@@ -32,15 +32,16 @@ function App() {
   return (
 
     <div className="App">
-      <header className="App-header">
+      
+      {/* <header className="App-header">
         
-        
+        <img src="http://127.0.0.1:5000/video_feed0"></img>
         <videoBox></videoBox>
         <videoBox></videoBox>
         <videoBox></videoBox>
         <button onClick={clickMe}>Default Button Name</button>
         
-      </header>
+      </header> */}
     </div>
   );
 }
