@@ -2,6 +2,7 @@ import logo from './logo.svg';
 import './App.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import Dashboard from './components/dashboard/Dashboard';
 
 
 
@@ -32,7 +33,8 @@ function App() {
   return (
 
     <div className="App">
-      
+      {/* Hi this is text */}
+      <Dashboard></Dashboard>
       {/* <header className="App-header">
         
         <img src="http://127.0.0.1:5000/video_feed0"></img>
