@@ -4,8 +4,6 @@ from camera import camera as Camera
 
 app = Flask(__name__)
 
-
-
 video_stream = Camera(0)
 
 @app.route('/')
