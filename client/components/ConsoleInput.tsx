@@ -21,7 +21,7 @@ export default function ConsoleInput(props: ConsoleInputProps) {
     sendJsonMessage(message);
     appendData({
       sender: "Client",
-      message: userInput,
+      message: message,
       timestamp: new Date()
     }, setLogData);
     setUserInput("");
