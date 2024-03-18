@@ -9,7 +9,7 @@ function App() {
     <>
     <RecoilRoot>
       <MachineLog />
-      {/* <CameraFeed /> */}
+      <CameraFeed />
     </RecoilRoot>
     </>
   );
