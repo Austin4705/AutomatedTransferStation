@@ -1,0 +1,19 @@
+
+
+
+
+class transferStation:
+    def __init__(self) -> None:
+        pass
+
+    def sendCommand(self, command):
+        pass
+
+    def moveABS(self, x, y):
+        transferStation.sendCommand(f"MOVEABS{x}{y}")
+    
+    def moveREL(self, x, y):
+        transferStation.sendCommand(f"MOVEREL{x}{y}")
+    
+
+    
