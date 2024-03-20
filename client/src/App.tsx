@@ -1,16 +1,18 @@
-import SelectableAxis from "../components/SelectableAxis"
-import MachineLog from "../components/MachineLog"
-import CameraFeed from "../components/CameraFeed"
+import {RecoilRoot} from "recoil";
+import MachineLog from "../components/Console";
+import CameraFeed from "../components/CameraFeed";
 
-import "./App.css"
+import "./App.css";
 
 function App() {
   return (
     <>
+    <RecoilRoot>
       <MachineLog />
-      {/* <CameraFeed /> */}
+      <CameraFeed />
+    </RecoilRoot>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

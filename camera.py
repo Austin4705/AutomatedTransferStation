@@ -1,6 +1,5 @@
 import cv2
 
-
 class camera(object):
     def __init__(self, cameraId):
         self.video = cv2.VideoCapture(cameraId)
