@@ -50,7 +50,7 @@ if __name__ == '__main__':
         # station.sendCommandStation("")
     # x = input()
     print("Closing Out")
-    station.endCommunication()
+    # station.endCommunication()
 
 
     

@@ -14,45 +14,58 @@ class transferStation:
                                     #   ,args=(self.device))
             self.thread.start()
 
-        def receiveCommandStation(self, device):
+        def receiveCommandStation(self):
             while True:
-                reading = device.readline()
+                reading = self.device.readline()
                 readStr = str(reading)
                 if readStr != "b\'\'":
                     self.handleData(readStr[2:len(readStr)-5])
+        def sendCommandStation(self, command):
+            self.device.write(bytes(f"{command}\r\n", 'ascii'))
 
         def endCommunication(self):
             self.thread.join()
             self.device.close()
 
     def __init__(self, portCtrl1, portCtrl2) -> None:
-        self.motorDevice = transferStation.serialObj(portCtrl1, transferStation.handleData)
+        self.motorDevice = transferStation.serialObj(portCtrl1, transferStation.handleDataMotor)
+        self.perfDevice = transferStation.serialObj(portCtrl2, transferStation.handleDataPerf)
 
-        # self.device1, self.thread1 = self.startCommunication(portCtrl1)
-        # device2, thread2 = self.startCommunication(portCtrl2)
-
-    # def startCommunication(self, port):
-    #     device = Serial(port=port, baudrate=9600, timeout=.1) 
-    #     thread = threading.Thread(target=self.receiveCommandStation  )
-    #                             #   ,args=(self.device))
-    #     thread.start()
-    #     return [device, thread]
-        
-
-    def sendCommandStation(self, command):
-        self.device1.write(bytes(f"{command}\r\n", 'ascii'))
     
-    def handleData(self, data):
-        print(data)
+    def handleDataMotor(data):
+        print('COM3: ' + data)
         pass
 
+    
+    def handleDataPerf(data):
+        print('COM4: ' + data)
+        pass
+
+    def sendMotor(self, msg):
+        self.motorDevice.sendCommandStation(msg)
+
+    def sendPerf(self, msg):
+        self.perfDevice.sendCommandStation(msg)
+
+
     def moveABS(self, x, y):
-        self.sendCommandStation(f"ABS{x}{y}")
+        self.sendMotor(f"ABS{x}{y}")
     
     def moveREL(self, axis, val):
-        self.sendCommandStation(f"REL{axis}{val}")
+        self.sendMotor(f"REL{axis}{val}")
 
+    def vaccumOn(self):
+        self.sendPerf("VAC_ON")
    
+    def vaccumOff(self):
+        self.sendPerf("VAC_OFF")
+
+    def setLed(self, val):
+        self.sendPerf(f"LEV={val}")
     
+    def __del__(self):
+        self.motorDevice.endCommunication()
+        self.perfDevice.endCommunication()
+        print("ENDING COMMUNICATN")
 
     
