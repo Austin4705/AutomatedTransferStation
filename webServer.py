@@ -4,7 +4,8 @@ from camera import camera as Camera
 from stationCommunication import transferStation
 import json
 from enum import Enum
-
+import time
+import os
 
 app = Flask(__name__)
 
@@ -27,7 +28,17 @@ def video_feed2():
 
 
 if __name__ == '__main__':
+    # os.environ["PYTHONUNBUFFERED"] = "0"
+    # app.run(host='127.0.0.1', port="5000", debug=True)
+    print("test")
+    station = transferStation('COM3')
+    station.moveREL('X','-10')
+    while(True):
+        time.sleep(1)
+        station.sendCommandStation()
+    print("Hi")
+    
+
     
     
-    app.run(host='127.0.0.1', port="5000", debug=True)
     
