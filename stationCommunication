@@ -6,8 +6,11 @@ class transferStation:
     def __init__(self) -> None:
         pass
 
-    def sendCommand(self, command):
+    def sendCommandStation(self, command):
         pass
+    
+    def receiveCommandStation(self, command):
+        
 
     def moveABS(self, x, y):
         transferStation.sendCommand(f"MOVEABS{x}{y}")
