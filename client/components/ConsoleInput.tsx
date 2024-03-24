@@ -17,13 +17,15 @@ export default function ConsoleInput(props: ConsoleInputProps) {
 
   const sendClientData = (message: string) => {
     if (message.length == 0) return;
-
-    sendJsonMessage(message);
-    appendData({
+    
+    const new_msg = {
       sender: "Client",
       message: message,
-      timestamp: new Date()
-    }, setLogData);
+      timestamp: new Date(),
+    };
+
+    sendJsonMessage(new_msg);
+    appendData(new_msg, setLogData);
     setUserInput("");
   };
 
