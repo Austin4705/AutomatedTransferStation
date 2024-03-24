@@ -49,7 +49,7 @@ def runSquareGrid(n, func, inc):
                 c += inc   
         i += 1
 
-n=5
+n=20
 arr =  numpy.zeros((n, n))
 for a in arr:
     print(a)
@@ -58,6 +58,7 @@ def fu(i, j, c):
     # c += 1
     arr[i][j] = c
     
-runSquareGrid(5, fu, 2)
+runSquareGrid(n, fu, 1)
+print("")
 for a in arr:
     print(a)
