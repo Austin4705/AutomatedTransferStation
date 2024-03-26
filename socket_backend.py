@@ -9,8 +9,8 @@ async def echo(websocket):
         data["message"] = "ACK " + data["message"]
         await websocket.send(json.dumps(data))
 
-async def main():
-    async with serve(echo, "localhost", 8765):
+async def start_socket(callback):
+    async with serve(callback, "localhost", 8765):
         await asyncio.Future()  # run forever
 
-asyncio.run(main())
+# asyncio.run(start_socket())
