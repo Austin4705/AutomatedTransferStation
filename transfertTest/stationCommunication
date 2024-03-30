@@ -12,11 +12,11 @@ class transferStation:
     def receiveCommandStation(self, command):
         
 
-    def moveABS(self, x, y):
-        transferStation.sendCommand(f"MOVEABS{x}{y}")
+    def moveABS(self, axis, val):
+        transferStation.sendCommand(f"MOVEABS{axis}{val}")
     
-    def moveREL(self, x, y):
-        transferStation.sendCommand(f"MOVEREL{x}{y}")
+    def moveREL(self, axis, val):
+        transferStation.sendCommand(f"MOVEREL{axis}{val}")
     
 
     

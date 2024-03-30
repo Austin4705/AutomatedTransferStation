@@ -28,7 +28,7 @@ def traceOver(device):
     device.sendMotor("FHMX")
     device.sendMotor("FHMY")
 
-    # runSquareGrid(5, , )
+    runSquareGrid(5, , 10, device.)
 
     time.sleep(2)
     print("SLEPT")
