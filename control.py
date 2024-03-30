@@ -1,56 +1,28 @@
 import asyncio
 import threading
-from station_com import Transfer_Station
+from transfer_station import Transfer_Station
 from web_server import startup_flask_app
-from socket_backend import start_socket
 import scripts
+import websockets
+from websockets.server import serve
 import json
-
-async def echo(websocket):
-    async for message in websocket:
-        data = json.loads(message)
-        data["sender"] = "Server"
-        data["message"] = "ACK " + data["message"]
-        await websocket.send(json.dumps(data))
-
-async def handle_socket_com(websocket):
-    # async for message in websocket:
-    #     data = json.loads(message)
-    #     data["sender"] = "Server"
-    #     data["message"] = "ACK " + data["message"]
-    #     await websocket.send(json.dumps(data))
-
-    async def send_message(msg):
-        await websocket.send(msg)
-    
-    station = Transfer_Station('COM3', 'COM4', send_message)
-    scripts.traceOver(station)
-
-def main():
-    # Wait for camera server to initialize
-    threading.Thread(target=startup_flask_app).start()
-    input()
-
-    print("Flash server initialized")
-
-    asyncio.run(start_socket(handle_socket_com))
-
-    print("Closing Out")
+from queue import Queue
+from socket_manager import Socket_Manager
 
 
 if __name__ == '__main__':
-    main()
-    # os.environ["PYTHONUNBUFFERED"] = "0"
-    # app.run(host='127.0.0.1', port="5000", debug=True)
+    # Wait for camera server to initialize
+    print("Initializing Flask server")
+    threading.Thread(target=startup_flask_app).start()
 
-    
-    # while(True):
-        # station.sendCommandStation(input())
-        # station.moveREL('X',10)
-        # time.sleep(1)
-        # station.sendCommandStation("")
-    # x = input()
-    # station.endCommunication()
+    print("Starting socket")
+    threading.Thread(target=Socket_Manager.start).start()
+    print("Socket initialized")
+    TRANSFER_STATION = Transfer_Station("COM3", "COM4")
 
-
-    
+    while True:
+        if(Socket_Manager.CLIENT_DATA_QUEUE.not_empty):
+            data = Socket_Manager.CLIENT_DATA_QUEUE.get()
+            TRANSFER_STATION.send_motor(data["message"])
+            print(data["message"])
+    # Uncreachable
