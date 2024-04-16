@@ -28,7 +28,7 @@ class camera(object):
     
     def capture_image(self, i, j, c):
         self.get_frame()
-        filename = f"{i}-{j}-{c}-camera{self.camera_id}"
+        filename = f"{i}-{j}-camera"
         # image = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
         cv2.imwrite(camera.IMAGE_REPO_NAME+"/"+self.name+"/"+filename+".png", self.frame)
 
