@@ -1,7 +1,8 @@
 import time
 from camera import camera
+import image_container
 
-def runSquareGrid(n, capture_func, inc, incXFunc, incYFunc, time_delay):
+def runSquareGrid(n, capture_func, incX, incY, incXFunc, incYFunc, time_delay):
     i=0
     j=0
     k = 0
@@ -12,7 +13,7 @@ def runSquareGrid(n, capture_func, inc, incXFunc, incYFunc, time_delay):
         if(k % 2 == 0):
             for a in range(n-1):
                 j += 1
-                incYFunc(inc)
+                incYFunc(incY)
                 time.sleep(time_delay)
 
                 capture_func(i, j, c)
@@ -20,13 +21,13 @@ def runSquareGrid(n, capture_func, inc, incXFunc, incYFunc, time_delay):
         else:
             for a in range(n-1):
                 j -= 1
-                incYFunc(-inc)
+                incYFunc(-incY)
                 time.sleep(time_delay)
 
                 capture_func(i, j, c)
                 c += 1   
         i += 1
-        incXFunc(inc)
+        incXFunc(incX)
         time.sleep(time_delay)
 
 def capFuncTest(i, j, c):
@@ -38,13 +39,12 @@ def init(device):
     device.send_motor("FHMX")
     device.send_motor("FHMY")
 
-
-def traceOver(device, n, increment, time_delay):
+def traceOver(device, n, incrementX, incrementY, time_delay):
     print(camera.global_list)
-    the_camera = camera.global_list[0]
-    the_camera.create_image_repo()
+    images = image_container.Image_Container(0)
+
     device.move_abs('X', 12.5)
     device.move_abs('Y', 12.5)
-    runSquareGrid(n, the_camera.capture_image, increment, device.move_relX, device.move_relY, time_delay)
+    runSquareGrid(n, images.capture_image, incrementX, incrementY, device.move_relX, device.move_relY, time_delay)
     # device.set_led(0)
     device.vaccum_off()

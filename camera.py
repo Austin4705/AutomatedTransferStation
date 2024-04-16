@@ -9,28 +9,10 @@ class camera(object):
         self.video = cv2.VideoCapture(cameraId, cv2.CAP_DSHOW)
         camera.global_list[cameraId] = self
         self.camera_id = cameraId
-        self.name = ("camera"+str(cameraId)+"-"+str(datetime.now().strftime("%d-%m-%Y-%H-%M-%S")))
         self.get_frame()
 
     def __del__(self):
-        self.video.release()        
-
-    def create_image_repo(self):
-        # create the directories
-        try:
-            os.mkdir(camera.IMAGE_REPO_NAME)
-        except OSError as error:
-            pass
-        try:
-            os.mkdir(camera.IMAGE_REPO_NAME+"/"+self.name)
-        except OSError as error:
-            pass
-    
-    def capture_image(self, i, j, c):
-        self.get_frame()
-        filename = f"{i}-{j}-camera"
-        # image = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-        cv2.imwrite(camera.IMAGE_REPO_NAME+"/"+self.name+"/"+filename+".png", self.frame)
+        self.video.release() 
 
     def get_frame(self):
         ret, self.frame = self.video.read()
