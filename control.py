@@ -39,21 +39,31 @@ def command_dispatch(msg, TRANSFER_STATION):
         case "traceOver":
             # n, increment, time_delay
             scripts.traceOver(TRANSFER_STATION, int(split_msg[1]), float(split_msg[2]), float(split_msg[3]))
+        case _:
+            print(split_msg)
+            Socket_Manager.send_all("ack")
 
+
+
+sim_test = True
 if __name__ == '__main__':
     # Wait for camera server to initialize
     camera0 = camera(0)
-    camera1 = camera(1)
-    camera2 = camera(2)
+    camera1 = camera0
+    camera2 = camera0
+    if not sim_test:
+        camera1 = camera(1)
+        camera2 = camera(2)
 
     print("Initializing Flask server")
     threading.Thread(target=web_server.startup_flask_app).start()
-    
-
     print("Starting socket")
+
+
     threading.Thread(target=Socket_Manager.start).start()
     print("Socket initialized")
-    TRANSFER_STATION = Transfer_Station("COM3", "COM4")
 
+
+    TRANSFER_STATION = Transfer_Station("COM3", "COM4")
     threading.Thread(target=socket_dispatch_thread, args=(TRANSFER_STATION,)).start()
     

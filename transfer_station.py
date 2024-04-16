@@ -2,7 +2,8 @@ from serial import Serial
 import threading
 from queue import Queue
 from socket_manager import Socket_Manager
-
+import time
+import importlib
 
 class Serial_Obj:
     QUEUE_BUFFER_SIZE = 10000
@@ -13,14 +14,32 @@ class Serial_Obj:
         self.port = port
         self.callback = callback
 
+    # Used for simulating the app when there isnt a transfer station connected
+    class fake_serial():
+        def __init__(self, port, baudrate, timeout):
+            self.printdata = True
+            self.port = port
+        def write(self, msg):
+            if(self.printdata):
+                print(f"Port: {self.port} msg: {msg}")
+        def close(self):
+            pass
+        def readline(self):
+            return bytes('', 'utf-8')            
+
+
     def add_command_buffer(self, command):
         self.to_serial_queue.put(command)
 
     def send_command_immediately(self, command):
         self.send_to_station(command)
-        
+    
     def start_communication(self):
-        self.device = Serial(port=self.port, baudrate=9600, timeout=.1) 
+        self.device = None
+        if importlib.import_module("control").sim_test:
+            self.device = Serial_Obj.fake_serial(port=self.port, baudrate=9600, timeout=.1)
+        else:
+            self.device = Serial(port=self.port, baudrate=9600, timeout=.1) 
         self.thread = threading.Thread(target=self.listen_serial)
         self.thread.start()
 
@@ -29,9 +48,9 @@ class Serial_Obj:
             reading = self.device.readline()
             readStr = str(reading)
             if readStr != "b\'\'":
+                print("here")
                 data = readStr[2:len(readStr)-5]
                 self.callback(data)
-                # print(f"{self.port}: {data}")
                 # self.squeue.put(f"{self.port}: {data}")
 
     def send_to_station(self, command):
@@ -61,9 +80,6 @@ class Transfer_Station:
 
     def message_received(self, message):
         self.dispatch(message)
-        # print(message)
-        # Socket_Manager.send_all(message)
-
 
     # TODO: Change structure
     def send_motor(self, msg):
@@ -107,8 +123,6 @@ class Transfer_Station:
         else:
             print(message)
             Socket_Manager.send_all(message)
-            # print("Unknown Packet")
-
 
     def __del__(self):
         self.motor_device.end_communication()

@@ -41,7 +41,7 @@ def init(device):
 
 def traceOver(device, n, increment, time_delay):
     print(camera.global_list)
-    the_camera = camera.global_list[1]
+    the_camera = camera.global_list[0]
     the_camera.create_image_repo()
     device.move_abs('X', 12.5)
     device.move_abs('Y', 12.5)
