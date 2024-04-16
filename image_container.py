@@ -1,6 +1,6 @@
 import cv2
-import camera
-import time as datetime
+from camera import camera
+from datetime import datetime
 import os 
 
 class Image_Container:
@@ -9,6 +9,7 @@ class Image_Container:
     def __init__(self, cameraId) -> None:
         self.name = ("camera"+str(cameraId)+"-"+str(datetime.now().strftime("%d-%m-%Y-%H-%M-%S")))
         self.camera = camera.global_list[cameraId]    
+        self.create_image_repo()
 
     def create_image_repo(self):
             # create the directories

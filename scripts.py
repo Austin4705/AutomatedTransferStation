@@ -41,10 +41,7 @@ def init(device):
 
 def traceOver(device, n, incrementX, incrementY, time_delay):
     print(camera.global_list)
-    images = image_container.Image_Container(0)
-
-    device.move_abs('X', 12.5)
-    device.move_abs('Y', 12.5)
+    images = image_container.Image_Container(1)
     runSquareGrid(n, images.capture_image, incrementX, incrementY, device.move_relX, device.move_relY, time_delay)
     # device.set_led(0)
     device.vaccum_off()

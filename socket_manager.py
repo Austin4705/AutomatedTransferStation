@@ -3,7 +3,6 @@ from websockets.server import serve
 import json
 from queue import Queue
 import websockets
-from threading import Thread 
 
 '''
 This class handles the websockets that are used to communicate with the UI. 
