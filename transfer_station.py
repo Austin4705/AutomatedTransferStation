@@ -5,7 +5,7 @@ from socket_manager import Socket_Manager
 
 
 class Serial_Obj:
-    QUEUE_BUFFER_SIZE = 1000
+    QUEUE_BUFFER_SIZE = 10000
     
     def __init__(self, port, callback) -> None:
         self.to_serial_queue = Queue(Serial_Obj.QUEUE_BUFFER_SIZE)
@@ -72,8 +72,8 @@ class Transfer_Station:
     def send_perf(self, msg):
         self.perf_device.send_command_immediately(msg)
 
-    def move_abs(self, x, y):
-        self.send_motor(f"ABS{x}{y}")
+    def move_abs(self, axis, val):
+        self.send_motor(f"ABS{axis}{val}")
     
     def move_rel(self, axis, val):
         self.send_motor(f"REL{axis}{val}")
