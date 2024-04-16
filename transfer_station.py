@@ -48,14 +48,21 @@ class Transfer_Station:
         self.perf_device = Serial_Obj(portCtrl2, self.message_received)
         self.start_serial()
 
+        self.x_pos = 0
+        self.y_pos = 0
+        self.temp = 0
+        self.donezoom = 0
+        self.pres = 0
+
     def start_serial(self):
         print("Starting serial communication...")
         self.motor_device.start_communication()
         self.perf_device.start_communication()
 
     def message_received(self, message):
-        print(message)
-        Socket_Manager.send_all(message)
+        self.dispatch(message)
+        # print(message)
+        # Socket_Manager.send_all(message)
 
 
     # TODO: Change structure
@@ -71,6 +78,12 @@ class Transfer_Station:
     def move_rel(self, axis, val):
         self.send_motor(f"REL{axis}{val}")
 
+    def move_relX(self, val):
+        self.send_motor(f"RELX{val}")
+
+    def move_relY(self, val):
+        self.send_motor(f"RELY{val}")
+
     def vaccum_on(self):
         self.send_perf("VAC_ON")
    
@@ -80,6 +93,23 @@ class Transfer_Station:
     def set_led(self, val):
         self.send_perf(f"LEV={val}")
     
+    def dispatch(self, message):
+        if message[0:2] == "X:":
+            self.x_pos = float(message[2:])
+        elif message[0:2] == "Y:":
+            self.y_pos = float(message[2:])
+        elif message[0:5] == "TEMP:":
+            self.temp = float(message[5:])
+        elif message[0:9] == "DONEZOOM:":
+            self.donezoom = float(message[9:])
+        elif message[0:5] == "PRES:":
+            self.pres = float(message[5:])
+        else:
+            print(message)
+            Socket_Manager.send_all(message)
+            # print("Unknown Packet")
+
+
     def __del__(self):
         self.motor_device.end_communication()
         self.perf_device.end_communication()

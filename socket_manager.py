@@ -14,7 +14,7 @@ class Socket_Manager:
         async for message in websocket:
             data = json.loads(message)
             Socket_Manager.CLIENT_DATA_QUEUE.put(data)
-
+    
     async def conn_handler(websocket):
         """
         Main handler that gets called on each new websocket handshake
@@ -30,7 +30,8 @@ class Socket_Manager:
 
         finally:
             Socket_Manager.CONNECTIONS.remove(websocket)
-            
+
+    # How to send data to ui
     def send_all(msg: str):
         websockets.broadcast(Socket_Manager.CONNECTIONS, msg)
     
