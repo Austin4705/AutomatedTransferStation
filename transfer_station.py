@@ -2,7 +2,7 @@ from serial import Serial
 import threading
 from queue import Queue
 from socket_manager import Socket_Manager
-
+import json
 
 class Serial_Obj:
     QUEUE_BUFFER_SIZE = 1000
@@ -93,6 +93,7 @@ class Transfer_Station:
         self.send_perf(f"LEV={val}")
     
     def dispatch(self, message):
+        print(message)
         if message[0:2] == "X:":
             self.x_pos = float(message[2:])
         elif message[0:2] == "Y:":
@@ -105,7 +106,7 @@ class Transfer_Station:
             self.pres = float(message[5:])
         else:
             print(message)
-            Socket_Manager.send_all(message)
+        Socket_Manager.send_all(json.dumps({"message": message, "sender": "transfer station"}))
             # print("Unknown Packet")
 
 

@@ -5,3 +5,8 @@
   text-align: center;
 }
 
+.grid-container {
+  display: grid;
+  column-gap: 50px;
+  row-gap: 50px;
+}
