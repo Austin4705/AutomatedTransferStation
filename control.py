@@ -48,7 +48,7 @@ def command_dispatch(msg, TRANSFER_STATION):
 
 
 
-sim_test = False
+sim_test = True
 if __name__ == '__main__':
     # Wait for camera server to initialize
     camera0 = camera(0)
