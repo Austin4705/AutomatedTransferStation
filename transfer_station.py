@@ -39,6 +39,7 @@ class Serial_Obj:
     def end_communication(self):
         self.thread.join()
         self.device.close()
+        
 
 class Transfer_Station:
     def __init__(self, portCtrl1: str, portCtrl2: str) -> None:
