@@ -3,6 +3,7 @@ from websockets.server import serve
 import json
 from queue import Queue
 import websockets
+import scripts
 
 
 class Socket_Manager:
@@ -45,3 +46,40 @@ class Socket_Manager:
     
     def start():
         asyncio.run(Socket_Manager.start_socket_server())
+
+
+    # Socket stuff
+
+    def socket_dispatch_thread(TRANSFER_STATION):    
+        while True:
+            if(Socket_Manager.CLIENT_DATA_QUEUE.not_empty):
+                data = Socket_Manager.CLIENT_DATA_QUEUE.get()
+                Socket_Manager.socket_dispatch(data, TRANSFER_STATION)
+
+    def socket_dispatch(data, TRANSFER_STATION):
+        print(f"Received message: {data["message"]}")
+        if data["message"][0] == "*":
+            command = data["message"][1:]
+            Socket_Manager.command_dispatch(command, TRANSFER_STATION)
+        elif data["message"][0] == "^":
+            TRANSFER_STATION.send_perf(data["message"][1:])
+        elif data["message"][0] == "&":
+            ts = TRANSFER_STATION
+            try:
+                exec(data["message"][1:])
+            except Exception  as error:
+                print(f"User defined command wrong. Error:\n{error}")
+        else:
+            TRANSFER_STATION.send_motor(data["message"][0:])
+
+    def command_dispatch(msg, TRANSFER_STATION):
+        split_msg = msg.split(" ")
+        match split_msg[0]:
+            case "init":
+                scripts.init(TRANSFER_STATION)
+            case "traceOver":
+                # n, increment, time_delay
+                scripts.traceOver(TRANSFER_STATION, int(split_msg[1]), float(split_msg[2]), float(split_msg[3]))
+            case _:
+                print(split_msg)
+                Socket_Manager.send_all("ack")
