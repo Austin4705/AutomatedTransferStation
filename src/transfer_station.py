@@ -3,6 +3,9 @@ import threading
 from queue import Queue
 from socket_manager import Socket_Manager
 import json
+import os 
+
+
 
 class Serial_Obj:
     QUEUE_BUFFER_SIZE = 1000
@@ -12,6 +15,7 @@ class Serial_Obj:
         # self.from_serial_queue = Queue(Serial_Obj.QUEUE_BUFFER_SIZE)
         self.port = port
         self.callback = callback
+        self.sim_test = os.getenv("sim_test")
 
     def add_command_buffer(self, command):
         self.to_serial_queue.put(command)
@@ -20,18 +24,22 @@ class Serial_Obj:
         self.send_to_station(command)
         
     def start_communication(self):
-        self.device = Serial(port=self.port, baudrate=9600, timeout=.1) 
+        if not self.sim_test:
+            self.device = Serial(port=self.port, baudrate=9600, timeout=.1) 
+        else:
+            self.device = Serial_Obj.MockSerial()
         self.thread = threading.Thread(target=self.listen_serial)
         self.thread.start()
 
     def listen_serial(self):
-        while True:
-            reading = self.device.readline()
-            readStr = str(reading)
-            if readStr != "b\'\'":
-                data = readStr[2:len(readStr)-5]
-                self.callback(data)
-                # self.squeue.put(f"{self.port}: {data}")
+        if not self.sim_test:
+            while True:
+                reading = self.device.readline()
+                readStr = str(reading)
+                if readStr != "b\'\'":
+                    data = readStr[2:len(readStr)-5]
+                    self.callback(data)
+                    # self.squeue.put(f"{self.port}: {data}")
 
     def send_to_station(self, command):
         self.device.write(bytes(f"{command}\r\n", 'ascii'))
@@ -39,6 +47,12 @@ class Serial_Obj:
     def end_communication(self):
         self.thread.join()
         self.device.close()
+
+    class MockSerial():
+        def init(port, baudrate, timeout):
+            pass
+        def write(data, format):
+            pass
         
 
 class Transfer_Station:

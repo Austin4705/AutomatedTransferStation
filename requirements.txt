@@ -2,3 +2,4 @@ opencv-python
 flask
 websockets
 pyserial
+python-dotenv

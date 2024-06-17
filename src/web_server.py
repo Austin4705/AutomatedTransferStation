@@ -1,7 +1,6 @@
 from flask import Flask, render_template, Response, jsonify
 from camera import camera
-
-
+import logging
 
 app = Flask(__name__)
 
@@ -21,4 +20,7 @@ def video_feed2():
     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def startup_flask_app():
+    app.logger.disabled = True
+    log = logging.getLogger('werkzeug')
+    log.disabled = True
     app.run(host='127.0.0.1', port="5000", debug=True, use_reloader=False)

@@ -4,11 +4,12 @@ import json
 from queue import Queue
 import websockets
 
-'''
-This class handles the websockets that are used to communicate with the UI. 
-All you really have to know is that it has a queue of jsons that represent incoming messages and a function to send jsons to the clients.
-'''
+
 class Socket_Manager:
+    '''
+    This class handles the websockets that are used to communicate with the UI. 
+    All you really have to know is that it has a queue of jsons that represent incoming messages and a function to send jsons to the clients.
+    '''
     QUEUE_BUFFER_SIZE = 1000
     CONNECTIONS = set()
     CLIENT_DATA_QUEUE = Queue(QUEUE_BUFFER_SIZE)
