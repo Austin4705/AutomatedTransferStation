@@ -18,8 +18,9 @@ const readyStateMap = {
 };
 
 const entryToString = (logEntry: consoleMessage) => {
-  const {timestamp} = logEntry;
-  const formattedTimeStamp = `${timestamp.toLocaleString('en-US')}`;
+  // const {timestamp} = logEntry;
+  // const formattedTimeStamp = `${timestamp.toLocaleString('en-US')}`;
+  const formattedTimeStamp = "fixme"
   return `[${formattedTimeStamp}] [${logEntry.sender}]: ${logEntry.message}`;
 };
 
@@ -35,9 +36,9 @@ export default function ConsoleLog(props: ConsoleLogProps) {
 
   useEffect(() => {
     if (isConsoleMessage(lastJsonMessage)) {
-      if (typeof (lastJsonMessage.timestamp) == "string") {
-        lastJsonMessage.timestamp = new Date(lastJsonMessage.timestamp)
-      }
+      // if (typeof (lastJsonMessage.timestamp) == "string") {
+      //   lastJsonMessage.timestamp = new Date(lastJsonMessage.timestamp)
+      // }
       appendData(lastJsonMessage, setLogData);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

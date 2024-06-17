@@ -11,10 +11,8 @@ All you really have to know is that it has a queue of jsons that represent incom
 class Socket_Manager:
     QUEUE_BUFFER_SIZE = 1000
     CONNECTIONS = set()
-
-
-    # Class interface:
     CLIENT_DATA_QUEUE = Queue(QUEUE_BUFFER_SIZE)
+
     # How to send data to ui
     def send_all(msg: str):
         websockets.broadcast(Socket_Manager.CONNECTIONS, msg)

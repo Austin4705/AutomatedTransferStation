@@ -2,7 +2,7 @@ import cv2
 from datetime import datetime
 import os
 
-class camera(object):
+class camera:
     global_list = dict()
     IMAGE_REPO_NAME = "images"
     def __init__(self, cameraId):

@@ -12,3 +12,9 @@
     background-color: black;
     color: white;
 }
+
+
+#CameraFeed {
+    grid-column-start: 1;
+  grid-column-end: 20;
+}
