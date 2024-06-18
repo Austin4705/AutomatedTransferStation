@@ -1,5 +1,9 @@
-import socket_manager
 import json
+
+import socket_manager
+
+
+# File around waht to do with the data given by transfer station
 
 def dispatch(self, message):
     print(message)
@@ -15,5 +19,5 @@ def dispatch(self, message):
         self.pres = float(message[5:])
     else:
         print(message)
-    Socket_Manager.send_all(json.dumps({"message": message, "sender": "transfer station"}))
+    socket_manager.send_all(json.dumps({"message": message, "sender": "transfer station"}))
         # print("Unknown Packet")

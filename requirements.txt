@@ -3,3 +3,4 @@ flask
 websockets
 pyserial
 python-dotenv
+GMMDetector

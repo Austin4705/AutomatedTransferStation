@@ -5,6 +5,11 @@ import json
 import os         
 
 class Transfer_Station:
+    """
+    This class is specifically designed for the HQ Graphene Transfer Station. 
+    It is responsible for handling the serial communication between the station and the motor controller and the performance controller. 
+    It also has functions to send commands to the motor controller and the performance controller.
+    """
     def __init__(self, message_callback: function) -> None:
         print("Initializing Transfer Station...")
         self.portCtrl1 = os.getenv("motorControllerPort")
