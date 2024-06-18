@@ -59,7 +59,9 @@ class Socket_Manager:
                 Socket_Manager.socket_dispatch(data, TRANSFER_STATION)
 
     def socket_dispatch(data, TRANSFER_STATION):
-        print(f"Received message: {data["message"]}")
+        message = data["message"]
+        print(f"Received message: {message}")
+
         if data["message"][0] == "*":
             command = data["message"][1:]
             Socket_Manager.command_dispatch(command, TRANSFER_STATION)
