@@ -1,5 +1,5 @@
 import time
-from camera import camera
+from camera import Camera
 import image_container
 
 def runSquareGrid(n, capture_func, incX, incY, incXFunc, incYFunc, time_delay):
@@ -40,7 +40,7 @@ def init(device):
     device.send_motor("FHMY")
 
 def traceOver(device, n, incrementX, incrementY, time_delay):
-    print(camera.global_list)
+    print(Camera.global_list)
     images = image_container.Image_Container(1)
     runSquareGrid(n, images.capture_image, incrementX, incrementY, device.move_relX, device.move_relY, time_delay)
     # device.set_led(0)

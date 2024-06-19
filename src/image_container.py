@@ -1,5 +1,5 @@
 import cv2
-from camera import camera
+from camera import Camera
 from datetime import datetime
 import os 
 
@@ -8,7 +8,7 @@ class Image_Container:
     
     def __init__(self, cameraId) -> None:
         self.name = ("camera"+str(cameraId)+"-"+str(datetime.now().strftime("%d-%m-%Y-%H-%M-%S")))
-        self.camera = camera.global_list[cameraId]    
+        self.camera = Camera.global_list[cameraId]    
         self.create_image_repo()
 
     def create_image_repo(self):
@@ -25,7 +25,7 @@ class Image_Container:
     def capture_image(self, i, j, c):
         self.camera.get_frame()
         filename = f"{i}-{j}-camera"
-        cv2.imwrite(Image_Container.IMAGE_REPO_NAME+"/"+self.name+"/"+filename+".png", self.camera.frame)
+        cv2.imwrite("../"+Image_Container.IMAGE_REPO_NAME+"/"+self.name+"/"+filename+".png", self.camera.frame)
 
     def get_photo(self):
         pass

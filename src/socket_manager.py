@@ -3,7 +3,7 @@ from websockets.server import serve
 import json
 from queue import Queue
 import websockets
-
+from camera import Camera
 
 import scripts
 
@@ -47,7 +47,8 @@ class Socket_Manager:
             await asyncio.Future()  # run forever
     
     def start():
-        asyncio.run(Socket_Manager.start_socket_server())
+        pass
+        # asyncio.run(Socket_Manager.start_socket_server())
 
 
     # Socket stuff
@@ -59,7 +60,8 @@ class Socket_Manager:
                 Socket_Manager.socket_dispatch(data, TRANSFER_STATION)
 
     def socket_dispatch(data, TRANSFER_STATION):
-        print(f"Received message: {data["message"]}")
+        message = data["message"]
+        print(f"Received message: {message}")
         if data["message"][0] == "*":
             command = data["message"][1:]
             Socket_Manager.command_dispatch(command, TRANSFER_STATION)
@@ -71,6 +73,11 @@ class Socket_Manager:
                 exec(data["message"][1:])
             except Exception  as error:
                 print(f"User defined command wrong. Error:\n{error}")
+        elif data["message"][0] == "#":
+            Socket_Manager.testFunction()
+        elif data["message"] == "SendImage":
+            img = Camera.get_gmm_transofrm()
+            
         else:
             TRANSFER_STATION.send_motor(data["message"][0:])
 
@@ -85,3 +92,9 @@ class Socket_Manager:
             case _:
                 print(split_msg)
                 Socket_Manager.send_all("ack")
+
+    def testFunction():
+        print("testFunction called")
+        Camera.save_image(Camera.global_list[0].get_frame())
+        print("Trying Cancer one")
+        Camera.save_image(Camera.matGMM2DTransform(Camera.global_list[0].get_frame()))

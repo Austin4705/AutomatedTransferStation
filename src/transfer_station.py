@@ -10,7 +10,7 @@ class Transfer_Station:
     It is responsible for handling the serial communication between the station and the motor controller and the performance controller. 
     It also has functions to send commands to the motor controller and the performance controller.
     """
-    def __init__(self, message_callback: function) -> None:
+    def __init__(self, message_callback) -> None:
         print("Initializing Transfer Station...")
         self.portCtrl1 = os.getenv("motorControllerPort")
         self.portCtrl2 = os.getenv("perfControllerPort")
@@ -60,9 +60,10 @@ class Transfer_Station:
         self.send_perf(f"LEV={val}")
 
     def __del__(self):
+        print("ENDING COMMUNICATION TO TRANSFER STATION...")
         self.motor_device.end_communication()
         self.perf_device.end_communication()
-        print("ENDING COMMUNICATION")
+        print("COMMUNICATION ENDED")
 
 
 class Serial_Obj:
@@ -111,7 +112,7 @@ class Serial_Obj:
             pass
         def start_communication(self):
             pass
-        def write(self, data, format):
+        def write(self, b, /):
             pass
         def readline(self):
             return "b\'\'"
