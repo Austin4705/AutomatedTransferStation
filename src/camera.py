@@ -16,7 +16,8 @@ class Camera:
         self.video = cv2.VideoCapture(cameraId, cv2.CAP_DSHOW)
         Camera.global_list[cameraId] = self
         self.camera_id = cameraId
-        self.get_frame()
+        self.snap_image()
+
 
     def __del__(self):
         self.video.release() 
@@ -24,7 +25,17 @@ class Camera:
     def get_frame(self):
         ret, self.frame = self.video.read()
         return self.frame
-    
+
+    def save_image(frame) :
+        cv2.imwrite(f"../{Camera.IMAGE_REPO_NAME}/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.jpg", frame)
+
+    def snap_image(self):
+        self.snapshot_image =(self.get_frame())
+        #  Camera.matGMM2DTransform
+
+    def get_gmm_transofrm(self):
+        return Camera.matGMM2DTransform(self.get_frame())
+
     def generate_video(camera):
         while True:
             frame = camera.get_frame()
@@ -33,11 +44,10 @@ class Camera:
             yield (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + png.tobytes() + b'\r\n\r\n')
             
-    def save_image(frame) :
-        cv2.imwrite(f"../{Camera.IMAGE_REPO_NAME}/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.jpg", frame)
-    
-    def get_gmm_transofrm(self):
-        return Camera.matGMM2DTransform(self.get_frame())
+    def get_snapped_image(camera):
+        ret, png = cv2.imencode('.jpg', camera.snapshot_image)
+        return (b'--frame\r\n'
+            b'Content-Type: image/jpeg\r\n\r\n' + png.tobytes() + b'\r\n\r\n')
 
     def matGMM2DTransform(img):
         CONFIDENCE_THRESHOLD = 0.5

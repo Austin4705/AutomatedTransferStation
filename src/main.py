@@ -18,7 +18,7 @@ if __name__ == '__main__':
     camera1 = camera0 if not sim_test else Camera(1)
 
     print("Loading Model")
-    Camera.matGMM2DTransform(Camera.mockImage)
+    # Camera.matGMM2DTransform(Camera.mockImage)
     print("Model Loaded")
 
     print("Initializing Flask server")
@@ -40,9 +40,9 @@ if __name__ == '__main__':
     ts_listening_therad.start()
 
     print("Trying Here")
-    frame = Camera.global_list[0].get_frame()
-    frame2 = Camera.matGMM2DTransform(frame)
+    # frame = Camera.global_list[0].get_frame()
+    # frame2 = Camera.matGMM2DTransform(frame)
     print("Done!")
-    Camera.save_image(frame2)
+    # Camera.save_image(frame2)
 
     input()

@@ -75,8 +75,8 @@ class Socket_Manager:
                 print(f"User defined command wrong. Error:\n{error}")
         elif data["message"][0] == "#":
             Socket_Manager.testFunction()
-        elif data["message"] == "SendImage":
-            img = Camera.get_gmm_transofrm()
+        elif data["message"] == "snap":
+            Camera.global_list[0].snap_image()
             
         else:
             TRANSFER_STATION.send_motor(data["message"][0:])
