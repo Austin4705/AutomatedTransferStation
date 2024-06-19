@@ -20,7 +20,7 @@ const readyStateMap = {
 const entryToString = (logEntry: consoleMessage) => {
   // const {timestamp} = logEntry;
   // const formattedTimeStamp = `${timestamp.toLocaleString('en-US')}`;
-  const formattedTimeStamp = "fixme"
+  const formattedTimeStamp = "TIME"
   return `[${formattedTimeStamp}] [${logEntry.sender}]: ${logEntry.message}`;
 };
 

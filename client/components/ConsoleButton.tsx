@@ -1,13 +1,13 @@
-import { Button } from "@mui/material";
+import React from "react";
 
 export interface ConsoleButtonProps {
   background?: string;
-  handler: () => void;
+  handler: React.MouseEventHandler<HTMLButtonElement>;
   children: string;
 }
 
 export default function ConsoleButton(props: ConsoleButtonProps) {
   const { handler, background } = props;
 
-  return <Button onClick={handler} sx={{backgroundColor: background ?? "lightgray"}}>{props.children}</Button>;
+  return <button onClick={handler} style={{backgroundColor: background ?? "lightgray"}}>{props.children}</button>;
 }
