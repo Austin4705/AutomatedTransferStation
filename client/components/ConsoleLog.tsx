@@ -36,9 +36,11 @@ export default function ConsoleLog(props: ConsoleLogProps) {
 
   useEffect(() => {
     if (isConsoleMessage(lastJsonMessage)) {
+      // WHERE DATA RECEIVED
       // if (typeof (lastJsonMessage.timestamp) == "string") {
       //   lastJsonMessage.timestamp = new Date(lastJsonMessage.timestamp)
       // }
+      console.log("lastJsonMessage");
       appendData(lastJsonMessage, setLogData);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

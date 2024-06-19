@@ -30,11 +30,8 @@ class Camera:
         cv2.imwrite(f"../{Camera.IMAGE_REPO_NAME}/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.jpg", frame)
 
     def snap_image(self):
-        self.snapshot_image =(self.get_frame())
+        self.snapshot_image = Camera.matGMM2DTransform(self.get_frame())
         #  Camera.matGMM2DTransform
-
-    def get_gmm_transofrm(self):
-        return Camera.matGMM2DTransform(self.get_frame())
 
     def generate_video(camera):
         while True:

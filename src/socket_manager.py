@@ -48,7 +48,7 @@ class Socket_Manager:
     
     def start():
         pass
-        # asyncio.run(Socket_Manager.start_socket_server())
+        asyncio.run(Socket_Manager.start_socket_server())
 
 
     # Socket stuff
@@ -76,6 +76,7 @@ class Socket_Manager:
         elif data["message"][0] == "#":
             Socket_Manager.testFunction()
         elif data["message"] == "snap":
+            Socket_Manager.send_all("snaped")
             Camera.global_list[0].snap_image()
             
         else:
@@ -95,6 +96,3 @@ class Socket_Manager:
 
     def testFunction():
         print("testFunction called")
-        Camera.save_image(Camera.global_list[0].get_frame())
-        print("Trying Cancer one")
-        Camera.save_image(Camera.matGMM2DTransform(Camera.global_list[0].get_frame()))
