@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Typography } from "@mui/material";
 import { ReadyState } from "react-use-websocket";
 import { useRecoilState } from "recoil";
 import {
@@ -45,22 +45,14 @@ export default function ConsoleLog(props: ConsoleLogProps) {
   }, [lastJsonMessage]);
 
   return (
-    <>
+    <div className="flex flex-col h-full">
       <Typography>Connection State: {readyStateMap[readyState]}</Typography>
 
-      <Box
-        sx={{
-          border: "2px solid black",
-          width: "100%",
-          height: "80%",
-          overflowY: "auto",
-          textAlign: "left"
-        }}
-      >
+      <div className="flex-grow border-2 border-solid border-black overflow-y-auto text-left">
         {logData.map((log) => (
-          <Box className="log">{entryToString(log)}</Box>
+          <div className="log">{entryToString(log)}</div>
         ))}
-      </Box>
-    </>
+      </div>
+    </div>
   );
 }

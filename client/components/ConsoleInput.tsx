@@ -4,6 +4,7 @@ import { useState } from "react";
 import { appendData, consoleState } from "../state/consoleState";
 import { useRecoilState } from "recoil";
 import { SendJsonMessage } from "react-use-websocket/dist/lib/types";
+import ConsoleButton from "./ConsoleButton"
 
 interface ConsoleInputProps {
   sendJsonMessage: SendJsonMessage;
@@ -28,6 +29,25 @@ export default function ConsoleInput(props: ConsoleInputProps) {
     appendData(new_msg, setLogData);
     setUserInput("");
   };
+
+  return (
+    <Box>
+      {/* The Text input */}
+      <Box></Box>
+
+      {/* The buttons */}
+      <Box
+        style={{
+          display: "grid",
+          gap: "10px",
+          gridTemplateColumns: "repeat(3, 1fr)",
+        }}
+      >
+        <ConsoleButton handler={() => sendClientData("+5")}>Add 5</ConsoleButton>
+        <ConsoleButton handler={() => sendClientData("-5")}>Subtract 5</ConsoleButton>
+      </Box>
+    </Box>
+  );
 
   return (
     <Box
@@ -71,31 +91,7 @@ export default function ConsoleInput(props: ConsoleInputProps) {
           Send Data
         </Button>
       </Box>
-      <Box
-        sx={{
-          width: "100%",
-          height: "50%",
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          gap: "10px",
-        }}
-      >
-        <Button
-          sx={{ width: "50%", height: "100%" }}
-          variant="contained"
-          onClick={() => sendClientData("+5")}
-        >
-          +5
-        </Button>
-        <Button
-          sx={{ width: "50%", height: "100%" }}
-          variant="contained"
-          onClick={() => sendClientData("-5")}
-        >
-          -5
-        </Button>
-      </Box>
+
     </Box>
   );
 }
