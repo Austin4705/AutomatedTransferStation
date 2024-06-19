@@ -1,13 +1,20 @@
 import cv2
 from datetime import datetime
 import os
+from demo_functions import visualise_flakes, remove_vignette
+import json
+from GMMDetector import MaterialDetector
 
-class camera:
+class Camera:
     global_list = dict()
     IMAGE_REPO_NAME = "images"
+    contrast_dict = json.load(open("../contrastDictDir/Graphene_GMM.json", "r"))
+    mockImage = cv2.imread("mockImage.png")
+
+
     def __init__(self, cameraId):
         self.video = cv2.VideoCapture(cameraId, cv2.CAP_DSHOW)
-        camera.global_list[cameraId] = self
+        Camera.global_list[cameraId] = self
         self.camera_id = cameraId
         self.get_frame()
 
@@ -16,17 +23,42 @@ class camera:
 
     def get_frame(self):
         ret, self.frame = self.video.read()
-        ret, self.jpeg = cv2.imencode('.jpg', self.frame)
-        return self.jpeg.tobytes()
+        return self.frame
     
     def generate_video(camera):
         while True:
             frame = camera.get_frame()
+            # frame = Camera.matGMM2DTransform(frame)
+            ret, png = cv2.imencode('.jpg', frame)
             yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+                b'Content-Type: image/jpeg\r\n\r\n' + png.tobytes() + b'\r\n\r\n')
             
+    def save_image(frame) :
+        cv2.imwrite(f"../{Camera.IMAGE_REPO_NAME}/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.jpg", frame)
+    
+    def get_gmm_transofrm(self):
+        return Camera.matGMM2DTransform(self.get_frame())
 
-    def cvImage(img):
+    def matGMM2DTransform(img):
+        CONFIDENCE_THRESHOLD = 0.5
+        
+        model = MaterialDetector(
+            contrast_dict=Camera.contrast_dict,
+            size_threshold=500,
+            standard_deviation_threshold=5,
+            used_channels="BGR",
+        )
+
+        flakes = model.detect_flakes(img)
+        image = visualise_flakes(
+            flakes,
+            img,
+            confidence_threshold=CONFIDENCE_THRESHOLD,
+        )
+        return image
+    
+
+    def cvImageBoarderOp(img):
         # Convert to YCrCb Channel and extract cb channel
         imgYCrCb = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)
         channel = imgYCrCb[:,:,2]
@@ -71,3 +103,5 @@ class camera:
             cv2.line(result, maxY, minX, [0,255,0], 10)
             # print(f"{minX}, {minY}, {maxX}, {maxY}")
             return minX, minY, maxX, maxY 
+
+
