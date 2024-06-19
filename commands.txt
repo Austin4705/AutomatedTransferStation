@@ -3,3 +3,5 @@
 
 &Camera.save_image(Camera.matGMM2DTransform(Camera.global_list[0].get_frame()))
 &Camera.save_image(Camera.global_list[0].get_frame())
+
+cargo build && .\target\debug\AutomatedTransferStation.exe
