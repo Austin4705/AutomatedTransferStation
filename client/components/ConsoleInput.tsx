@@ -26,9 +26,15 @@ export default function ConsoleInput(props: ConsoleInputProps) {
     setUserInput("");
   };
 
+  const handleKeyDown = (event: any) => {
+    if (event.key === 'Enter') {
+      sendClientData(userInput)
+    }
+  }
+
   return (
     <div className="p-2 flex gap-2">
-      <input className="border-purple-200 border-2 rounded" onChange={e => setUserInput(e.target.value)} value={userInput} placeholder="Manual input"></input>
+      <input className="border-purple-200 border-2 rounded" onKeyDown={handleKeyDown} onChange={e => setUserInput(e.target.value)} value={userInput} placeholder="Manual input"></input>
       <button className="bg-gray-200 rounded" onClick={() => sendClientData(userInput)}>Submit</button>
     </div>
   );
