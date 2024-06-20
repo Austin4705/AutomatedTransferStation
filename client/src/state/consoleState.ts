@@ -1,12 +1,11 @@
-import {SetterOrUpdater, atom} from 'recoil'
+import {atom, useSetRecoilState} from 'recoil'
 
 export interface consoleMessage {
   message: string;
   sender: string;
-  // timestamp: Date;
 }
 
-export const consoleState = atom<consoleMessage[]>({
+export const consoleStateAtom = atom<consoleMessage[]>({
   key: "consoleState",
   default: [],
 });
@@ -19,10 +18,3 @@ export function isConsoleMessage(msg: consoleMessage | unknown | null): msg is c
     // (msg as consoleMessage).timestamp !== undefined
   );
 }
-
-export const appendData = (
-  line: consoleMessage,
-  setLogData: SetterOrUpdater<consoleMessage[]>
-) => {
-  setLogData((log) => log.concat([line]));
-};
