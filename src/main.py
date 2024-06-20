@@ -1,5 +1,5 @@
 import threading
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import os
 import time
 
@@ -11,13 +11,16 @@ import web_server
 
 if __name__ == '__main__':
     # Load enviroment variables
+    find_dotenv()
     load_dotenv()
-    sim_test = os.getenv("sim_test")    
-
+    sim_test = os.getenv("sim_test") 
+    sim_test = bool(sim_test) 
     # Wait for camera server to initialize
     camera0 = Camera(0)
-    camera1 = camera0 if not sim_test else Camera(1)
-    camera2 = camera0 if not sim_test else Camera(2)
+    if sim_test:
+        print("Simulation Test: Cameras set to single source")
+    camera1 = camera0 if sim_test else Camera(1)
+    camera2 = camera0 if sim_test else Camera(2)
 
     print("Loading Model")
     Camera.matGMM2DTransform(Camera.mockImage)

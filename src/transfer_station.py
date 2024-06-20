@@ -94,6 +94,7 @@ class Serial_Obj:
         self.port = port
         self.callback = callback
         self.sim_test = os.getenv("sim_test")
+        self.sim_test = bool(self.sim_test)
 
     def add_command_buffer(self, command):
         self.to_serial_queue.put(command)
@@ -102,11 +103,12 @@ class Serial_Obj:
         self.send_to_station(command)
         
     def start_communication(self):
-        self.device = Serial(port=self.port, baudrate=9600, timeout=.1) 
-        # if self.sim_test:
-        #     self.device = Serial_Obj.MockSerial()
-        # else:
-        #     print("Starting serial")
+        if self.sim_test:
+            print("Starting Mock Serial")
+            self.device = Serial_Obj.MockSerial()
+        else:
+            print("Starting serial")
+            self.device = Serial(port=self.port, baudrate=9600, timeout=.1) 
         self.thread = threading.Thread(target=self.listen_serial)
         self.thread.daemon = True
         self.thread.start()

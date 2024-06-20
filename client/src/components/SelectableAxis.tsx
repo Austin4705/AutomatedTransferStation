@@ -1,4 +1,4 @@
-import { Button } from "@mui/material"
+// import { Button } from "@mui/material"
 
 export default function SelectableAxis() {
     const handleClick = (value: number) => {
@@ -7,7 +7,7 @@ export default function SelectableAxis() {
     }
 
     return <>
-        <Button variant="contained" onClick={() => handleClick(5)}>+5</Button>
-        <Button variant="contained" onClick={() => handleClick(-5)}>-5</Button>
+        <button onClick={() => handleClick(5)}>+5</button>
+        <button onClick={() => handleClick(-5)}>-5</button>
     </>
 }

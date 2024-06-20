@@ -32,7 +32,6 @@ export default function ConsoleLog() {
 
   useEffect(() => {
     if (isConsoleMessage(jsonState.lastJsonMessage)) {
-      console.log("lastJsonMessage");
       appendData(jsonState.lastJsonMessage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

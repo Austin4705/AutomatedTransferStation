@@ -1,1 +1,1 @@
-cd src && conda activate automatedTransfer && python main.py
+conda activate automatedTransfer && python ./src/main.py
