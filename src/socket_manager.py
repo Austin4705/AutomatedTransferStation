@@ -78,6 +78,14 @@ class Socket_Manager:
         elif data["message"] == "snap":
             Camera.global_list[0].snap_image()
             Socket_Manager.send_all(json.dumps({"message": "snapped", "sender": "transfer station"}))
+        elif data["message"] == "moveUp":
+            TRANSFER_STATION.send_motor("RELY1")
+        elif data["message"] == "moveRight":
+            TRANSFER_STATION.send_motor("RELX1")
+        elif data["message"] == "moveLeft":
+            TRANSFER_STATION.send_motor("RELX-1")
+        elif data["message"] == "moveDown":
+            TRANSFER_STATION.send_motor("RELY-1")
         elif data["message"] == "echo":
             Socket_Manager.send_all(json.dumps({"message": "echoACK", "sender": "transfer station"}))
             

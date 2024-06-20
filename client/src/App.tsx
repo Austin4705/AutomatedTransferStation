@@ -58,8 +58,18 @@ function App() {
           <div className="row-span-1 col-span-1 border-2 border-black">
             Choose Axis Button
           </div>
-          <div className="border-2 border-black">Controller 1</div>
-          <div className="border-2 border-black">Controller 2</div>
+          <div className="border-2 border-black">Controller 1
+            <div className="h-full w-full">
+              <CustomButton message={"moveLeft"} buttonText={"Left"} className="top-50 left-0 translate-x-0.5"/>
+              <CustomButton message={"moveRight"} buttonText={"Right"} className="top-50 right-0 translate-x-0.5"/>
+            </div>
+          </div>
+          <div className="border-2 border-black">Controller 2
+            <div className="h-full w-full">
+              <CustomButton message={"moveUp"} buttonText={"Up"} className="top-0 left-50" />
+              <CustomButton message={"moveDown"} buttonText={"Down"} className="down-0 left-50"/>
+            </div>
+          </div>
           <div className="border-2 border-black">Controller 3</div>
           <div className="border-2 border-black">Controller 4</div>
         </div>

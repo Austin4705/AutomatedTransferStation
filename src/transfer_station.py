@@ -3,6 +3,7 @@ import threading
 from queue import Queue
 import json
 import os         
+import time 
 
 from socket_manager import Socket_Manager
 
@@ -12,6 +13,8 @@ class Transfer_Station:
     It is responsible for handling the serial communication between the station and the motor controller and the performance controller. 
     It also has functions to send commands to the motor controller and the performance controller.
     """
+    QUEUE_BUFFER_SIZE = 1000
+
     def __init__(self, message_callback, socket_manager) -> None:
         print("Initializing Transfer Station...")
         self.portCtrl1 = "COM3"
@@ -19,25 +22,61 @@ class Transfer_Station:
 
         self.motor_device = Serial_Obj(self.portCtrl1, self.dispatch)
         self.perf_device = Serial_Obj(self.portCtrl2, self.dispatch)
+
         self.message_callback = message_callback
+        self.mainMessageQueue = Queue(Transfer_Station.QUEUE_BUFFER_SIZE)
 
         self.x_pos = 0
         self.y_pos = 0
         self.temp = 0
         self.donezoom = 0
         self.pres = 0
+        self.vaccum_state = False
+        self.led_stat = 0
+
+    def ts_thread_loop(self, prevCmd):
+        # if(self.mainMessageQueue.not_empty):
+        #     command = self.mainMessageQueue.get()
+        #     if command == prevCmd:
+
+        return prevCmd
+        
+    
+    def run_ts_sender(self):
+        prevCmd = ""
+        while True:
+            prevCmd = self.ts_thread_loop(prevCmd)
+            time.sleep(0.01)
 
     def start_serial(self):
         print("Starting serial communication...")
         self.motor_device.start_communication()
         self.perf_device.start_communication()
+        self.thread = threading.Thread(target=self.run_ts_sender)
+        self.thread.daemon = True
+        self.thread.start()
+
+    def dispatch(self, message):
+        Socket_Manager.send_all(json.dumps({"message": message, "sender": "transfer station"}))
+        if message[0:2] == "X:":
+            self.x_pos = float(message[2:])
+        elif message[0:2] == "Y:":
+            self.y_pos = float(message[2:])
+        elif message[0:5] == "TEMP:":
+            self.temp = float(message[5:])
+        elif message[0:9] == "DONEZOOM:":
+            self.donezoom = float(message[9:])
+        elif message[0:5] == "PRES:":
+            self.pres = float(message[5:])
+        else:
+            print(message)
 
     # TODO: Change structure
     def send_motor(self, msg):
-        self.motor_device.send_command_immediately(msg)
+        self.motor_device.send_to_station(msg)
 
     def send_perf(self, msg):
-        self.perf_device.send_command_immediately(msg)
+        self.perf_device.send_to_station(msg)
 
     def move_abs(self, x, y):
         self.send_motor(f"ABS{x}{y}")
@@ -60,24 +99,6 @@ class Transfer_Station:
     def set_led(self, val):
         self.send_perf(f"LEV={val}")
 
-    def dispatch(self, message):
-        print(message)
-        if message[0:2] == "X:":
-            self.x_pos = float(message[2:])
-        elif message[0:2] == "Y:":
-            self.y_pos = float(message[2:])
-        elif message[0:5] == "TEMP:":
-            self.temp = float(message[5:])
-        elif message[0:9] == "DONEZOOM:":
-            self.donezoom = float(message[9:])
-        elif message[0:5] == "PRES:":
-            self.pres = float(message[5:])
-        else:
-            print(message)
-        Socket_Manager.send_all(json.dumps({"message": message, "sender": "transfer station"}))
-            # print("Unknown Packet")
-
-
     def __del__(self):
         print("ENDING COMMUNICATION TO TRANSFER STATION...")
         self.motor_device.end_communication()
@@ -86,21 +107,12 @@ class Transfer_Station:
 
 
 class Serial_Obj:
-    QUEUE_BUFFER_SIZE = 1000
     
     def __init__(self, port, callback) -> None:
-        self.to_serial_queue = Queue(Serial_Obj.QUEUE_BUFFER_SIZE)
-        # self.from_serial_queue = Queue(Serial_Obj.QUEUE_BUFFER_SIZE)
         self.port = port
         self.callback = callback
         self.sim_test = os.getenv("sim_test")
         self.sim_test = bool(self.sim_test)
-
-    def add_command_buffer(self, command):
-        self.to_serial_queue.put(command)
-
-    def send_command_immediately(self, command):
-        self.send_to_station(command)
         
     def start_communication(self):
         if self.sim_test:
@@ -135,7 +147,7 @@ class Serial_Obj:
         def start_communication(self):
             pass
         def write(self, b, /):
-            pass
+            print(f"Mock Serial Write: {str(b)[2:len(str(b))-5]}")
         def readline(self):
             return "b\'\'"
         def close(self):
