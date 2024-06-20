@@ -4,6 +4,7 @@ import "./App.css";
 import ConsoleLog from "./components/ConsoleLog";
 import ConsoleInput from "./components/ConsoleInput"
 import useSocketJSON from "./hooks/useSocketJSON"
+import CustomButton from "./components/CustomButton";
 
 function App() {
   const WS_URL = "ws://127.0.0.1:8765";
@@ -42,7 +43,18 @@ function App() {
         >
           <div id="subcontrols-container" className="row-span-1 col-span-5 border-2 border-black">
             <ConsoleInput />
+            <div className="p-1 flex gap-2">
+              <CustomButton message={"tc1"} buttonText={"tcccc"}/>
+            </div>
+            <div className="p-1 flex gap-2">
+              <CustomButton message={"tc1"} buttonText={"tcccc"}/>
+            </div>
+            <div className="p-1 flex gap-2">
+              <CustomButton message={"snap"} buttonText={"Snap a Picture"}/>
+            </div>
+            
           </div>
+          
           <div className="row-span-1 col-span-1 border-2 border-black">
             Choose Axis Button
           </div>
