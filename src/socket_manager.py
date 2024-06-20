@@ -76,8 +76,9 @@ class Socket_Manager:
         elif data["message"][0] == "#":
             Socket_Manager.testFunction()
         elif data["message"] == "snap":
-            Socket_Manager.send_all("snaped")
             Camera.global_list[0].snap_image()
+            Socket_Manager.send_all(json.dumps({"message": "snapped", "sender": "transfer station"}))
+            
             
         else:
             TRANSFER_STATION.send_motor(data["message"][0:])

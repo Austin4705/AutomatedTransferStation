@@ -1,0 +1,1 @@
+cd src && conda activate automatedTransfer && python main.py

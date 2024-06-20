@@ -4,20 +4,21 @@ from queue import Queue
 import json
 import os         
 
+from socket_manager import Socket_Manager
+
 class Transfer_Station:
     """
     This class is specifically designed for the HQ Graphene Transfer Station. 
     It is responsible for handling the serial communication between the station and the motor controller and the performance controller. 
     It also has functions to send commands to the motor controller and the performance controller.
     """
-    def __init__(self, message_callback) -> None:
+    def __init__(self, message_callback, socket_manager) -> None:
         print("Initializing Transfer Station...")
-        self.portCtrl1 = os.getenv("motorControllerPort")
-        self.portCtrl2 = os.getenv("perfControllerPort")
+        self.portCtrl1 = "COM3"
+        self.portCtrl2 = "COM4"
 
-        self.motor_device = Serial_Obj(self.portCtrl1, message_callback)
-        self.perf_device = Serial_Obj(self.portCtrl2, message_callback)
-        self.start_serial()
+        self.motor_device = Serial_Obj(self.portCtrl1, self.dispatch)
+        self.perf_device = Serial_Obj(self.portCtrl2, self.dispatch)
         self.message_callback = message_callback
 
         self.x_pos = 0
@@ -59,6 +60,24 @@ class Transfer_Station:
     def set_led(self, val):
         self.send_perf(f"LEV={val}")
 
+    def dispatch(self, message):
+        print(message)
+        if message[0:2] == "X:":
+            self.x_pos = float(message[2:])
+        elif message[0:2] == "Y:":
+            self.y_pos = float(message[2:])
+        elif message[0:5] == "TEMP:":
+            self.temp = float(message[5:])
+        elif message[0:9] == "DONEZOOM:":
+            self.donezoom = float(message[9:])
+        elif message[0:5] == "PRES:":
+            self.pres = float(message[5:])
+        else:
+            print(message)
+        Socket_Manager.send_all(json.dumps({"message": message, "sender": "transfer station"}))
+            # print("Unknown Packet")
+
+
     def __del__(self):
         print("ENDING COMMUNICATION TO TRANSFER STATION...")
         self.motor_device.end_communication()
@@ -83,10 +102,11 @@ class Serial_Obj:
         self.send_to_station(command)
         
     def start_communication(self):
-        if not self.sim_test:
-            self.device = Serial(port=self.port, baudrate=9600, timeout=.1) 
-        else:
-            self.device = Serial_Obj.MockSerial()
+        self.device = Serial(port=self.port, baudrate=9600, timeout=.1) 
+        # if self.sim_test:
+        #     self.device = Serial_Obj.MockSerial()
+        # else:
+        #     print("Starting serial")
         self.thread = threading.Thread(target=self.listen_serial)
         self.thread.daemon = True
         self.thread.start()
