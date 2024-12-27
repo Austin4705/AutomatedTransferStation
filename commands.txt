@@ -5,3 +5,4 @@
 &Camera.save_image(Camera.global_list[0].get_frame())
 
 
+cd src ; conda activate automatedTransfer ; main.py 

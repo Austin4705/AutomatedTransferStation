@@ -2,19 +2,28 @@ import threading
 from dotenv import load_dotenv, find_dotenv
 import os
 import time
-
+import sys 
+import ctypes
 from transfer_station import Transfer_Station
 from socket_manager import Socket_Manager
 from camera import Camera
 import data_parser
 import web_server
 
+def raise_exception(thread):
+    thread_id = thread.native_id
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id,
+            ctypes.py_object(SystemExit))
+    if res > 1:
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
+        print('Exception raise failure')
+
 if __name__ == '__main__':
     # Load enviroment variables
     find_dotenv()
     load_dotenv()
-    sim_test = os.getenv("sim_test") 
-    sim_test = bool(sim_test) 
+    sim_test = os.getenv("sim_test")
+    sim_test = sim_test != "False" 
     # Wait for camera server to initialize
     camera0 = Camera(0)
     if sim_test:
@@ -44,15 +53,14 @@ if __name__ == '__main__':
     ts_listening_therad.daemon = True
     ts_listening_therad.start()
 
-    
-    # for i in range(1000):
-    #     time.sleep(2)
-    #     print(f"Sending {i}")
-    #     Socket_Manager.send_all("TestMessage")
-
     input()
-    print("Finsihed Exec")
+
     for thread in threading.enumerate(): 
+        if thread.daemon:
+            thread.join
+    for thread in threading.enumerate():
         print(thread.name)
         print(thread.daemon)
-    exit(0)
+    print("Done")
+    quit()
+    # exit(0)

@@ -17,8 +17,8 @@ class Transfer_Station:
 
     def __init__(self, message_callback, socket_manager) -> None:
         print("Initializing Transfer Station...")
-        self.portCtrl1 = "COM3"
-        self.portCtrl2 = "COM4"
+        self.portCtrl1 = "COM8"
+        self.portCtrl2 = "COM9"
 
         self.motor_device = Serial_Obj(self.portCtrl1, self.dispatch)
         self.perf_device = Serial_Obj(self.portCtrl2, self.dispatch)
@@ -112,7 +112,7 @@ class Serial_Obj:
         self.port = port
         self.callback = callback
         self.sim_test = os.getenv("sim_test")
-        self.sim_test = bool(self.sim_test)
+        self.sim_test = self.sim_test != "False" 
         
     def start_communication(self):
         if self.sim_test:

@@ -75,17 +75,23 @@ class Socket_Manager:
                 print(f"User defined command wrong. Error:\n{error}")
         elif data["message"][0] == "#":
             Socket_Manager.testFunction()
-        elif data["message"] == "snap":
+        elif data["message"] == "snap0":
             Camera.global_list[0].snap_image()
             Socket_Manager.send_all(json.dumps({"message": "snapped", "sender": "transfer station"}))
+        elif data["message"] == "snap1":
+            Camera.global_list[1].snap_image()
+            Socket_Manager.send_all(json.dumps({"message": "snapped", "sender": "transfer station"}))
+        elif data["message"] == "snap2":
+            Camera.global_list[2].snap_image()
+            Socket_Manager.send_all(json.dumps({"message": "snapped", "sender": "transfer station"}))
         elif data["message"] == "moveUp":
-            TRANSFER_STATION.send_motor("RELY1")
+            TRANSFER_STATION.send_motor("RELY0.1")
         elif data["message"] == "moveRight":
-            TRANSFER_STATION.send_motor("RELX1")
+            TRANSFER_STATION.send_motor("RELX-0.1")
         elif data["message"] == "moveLeft":
-            TRANSFER_STATION.send_motor("RELX-1")
+            TRANSFER_STATION.send_motor("RELX0.1")
         elif data["message"] == "moveDown":
-            TRANSFER_STATION.send_motor("RELY-1")
+            TRANSFER_STATION.send_motor("RELY-0.1")
         elif data["message"] == "echo":
             Socket_Manager.send_all(json.dumps({"message": "echoACK", "sender": "transfer station"}))
             

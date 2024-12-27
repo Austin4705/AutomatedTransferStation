@@ -38,3 +38,8 @@ cd client
 npm run dev
 
 conda activate automatedTransfer && cd src && python main.py
+
+
+set-executionpolicy unrestricted
+conda init powershell
+

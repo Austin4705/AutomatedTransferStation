@@ -23,19 +23,19 @@ function App() {
           id="camera1-container"
           className="row-start-1 row-span-2 col-span-4 border-2 border-black"
         >
-          <CameraFeed id={"snapshot_feed0"} />
+          <CameraFeed id={"video_feed1"} />
         </div>
         <div
           id="camera2-container"
           className="row-start-1 row-span-1 col-span-2 border-2 border-black"
         >
-          <CameraFeed id={"video_feed0"} />
+          <CameraFeed id={"snapshot_feed1"} />
         </div>
         <div
           id="camera3-container"
           className="row-start-2 row-span-1 col-span-2 border-2 border-black"
         >
-          <CameraFeed id={"video_feed0"} />
+          <CameraFeed id={"video_feed2"} />
         </div>
         <div
           id="controls-container"
@@ -44,13 +44,13 @@ function App() {
           <div id="subcontrols-container" className="row-span-1 col-span-5 border-2 border-black">
             <ConsoleInput />
             <div className="p-1 flex gap-2">
-              <CustomButton message={"tc1"} buttonText={"tcccc"}/>
+              <CustomButton message={"snap0"} buttonText={"Snap a Picture0"}/>
             </div>
             <div className="p-1 flex gap-2">
-              <CustomButton message={"tc1"} buttonText={"tcccc"}/>
+              <CustomButton message={"snap1"} buttonText={"Snap a Picture1"}/>
             </div>
             <div className="p-1 flex gap-2">
-              <CustomButton message={"snap"} buttonText={"Snap a Picture"}/>
+              <CustomButton message={"snap2"} buttonText={"Snap a Picture2"}/>
             </div>
             
           </div>
