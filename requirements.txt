@@ -4,3 +4,4 @@ websockets
 pyserial
 python-dotenv
 dotenv
+matplotlib
