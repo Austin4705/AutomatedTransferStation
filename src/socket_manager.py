@@ -56,7 +56,7 @@ class Socket_Manager:
             if isinstance(packet, str):
                 packet = json.loads(packet)  # parse again if still a string
             # # print(f"Message: {message}")
-            print(f"Received message: {packet}")
+            # print(f"Received message: {packet}")
             packet_type = packet.get("type")
 
             # Validate packet structure

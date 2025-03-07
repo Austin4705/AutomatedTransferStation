@@ -1,97 +1,99 @@
-import CameraFeed from "./components/CameraFeed";
-
+import { useEffect } from "react";
+import { useRecoilValue } from "recoil";
 import "./App.css";
-import ConsoleLog from "./components/ConsoleLog";
-import ConsoleInput from "./components/ConsoleInput"
-import useSocketJSON from "./hooks/useSocketJSON"
-import CustomButton from "./components/CustomButton";
+import CameraDisplay from "./components/CameraDisplay";
+import ConnectionStatus from "./components/ConnectionStatus";
+import CommandLog from "./components/CommandLog";
+import ResponseLog from "./components/ResponseLog";
+import CommandInput from "./components/CommandInput";
+import PacketInput from "./components/PacketInput";
+import PositionDisplay from "./components/PositionDisplay";
+import ActionButtons from "./components/ActionButtons";
+import useSocketJSON from "./hooks/useSocketJSON";
+import { jsonStateAtom } from "./state/jsonState";
+import { PacketManager } from "./packets/PacketHandler";
+import useAppendConsole from "./hooks/useAppendConsole";
+import { initializeStore } from "./state/store";
 
 function App() {
   const WS_URL = "ws://127.0.0.1:8765";
   useSocketJSON(WS_URL);
+  const jsonState = useRecoilValue(jsonStateAtom);
+  const appendConsole = useAppendConsole();
+
+  // Initialize the store with the appendConsole function
+  useEffect(() => {
+    initializeStore(appendConsole);
+  }, [appendConsole]);
+
+  useEffect(() => {
+    // Initialize packet system
+    PacketManager.initialize().then(() => {
+      console.log("Packet system initialized");
+    });
+  }, []);
+
+  useEffect(() => {
+    if (jsonState.lastJsonMessage) {
+      console.log("Received websocket message:", jsonState.lastJsonMessage);
+      PacketManager.handlePacket(jsonState.lastJsonMessage as any);
+    }
+  }, [jsonState.lastJsonMessage]);
 
   return (
-    <>
-      <div
-        id="grid"
-        className="p-4 w-full h-full grid grid-rows-4 grid-cols-10 gap-4"
-      >
-        <div id="log-container" className="row-start-1 row-span-2 col-span-4">
-          <ConsoleLog />
+    <div className="app-container">
+      <header className="app-header">
+        <h1>Automated Transfer Station</h1>
+        <ConnectionStatus />
+      </header>
+      
+      <main className="app-content">
+        <div className="camera-section">
+          <div className="camera-container primary">
+            <h2>Primary Camera</h2>
+            <CameraDisplay />
+          </div>
+          <div className="camera-container secondary">
+            <h2>Secondary Camera</h2>
+            <CameraDisplay />
+          </div>
         </div>
-        <div
-          id="camera1-container"
-          className="row-start-1 row-span-2 col-span-4 border-2 border-black"
-        >
-          <CameraFeed id={"video_feed0"} />
-        </div>
-        <div
-          id="camera2-container"
-          className="row-start-1 row-span-1 col-span-2 border-2 border-black"
-        >
-          <CameraFeed id={"snapshot_feed0"} />
-        </div>
-        <div
-          id="camera3-container"
-          className="row-start-2 row-span-1 col-span-2 border-2 border-black"
-        >
-          <CameraFeed id={"video_feed2"} />
-        </div>
-        <div
-          id="controls-container"
-          className="row-start-3 row-span-2 col-span-8 h-full grid grid-row-2 grid-col-5 gap-4"
-        >
-          <div id="subcontrols-container" className="row-span-1 col-span-5 border-2 border-black">
-            <ConsoleInput />
-            <div className="p-1 flex gap-2">
-              <CustomButton message={JSON.stringify({
-                "type": "COMMAND",
-                "command": "snap0",
-                "value": 0
-              })} buttonText={"Snap a Picture0"}/>
-            </div>
-            <div className="p-1 flex gap-2">
-              <CustomButton message={"snap1"} buttonText={"Snap a Picture1"}/>
-            </div>
-            <div className="p-1 flex gap-2">
-              <CustomButton message={"snap2"} buttonText={"Snap a Picture2"}/>
-            </div>
-            
+        
+        <div className="control-section">
+          <div className="position-container">
+            <h2>Position Data</h2>
+            <PositionDisplay />
           </div>
           
-          <div className="row-span-1 col-span-1 border-2 border-black">
-            Choose Axis Button
+          <div className="action-container">
+            <h2>Actions</h2>
+            <ActionButtons />
           </div>
-          <div className="border-2 border-black">Controller 1
-            <div className="h-full w-full">
-              <CustomButton message={"moveLeft"} buttonText={"Left"} className="top-50 left-0 translate-x-0.5"/>
-              <CustomButton message={"moveRight"} buttonText={"Right"} className="top-50 right-0 translate-x-0.5"/>
+          
+          <div className="input-container">
+            <div className="command-input">
+              <h2>Custom Command</h2>
+              <CommandInput />
+            </div>
+            <div className="packet-input">
+              <h2>Custom Packet</h2>
+              <PacketInput />
             </div>
           </div>
-          <div className="border-2 border-black">Controller 2
-            <div className="h-full w-full">
-              <CustomButton message={"moveUp"} buttonText={"Up"} className="top-0 left-50" />
-              <CustomButton message={"moveDown"} buttonText={"Down"} className="down-0 left-50"/>
-            </div>
+        </div>
+        
+        <div className="log-section">
+          <div className="log-container">
+            <h2>Command Log</h2>
+            <CommandLog />
           </div>
-          <div className="border-2 border-black">Controller 3</div>
-          <div className="border-2 border-black">Controller 4</div>
+          <div className="log-container">
+            <h2>Response Log</h2>
+            <ResponseLog />
+          </div>
         </div>
-        <div
-          id="data-container"
-          className="row-start-3 row-span-2 col-span-2 border-2 border-black"
-        >
-          Data Box
-        </div>
-      </div>
-      {/* <div
-          className="m-auto grid gap-20"
-          style={{ gridTemplateColumns: "1fr 1fr" }}
-        >
-          <Console />
-          <CameraFeed id={1} />
-        </div> */}
-    </>
+      </main>
+    </div>
   );
 }
 

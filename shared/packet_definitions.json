@@ -6,10 +6,16 @@
         "value": "float"
       }
     },
+    "REQUEST_LOG_COMMANDS":{
+      "fields": {}
+    },
     "LOG_COMMANDS":{
       "fields": {
         "command": "string"
       }
+    },
+    "REQUEST_LOG_RESPONSE":{
+      "fields": {}
     },
     "LOG_RESPONSE":{
       "fields": {

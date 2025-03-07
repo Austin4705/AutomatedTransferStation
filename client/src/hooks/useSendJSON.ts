@@ -1,23 +1,35 @@
+import { useCallback } from "react";
 import { useRecoilValue } from "recoil";
-import {jsonStateAtom} from "../state/jsonState"
+import { jsonStateAtom } from "../state/jsonState";
 import useAppendConsole from "./useAppendConsole";
-import { consoleMessage } from "../state/consoleState";
 
-export default function useSendJSON() {
+export const useSendJSON = () => {
   const jsonState = useRecoilValue(jsonStateAtom);
   const appendConsole = useAppendConsole();
 
-  const sendClientData = (message: string) => {
-    if (message.length == 0) return;
+  const sendJson = useCallback(
+    (data: any) => {
+      if (jsonState.sendJsonMessage) {
+        // Log the outgoing message to the console
+        appendConsole({
+          sender: "Client",
+          message: JSON.stringify(data),
+        });
+        
+        // Send the message
+        jsonState.sendJsonMessage(data);
+      } else {
+        console.error("WebSocket connection not established");
+        appendConsole({
+          sender: "Error",
+          message: "WebSocket connection not established",
+        });
+      }
+    },
+    [jsonState.sendJsonMessage, appendConsole]
+  );
 
-    // It will almost never be null except the very beginning init moments
-    if (jsonState.sendJsonMessage === null) return;
+  return sendJson;
+};
 
-    const msg: consoleMessage = message
-
-    jsonState.sendJsonMessage(msg);
-    appendConsole(msg);
-  };
-
-  return sendClientData;
-}
+export default useSendJSON;
