@@ -5,6 +5,7 @@ from queue import Queue
 import websockets
 from typing import Any, Dict, Callable
 import inspect
+from packet_handlers import PacketHandlers
 
 class Socket_Manager:
     """
@@ -18,24 +19,75 @@ class Socket_Manager:
     CLIENT_DATA_QUEUE = Queue(QUEUE_BUFFER_SIZE)
 
     # Load packet definitions
-    PACKET_DEFS = {
-        "COMMAND": {
-            "fields": {
-                "type": "string",
-                "command": "string",
-                "value": "int"
-            }
-        },
-        "ERROR": {
-            "fields": {
-                "code": "int",
-                "message": "string"
-            }
-        }
-    }
+    with open("./../shared/packet_definitions.json", "r") as f:
+        PACKET_DEFS = json.load(f)["packets"]
 
     # Dictionary to store packet handlers
-    packet_handlers: Dict[str, Callable] = {}
+    packet_handlers: Dict[str, Callable] = PacketHandlers.handlers
+
+    def start():
+        pass
+        asyncio.run(Socket_Manager.start_socket_server())
+
+    async def start_socket_server():
+        async with serve(Socket_Manager.conn_handler, "localhost", 8765):
+            await asyncio.Future()  # run forever
+
+    async def conn_handler(websocket):
+        """
+        Main handler that gets called on each new websocket handshake
+        """
+        Socket_Manager.CONNECTIONS.add(websocket)
+        print(f"New connection created {websocket}")
+
+        try:
+            async for message in websocket:
+                Socket_Manager.handle_packet(message)
+
+        finally:
+            Socket_Manager.CONNECTIONS.remove(websocket)
+            print(f"Connection removed {websocket}")
+
+    @classmethod
+    def handle_packet(cls, message: str):
+        """Handle incoming packets"""
+        try:
+            packet = json.loads(message)
+            if isinstance(packet, str):
+                packet = json.loads(packet)  # parse again if still a string
+            # # print(f"Message: {message}")
+            print(f"Received message: {packet}")
+            packet_type = packet.get("type")
+
+            # Validate packet structure
+            if not cls.validate_packet_data(packet_type, packet):
+                raise ValueError(f"Invalid packet data for type {packet_type}")
+
+            handler = cls.packet_handlers.get(packet_type, cls.default_handler)
+            handler(packet_type, packet)
+
+
+        except json.JSONDecodeError as e:
+            print(f"Invalid JSON format: {e}")
+            error_data = {
+                "type": "ERROR",
+                "data": {
+                    "code": 400,
+                    "message": "Invalid JSON format"
+                }
+            }
+            cls.send_all(json.dumps(error_data))
+        except Exception as e:
+            print(f"Error handling packet: {e}")
+            error_data = {
+                "type": "ERROR",
+                "data": {
+                    "code": 500,
+                    "message": str(e)
+                }
+            }            # Call the appropriate handler or default handler
+            cls.send_all(json.dumps(error_data))
+
 
     @classmethod
     def validate_packet_data(cls, packet_type: str, data: dict) -> bool:
@@ -45,14 +97,6 @@ class Socket_Manager:
 
         expected_fields = cls.PACKET_DEFS[packet_type]["fields"]
         
-        # For COMMAND packets, validate the entire packet
-        if packet_type == "COMMAND":
-            required_fields = {"type", "command", "value"}
-            if not all(field in data for field in required_fields):
-                return False
-            return True
-
-        # For other packets, validate fields as before
         for field, expected_type in expected_fields.items():
             if field not in data:
                 return False
@@ -72,103 +116,29 @@ class Socket_Manager:
         return True
 
     @classmethod
-    def packet_handler(cls, packet_type: str):
-        """Decorator to register packet handlers"""
-        def decorator(func):
-            cls.packet_handlers[packet_type] = func
-            return func
-        return decorator
-
-    @classmethod
-    @packet_handler("COMMAND")
-    def handle_command(cls, packet_type: str, data: dict):
-        """Handle COMMAND packets"""
-        command = data.get("command")
-        value = data.get("value")
-        print(f"Processing command: {command} with value: {value}")
-        # Put the command in the queue for processing
-        cls.CLIENT_DATA_QUEUE.put(data)
-
-    @classmethod
     def default_handler(cls, packet_type: str, data: dict):
         """Default handler for unhandled packet types"""
         print(f"Received unhandled packet type: {packet_type}")
         print("Data:", json.dumps(data, indent=2))
 
     @classmethod
-    def handle_packet(cls, packet: dict):
-        """Handle incoming packets"""
-        try:
-            # If the packet is already parsed JSON, use it directly
-            if isinstance(packet, dict):
-                data = packet
-            else:
-                # Otherwise parse it
-                data = json.loads(packet)
-
-            packet_type = data.get("type")
-            if not packet_type:
-                raise ValueError("Missing packet type")
-
-            # For COMMAND packets, validate the entire packet
-            if not cls.validate_packet_data(packet_type, data):
-                raise ValueError(f"Invalid packet data for type {packet_type}")
-
-            # Call the appropriate handler or default handler
-            handler = cls.packet_handlers.get(packet_type, cls.default_handler)
-            handler(packet_type, data)
-
-        except Exception as e:
-            error_data = {
-                "type": "ERROR",
-                "data": {
-                    "code": 500,
-                    "message": str(e)
-                }
-            }
-            cls.send_all(json.dumps(error_data))
-
-    @classmethod
     def send_all(cls, msg: str):
         """Send message to all connected clients"""
-        print(f"Manager {cls.CONNECTIONS}, {msg}")
+        #print(f"Manager {cls.CONNECTIONS}, {msg}")
         websockets.broadcast(cls.CONNECTIONS, msg)
 
-    async def conn_handler(websocket):
-        """
-        Main handler that gets called on each new websocket handshake
-        """
-        Socket_Manager.CONNECTIONS.add(websocket)
-        print(f"New connection created {websocket}")
-
-        try:
-            async for message in websocket:
-                data = json.loads(message)
-                print(f"Received message: {data}")
-                Socket_Manager.handle_packet(data)
-                Socket_Manager.CLIENT_DATA_QUEUE.put(data)
-
-        finally:
-            Socket_Manager.CONNECTIONS.remove(websocket)
-            print(f"Connection removed {websocket}")
-
-    async def start_socket_server():
-        async with serve(Socket_Manager.conn_handler, "localhost", 8765):
-            await asyncio.Future()  # run forever
-
-    def start():
-        pass
-        asyncio.run(Socket_Manager.start_socket_server())
 
     # Socket stuff
     def socket_dispatch_thread(TRANSFER_STATION):
         while True:
             if Socket_Manager.CLIENT_DATA_QUEUE.not_empty:
-                data = Socket_Manager.CLIENT_DATA_QUEUE.get()
-                message = data["message"]
-                print(f"Received message: {message}")
+                string_data = Socket_Manager.CLIENT_DATA_QUEUE.get()
+                print(f"Received message-s: {string_data}")
+                data = json.loads(string_data)
+                message = data.get("command")
                 # CALL DISPATCH HERE
                 #Socket_Manager.socket_dispatch(data, TRANSFER_STATION)
+
 
     def ts_sending_thread(TRANSFER_STATION):
         while True:
