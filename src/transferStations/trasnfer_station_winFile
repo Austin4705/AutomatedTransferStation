@@ -1,0 +1,107 @@
+import time
+import sys
+import re
+from datetime import datetime
+
+
+import win32pipe, win32file, pywintypes
+
+
+
+
+
+
+
+#Command Server Class to Communicate with the HQ Graphene Transfer Station
+class CommandServer:
+    def __init__(self):
+        self.pipe_name = r'\\.\pipe\HQ_server'
+        self.message_history = []
+
+    def send(self, data):
+        try:
+            handle = win32file.CreateFile(
+                self.pipe_name,
+                win32file.GENERIC_READ | win32file.GENERIC_WRITE,
+                0,
+                None,
+                win32file.OPEN_EXISTING,
+                0,
+                None
+            )
+            res = win32pipe.SetNamedPipeHandleState(handle, win32pipe.PIPE_READMODE_MESSAGE, None, None)
+
+            input_data = str.encode(data + '\n')
+            # Send instruction data to c# server
+            win32file.WriteFile(handle, input_data)
+
+            # Receive data from Python client
+            result, resp = win32file.ReadFile(handle, 64*1024)
+            win32file.CloseHandle(handle)
+            msg = resp.decode("utf-8").strip()
+            
+            # Add timestamp and store message
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            message_entry = {
+                'timestamp': timestamp,
+                'command': data,
+                'response': msg
+            }
+            self.message_history.append(message_entry)
+            
+            # Print the message immediately with newlines removed
+            print(f"[{timestamp}] Command: {data} -> Response: {msg.replace('\n', '')}")
+            
+            return msg
+
+        except pywintypes.error as e:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+            error_msg = ""
+            if e.args[0] == 2:
+                error_msg = "no pipe, trying again in a sec"
+                print(f"[{timestamp}] {error_msg}")
+                time.sleep(1)
+            elif e.args[0] == 109:
+                error_msg = "broken pipe, bye bye"
+                print(f"[{timestamp}] {error_msg}")
+            
+            # Store error in message history
+            message_entry = {
+                'timestamp': timestamp,
+                'command': data,
+                'response': error_msg,
+                'error': str(e)
+            }
+            self.message_history.append(message_entry)
+            return ""
+
+    def get_first_double(self, my_string):
+        if my_string is None or my_string.strip() == "OK":
+            return 0
+        numeric_const_pattern = r'[-+]?(?:(?:\d*\.\d+)|(?:\d+\.?)(?:[Ee][+-]?\d+)?)'
+        rx = re.compile(numeric_const_pattern)
+        matches = rx.findall(my_string)
+        if not matches:
+            return 0
+        return float(matches[0])
+
+    def get_message_history(self):
+        """Return the full message history"""
+        return self.message_history
+
+    def print_message_history(self):
+        """Print the entire message history"""
+        print("\nMessage History:")
+        print("-" * 80)
+        for entry in self.message_history:
+            print(f"[{entry['timestamp']}] Command: {entry['command']}")
+            print(f"Response: {entry['response']}")
+            if 'error' in entry:
+                print(f"Error: {entry['error']}")
+            print("-" * 80)
+
+
+
+
+
+

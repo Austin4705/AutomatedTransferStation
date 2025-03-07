@@ -1,72 +1,82 @@
 # Automated Transfer Program
 
-Created by Austin Wu for the Yasuda Lab at Cornell. The intention is to make a platform for 2d material automation platforms that can interface with any station, run flake searching (and potentially automated stacking algorithms), and also control the station automatically.
+## Overview
+This platform, developed by Austin Wu for the Yasuda Lab at Cornell, is designed for 2D material automation. It provides:
+- Interface capabilities with various stations
+- Flake searching functionality
+- Potential automated stacking algorithms
+- Automated station control
 
-## Setup
+## Prerequisites
+- [Miniconda](https://docs.conda.io/en/latest/miniconda.html) (Make sure it's installed and added to your PATH)
+- Python 3.11.9
+- Node.js and npm (for the client application)
 
-First install miniconda. Make sure locally and add path to env
+## Installation
 
-To create and activate a conda enviroment, run
-
-```
+### 1. Set up the Python Environment
+```bash
+# Create and activate a new conda environment
 conda create -n automatedTransfer python=3.11.9
 conda activate automatedTransfer
+
+# Install dependencies
+cd /path/to/project
+pip install -r requirements.txt
 ```
 
-Then `cd` to the directory and run
-
+### 2. Install 2DMatGMM
+The project requires the [2DMatGMM](https://github.com/Jaluus/2DMatGMM) library as a submodule.
+```bash
+# From the project root directory
+pip install -e 2DMatGMM
 ```
-pip install -r ./requirements.txt
+
+### 3. Set up the Client
+```bash
+cd client
+npm install
 ```
 
-crate .env in directory and add this info
-
-```
-.env is:
+### 4. Configure Environment Variables
+Create a `.env` file in the project root directory with the following content:
+```plaintext
 sim_test = False
 motorControllerPort = "COM3"
 perfControllerPort = "COM4"
 ```
+Adjust the port values according to your setup.
 
-Now this library should be downloaded as an submodule <https://github.com/Jaluus/2DMatGMM>. Go to parent folder of 2dMatGMM (Home directory) and run
+## Running the Application
 
-```
-pip install -e 2DMatGMM
-```
-
-Now to install the client run:
-
-```
-cd client
-npm install
-cd ..
-```
-
-## Running the program
-
-In order to start the backend server run:
-
-```
+### Start the Backend Server
+```bash
+# From the project root
 cd src
 python main.py
-```
 
-Or shorthandedly
-
-```
+# Or use the shorthand command
 conda activate automatedTransfer && cd src && python main.py
 ```
 
-Ensure the `.env` file is correct for your setup. Now in another terminal to enable to ui:
-
-```
+### Launch the User Interface
+In a separate terminal:
+```bash
 cd client
 npm run dev
 ```
 
-If having issues with conda on windows (although I suggest using wsl):
+## Troubleshooting
 
-```
-set-executionpolicy unrestricted
+### Windows-specific Issues
+If you encounter Conda-related issues on Windows (WSL is recommended instead):
+```powershell
+Set-ExecutionPolicy Unrestricted
 conda init powershell
 ```
+
+## Contributing
+For questions or contributions, please contact the Yasuda Lab at Cornell.
+
+## License
+[Add your license information here]
