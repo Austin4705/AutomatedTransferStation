@@ -86,8 +86,8 @@ const UnifiedLog = () => {
         // Initialize all packet types as selected
         setSelectedPacketTypes(new Set(allPacketTypes));
         
-        // Initialize all outgoing types as selected
-        setSelectedOutgoingTypes(new Set(COMMON_OUTGOING_TYPES));
+        // Use the same packet types for outgoing messages
+        setSelectedOutgoingTypes(new Set(allPacketTypes));
         
         packetDefsLoaded.current = true;
         
@@ -100,8 +100,8 @@ const UnifiedLog = () => {
         // Initialize all packet types as selected
         setSelectedPacketTypes(new Set(COMMON_PACKET_TYPES));
         
-        // Initialize all outgoing types as selected
-        setSelectedOutgoingTypes(new Set(COMMON_OUTGOING_TYPES));
+        // Use the same packet types for outgoing messages
+        setSelectedOutgoingTypes(new Set(COMMON_PACKET_TYPES));
         
         packetDefsLoaded.current = true;
       }
@@ -124,7 +124,7 @@ const UnifiedLog = () => {
     return Array.from(allTypes).sort();
   }, [logs, definedPacketTypes]);
 
-  // Extract unique outgoing message types from logs and combine with common types
+  // Extract unique outgoing message types from logs and combine with defined types
   const outgoingTypes = useMemo(() => {
     const typesFromLogs = new Set<string>();
     logs.forEach(log => {
@@ -133,10 +133,10 @@ const UnifiedLog = () => {
       }
     });
     
-    // Combine with common outgoing types
-    const allTypes = new Set([...COMMON_OUTGOING_TYPES, ...typesFromLogs]);
+    // Combine with defined packet types (using the same source as packets)
+    const allTypes = new Set([...definedPacketTypes, ...typesFromLogs]);
     return Array.from(allTypes).sort();
-  }, [logs]);
+  }, [logs, definedPacketTypes]);
 
   // Helper function to add logs while respecting the maximum limit
   const addLogs = (newLogs: LogEntry[], replace = false) => {
