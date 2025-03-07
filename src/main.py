@@ -43,7 +43,7 @@ if __name__ == "__main__":
     flask_server_thread.daemon = True
     flask_server_thread.start()
 
-
+    # Everything up until here is fully working
 
     print("Starting Transfer Station")
     TRANSFER_STATION = Transfer_Station(data_parser.dispatch, Socket_Manager)
