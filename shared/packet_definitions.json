@@ -19,6 +19,9 @@
         "response": "string"
       }
     },
+    "REQUEST_POSITION":{
+      "fields": {}
+    },
     "POSITION": {
       "fields": {
         "x": "float",
