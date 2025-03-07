@@ -4,11 +4,11 @@ import os
 import time
 import sys
 import ctypes
-from transfer_station import Transfer_Station
+from transfer_station_HQ_Old import Transfer_Station, data_parser
 from socket_manager import Socket_Manager
 from camera import Camera
-import data_parser
 import web_server
+from cvFunctions import CVFunctions
 
 
 def raise_exception(thread):
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     cameras = Camera.initialize_all_cameras()
     
     print("Loading Model")
-    Camera.matGMM2DTransform(Camera.mockImage)
+    CVFunctions()
     print("Model Loaded")
     
     print("Initializing Flask server")
