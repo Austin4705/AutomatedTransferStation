@@ -1,0 +1,11 @@
+{
+    "sim_test": true,
+    "serial": {
+        "motor_controller_port": "COM8",
+        "performance_controller_port": "COM9"
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 5000
+    }
+} 

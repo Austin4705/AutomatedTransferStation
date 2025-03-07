@@ -23,13 +23,13 @@ function App() {
           id="camera1-container"
           className="row-start-1 row-span-2 col-span-4 border-2 border-black"
         >
-          <CameraFeed id={"video_feed1"} />
+          <CameraFeed id={"video_feed0"} />
         </div>
         <div
           id="camera2-container"
           className="row-start-1 row-span-1 col-span-2 border-2 border-black"
         >
-          <CameraFeed id={"snapshot_feed1"} />
+          <CameraFeed id={"snapshot_feed0"} />
         </div>
         <div
           id="camera3-container"
