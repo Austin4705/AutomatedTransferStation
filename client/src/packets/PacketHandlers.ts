@@ -12,6 +12,12 @@ interface PositionData {
   [key: string]: number | undefined;
 }
 
+interface TraceOverResultData {
+  message: string;
+  success: boolean;
+  flakeCount?: number;
+}
+
 // Register packet handlers
 export class PacketHandlers {
   @PacketManager.registerHandler("POSITION")
@@ -46,6 +52,19 @@ export class PacketHandlers {
   static handleCommandResult(data: any) {
     console.log("Received command result:", data);
     // Command results will be handled by the ResponseLog component
+  }
+
+  @PacketManager.registerHandler("TRACE_OVER_RESULT")
+  static handleTraceOverResult(data: any) {
+    console.log("Received trace over result:", data);
+    // Display a notification or update UI based on the result
+    if (data.success) {
+      // Show success notification
+      console.log(`Trace over completed successfully for ${data.flakeCount || 'unknown'} flakes`);
+    } else {
+      // Show error notification
+      console.error(`Trace over failed: ${data.message || 'Unknown error'}`);
+    }
   }
 
   @PacketManager.registerHandler("COMMAND")
