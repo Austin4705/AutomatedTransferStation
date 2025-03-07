@@ -5,9 +5,6 @@ from queue import Queue
 import websockets
 from camera import Camera
 
-import scripts
-
-
 class Socket_Manager:
     """
     This class handles the websockets that are used to communicate with the UI.
@@ -110,15 +107,17 @@ class Socket_Manager:
         split_msg = msg.split(" ")
         match split_msg[0]:
             case "init":
-                scripts.init(TRANSFER_STATION)
+                print("Init called, no scripts")
+                # scripts.init(TRANSFER_STATION)
             case "traceOver":
                 # n, increment, time_delay
-                scripts.traceOver(
-                    TRANSFER_STATION,
-                    int(split_msg[1]),
-                    float(split_msg[2]),
-                    float(split_msg[3]),
-                )
+                print("Trace over called, no scripts")
+                # scripts.traceOver(
+                #     TRANSFER_STATION,
+                #     int(split_msg[1]),
+                #     float(split_msg[2]),
+                #     float(split_msg[3]),
+                # )
             case _:
                 print(split_msg)
                 Socket_Manager.send_all("ack")

@@ -42,7 +42,6 @@ def setup_routes():
 def create_video_feed_route(camera_id):
     """Create a video feed route for a specific camera"""
     def video_feed():
-        
         return Response(Camera.generate_video(Camera.global_list[camera_id]),
                        mimetype='multipart/x-mixed-replace; boundary=frame')
     return video_feed
@@ -50,8 +49,7 @@ def create_video_feed_route(camera_id):
 def create_snapshot_feed_route(camera_id):
     """Create a snapshot feed route for a specific camera"""
     def snapshot_feed():
-        print(Camera.global_list[camera_id])
-        return Response(Camera.get_snapped_image(Camera.global_list[camera_id]),
+        return Response(Camera.get_snapped_image_flake_hunted(Camera.global_list[camera_id]),
                        mimetype='multipart/x-mixed-replace; boundary=frame')
     return snapshot_feed
 
