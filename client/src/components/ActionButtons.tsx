@@ -34,27 +34,6 @@ const ActionButtons = () => {
           Snap 2
         </button>
       </div>
-      
-      <div className="trace-container mt-4">
-        <h3 className="text-sm font-medium mb-2">Trace Over Command</h3>
-        <div className="trace-input-group flex gap-2">
-          <input
-            type="text"
-            placeholder="Trace command (coming soon)"
-            className="trace-input flex-grow"
-            disabled
-          />
-          <button 
-            className="trace-button"
-            disabled
-          >
-            Trace
-          </button>
-        </div>
-        <p className="text-xs text-gray-600 mt-1">
-          Trace functionality will be implemented soon
-        </p>
-      </div>
     </div>
   );
 };
