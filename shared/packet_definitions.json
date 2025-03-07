@@ -1,22 +1,39 @@
 {
   "packets": {
-    "COMMAND": {
+    "SEND_COMMAND": {
       "fields": {
         "command": "string",
         "value": "float"
       }
     },
-    "STATUS": {
+    "LOG_COMMANDS":{
       "fields": {
-        "device": "string",
-        "online": "bool"
+        "command": "string"
       }
+    },
+    "LOG_RESPONSE":{
+      "fields": {
+        "response": "string"
+      }
+    },
+    "REQUEST_POSITION": {
+      "fields": {}
     },
     "POSITION": {
       "fields": {
         "x": "float",
         "y": "float",
         "z": "float"
+      }
+    },
+    "TRACE_OVER":{
+      "fields":{
+        "JSON": "string"
+      }
+    }, 
+    "SNAP_SHOT":{
+      "fields":{
+        "camera": "int"
       }
     },
     "ERROR": {
