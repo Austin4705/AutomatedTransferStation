@@ -4,7 +4,7 @@ import os
 import time
 import sys
 import ctypes
-from transfer_station_HQ_Old import Transfer_Station, data_parser
+from transferStations.transfer_station_HQ_Old import Transfer_Station, data_parser
 from socket_manager import Socket_Manager
 from camera import Camera
 import web_server
