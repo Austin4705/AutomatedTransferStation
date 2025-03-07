@@ -147,6 +147,24 @@ export class PacketManager {
     return true;
   }
 
+  // Check if a packet type is known based on packet definitions
+  static isKnownPacketType(type: string): boolean {
+    // If we have a registered handler for this type, it's known
+    if (this.handlers.has(type)) {
+      return true;
+    }
+    
+    // If it's in our packet definitions, it's known
+    if (this.packetDefs?.packets && type in this.packetDefs.packets) {
+      return true;
+    }
+    
+    // Special case for common packet types that might not be in definitions
+    const knownTypes = [];
+    
+    return knownTypes.includes(type);
+  }
+
   // Register a listener for packet traffic
   static registerTrafficListener(listener: PacketTrafficListener) {
     this.trafficListeners.push(listener);
