@@ -8,9 +8,11 @@ import CommandInput from "./components/CommandInput";
 import PacketInput from "./components/PacketInput";
 import PositionDisplay from "./components/PositionDisplay";
 import ActionButtons from "./components/ActionButtons";
+import TraceOverBox from "./components/TraceOverBox";
 import useSocketJSON from "./hooks/useSocketJSON";
 import { jsonStateAtom } from "./state/jsonState";
 import { PacketManager } from "./packets/PacketHandler";
+import HeaderPositionDisplay from "./components/HeaderPositionDisplay";
 
 function App() {
   const WS_URL = "ws://127.0.0.1:8765";
@@ -34,7 +36,10 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>Automated Transfer Station</h1>
+        <div className="flex items-center">
+          <h1>Automated Transfer Station</h1>
+          <HeaderPositionDisplay />
+        </div>
         <ConnectionStatus />
       </header>
       
@@ -51,14 +56,19 @@ function App() {
         </div>
         
         <div className="control-section">
-          <div className="position-container">
+          {/* Hide the original position display since it's now in the header */}
+          {/* <div className="position-container">
             <h2>Position Data</h2>
             <PositionDisplay />
-          </div>
+          </div> */}
           
           <div className="action-container">
             <h2>Actions</h2>
             <ActionButtons />
+          </div>
+          
+          <div className="trace-over-container">
+            <TraceOverBox />
           </div>
           
           <div className="input-container">

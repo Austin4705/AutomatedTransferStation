@@ -37,16 +37,49 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
+  padding: 0.5rem 1rem;
   background-color: #2c3e50;
   color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .app-header h1 {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 600;
+}
+
+/* Add styles for the header position display */
+.header-position-display {
+  display: flex;
+  align-items: center;
+  margin-left: 1rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.header-position-display input[type="checkbox"] {
+  margin-right: 0.25rem;
+}
+
+.header-position-display input[type="number"] {
+  width: 3rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  color: white;
+  padding: 0.1rem 0.25rem;
+  font-size: 0.75rem;
+}
+
+.header-position-display .text-gray-300 {
+  color: rgba(209, 213, 219, 0.8);
+  font-size: 0.7rem;
+}
+
+.header-position-display .position-values {
+  margin-left: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* Main Content */
@@ -113,6 +146,7 @@
 
 .position-container,
 .action-container,
+.trace-over-container,
 .input-container {
   background-color: white;
   border-radius: 8px;
@@ -122,6 +156,7 @@
 
 .position-container h2,
 .action-container h2,
+.trace-over-container h2,
 .input-container h2 {
   margin: 0 0 0.5rem 0;
   font-size: 1rem;
@@ -140,6 +175,46 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Trace Over Box Styles */
+.trace-over-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.trace-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.trace-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.trace-button {
+  padding: 0.5rem 1rem;
+  background-color: #4a5568;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.trace-button:hover:not(:disabled) {
+  background-color: #2d3748;
+}
+
+.trace-button:disabled {
+  background-color: #cbd5e0;
+  cursor: not-allowed;
 }
 
 /* Log Section */
