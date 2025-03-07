@@ -4,28 +4,42 @@ import os
 from demo_functions import visualise_flakes, remove_vignette
 import json
 from GMMDetector import MaterialDetector
+import numpy as np
 
 
 class Camera:
-    global_list = dict()
+    global_list = dict() #Global list of camera class objects
+
     IMAGE_REPO_NAME = "images"
     contrast_dict = json.load(open("../contrastDictDir/Graphene_GMM.json", "r"))
     mockImage = cv2.imread("mockImage.png")
 
-    def __init__(self, cameraId):
-        self.video = cv2.VideoCapture(cameraId, cv2.CAP_DSHOW)
-        if not self.video.isOpened():
-            print(f"Error: Could not open camera with ID {cameraId}")
-            print(f"Camera status: {self.video.isOpened()}")
-            # Try without CAP_DSHOW
-            self.video = cv2.VideoCapture(cameraId)
-            if not self.video.isOpened():
-                print("Error: Still could not open camera without CAP_DSHOW")
-                raise RuntimeError(f"Failed to open camera {cameraId}")
-        
-        # Set some basic properties
-        self.video.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    @staticmethod
+    # Figures out how many cameras are connected to the system
+    def initialize_all_cameras(sim_test=False):
+        max_cameras_to_check = 4
+        available_cameras = []
+        for i in range(0, max_cameras_to_check):
+            cap = cv2.VideoCapture(i)
+            if not cap.isOpened():
+                cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
+                if not cap.isOpened():
+                    continue
+            available_cameras.append(i)
+            Camera.global_list[i] = Camera(i, cap)
+
+        if not available_cameras:
+            print("No cameras detected on the system!")
+            return {}
+        else: 
+            print(f"Detected {len(available_cameras)} cameras: {available_cameras}")
+            return available_cameras
+
+    def __init__(self, cameraId, cap):
+        self.video = cap
+
+        #self.video.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        #self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         Camera.global_list[cameraId] = self
         self.camera_id = cameraId
         self.snap_image()
@@ -43,7 +57,7 @@ class Camera:
             print(f"Error: Could not read frame from camera {self.camera_id}")
             return None
             
-        print(f"Frame shape: {self.frame.shape if self.frame is not None else 'None'}")
+        # print(f"Frame shape: {self.frame.shape if self.frame is not None else 'None'}")
         return self.frame
 
     def save_image(frame):
@@ -56,6 +70,7 @@ class Camera:
         self.snapshot_image = Camera.matGMM2DTransform(self.get_frame())
         #  Camera.matGMM2DTransform
 
+    @staticmethod
     def generate_video(camera):
         while True:
             frame = camera.get_frame()
@@ -66,6 +81,7 @@ class Camera:
                 b"Content-Type: image/jpeg\r\n\r\n" + png.tobytes() + b"\r\n\r\n"
             )
 
+    @staticmethod
     def get_snapped_image(camera):
         ret, png = cv2.imencode(".jpg", camera.snapshot_image)
         return (
@@ -73,6 +89,7 @@ class Camera:
             b"Content-Type: image/jpeg\r\n\r\n" + png.tobytes() + b"\r\n\r\n"
         )
 
+    @staticmethod
     def matGMM2DTransform(img):
         CONFIDENCE_THRESHOLD = 0.5
 
@@ -91,6 +108,7 @@ class Camera:
         )
         return image
 
+    @staticmethod
     def cvImageBoarderOp(img):
         # Convert to YCrCb Channel and extract cb channel
         imgYCrCb = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)
