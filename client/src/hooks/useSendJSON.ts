@@ -13,10 +13,7 @@ export default function useSendJSON() {
     // It will almost never be null except the very beginning init moments
     if (jsonState.sendJsonMessage === null) return;
 
-    const msg: consoleMessage = {
-      sender: "Client",
-      message: message,
-    };
+    const msg: consoleMessage = message
 
     jsonState.sendJsonMessage(msg);
     appendConsole(msg);
