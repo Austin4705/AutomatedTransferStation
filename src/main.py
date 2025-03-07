@@ -10,15 +10,6 @@ import web_server
 from cvFunctions import CVFunctions
 
 from transfer_station import Transfer_Station
-def raise_exception(thread):
-    thread_id = thread.native_id
-    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
-        thread_id, ctypes.py_object(SystemExit)
-    )
-    if res > 1:
-        ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, 0)
-        print("Exception raise failure")
-
 
 if __name__ == "__main__":
     # Load configuration from JSON file
@@ -69,10 +60,11 @@ if __name__ == "__main__":
     input()
 
     #Fake response
-    for i in range(10):
-        TRANSFER_STATION.send_command("Fake Response")
-    print("Done")
-    input()
+    while True:
+        input()
+        for i in range(10):
+            TRANSFER_STATION.send_command(f"Fake Response {i}")
+        print("Done")
 
     for thread in threading.enumerate():
         if thread.daemon:

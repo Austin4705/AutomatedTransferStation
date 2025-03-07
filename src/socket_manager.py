@@ -3,6 +3,8 @@ from websockets.asyncio.server import serve
 import json
 from queue import Queue
 import websockets
+from typing import Any, Dict, Callable
+import inspect
 
 class Socket_Manager:
     """
@@ -15,21 +17,83 @@ class Socket_Manager:
     # Queue of incoming messages from web browser 
     CLIENT_DATA_QUEUE = Queue(QUEUE_BUFFER_SIZE)
 
-    # How to send data to ui
-    def send_all(msg: str):
-        print(f"Manager {Socket_Manager.CONNECTIONS}, {msg}")
-        if isinstance(msg, str):
-            formatted_msg = {
-                "message": msg,
-                "sender": "Server"
-            }
-            msg = json.dumps(formatted_msg)
-        websockets.broadcast(Socket_Manager.CONNECTIONS, msg)
+    # Load packet definitions
+    with open("./../shared/packet_definitions.json", "r") as f:
+        PACKET_DEFS = json.load(f)["packets"]
 
-    async def consumer_handler(websocket):
-        async for message in websocket:
-            data = json.loads(message)
-            Socket_Manager.CLIENT_DATA_QUEUE.put(data)
+    # Dictionary to store packet handlers
+    packet_handlers: Dict[str, Callable] = {}
+
+    @classmethod
+    def validate_packet_data(cls, packet_type: str, data: dict) -> bool:
+        """Validate packet data against definition"""
+        if packet_type not in cls.PACKET_DEFS:
+            return False
+
+        expected_fields = cls.PACKET_DEFS[packet_type]["fields"]
+        
+        for field, expected_type in expected_fields.items():
+            if field not in data:
+                return False
+            
+            value = data[field]
+            
+            # Type checking
+            if expected_type == "bool" and not isinstance(value, bool):
+                return False
+            elif expected_type == "int" and not isinstance(value, int):
+                return False
+            elif expected_type == "float" and not isinstance(value, (int, float)):
+                return False
+            elif expected_type == "string" and not isinstance(value, str):
+                return False
+
+        return True
+
+    @classmethod
+    def packet_handler(cls, packet_type: str):
+        """Decorator to register packet handlers"""
+        def decorator(func):
+            cls.packet_handlers[packet_type] = func
+            return func
+        return decorator
+
+    @classmethod
+    def default_handler(cls, packet_type: str, data: dict):
+        """Default handler for unhandled packet types"""
+        print(f"Received unhandled packet type: {packet_type}")
+        print("Data:", json.dumps(data, indent=2))
+
+    @classmethod
+    def handle_packet(cls, packet: dict):
+        """Handle incoming packets"""
+        try:
+            packet_type = packet.get("type")
+            data = packet.get("data", {})
+
+            # Validate packet structure
+            if not cls.validate_packet_data(packet_type, data):
+                raise ValueError(f"Invalid packet data for type {packet_type}")
+
+            # Call the appropriate handler or default handler
+            handler = cls.packet_handlers.get(packet_type, cls.default_handler)
+            handler(packet_type, data)
+
+        except Exception as e:
+            error_data = {
+                "type": "ERROR",
+                "data": {
+                    "code": 500,
+                    "message": str(e)
+                }
+            }
+            cls.send_all(json.dumps(error_data))
+
+    @classmethod
+    def send_all(cls, msg: str):
+        """Send message to all connected clients"""
+        print(f"Manager {cls.CONNECTIONS}, {msg}")
+        websockets.broadcast(cls.CONNECTIONS, msg)
 
     async def conn_handler(websocket):
         """
@@ -41,6 +105,7 @@ class Socket_Manager:
         try:
             async for message in websocket:
                 data = json.loads(message)
+                Socket_Manager.handle_packet(data)
                 Socket_Manager.CLIENT_DATA_QUEUE.put(data)
 
         finally:
@@ -70,4 +135,8 @@ class Socket_Manager:
             if TRANSFER_STATION.exist_new_sent_commands():
                 message = TRANSFER_STATION.since_last_send()
                 for m in message:
-                    Socket_Manager.send_all(json.dumps(m))
+                    Socket_Manager.send_all(json.dumps({
+                        "type": "COMMAND",
+                        "command": m["command"],
+                        "value": 0
+                    }))
