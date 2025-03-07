@@ -2,15 +2,62 @@ import time
 import sys
 import re
 from datetime import datetime
+import platform
 
+# Only import Windows-specific modules if on Windows
+if platform.system() == 'Windows':
+    import win32pipe
+    import win32file
+    import pywintypes
+else:
+    print("Warning: Windows-specific modules could not be imported. TransferStationWinFile will not be fully functional.")
+    win32pipe = None
+    win32file = None
+    pywintypes = None
 
-import win32pipe, win32file, pywintypes
+from ..transfer_station import Transfer_Station
 
+class TransferStationWinFile(Transfer_Station):
+    def __init__(self):
+        super().__init__()
+        if platform.system() == 'Windows':
+            self.command_server = CommandServer()
+        else:
+            self.command_server = DummyCommandServer()
 
+    def send_command(self, command):
+        print(f"Sending command: {command}")
+        return self.command_server.send(command)
 
+    def receive_command(self):
+        print("Receiving commands")
+        # Implementation specific to WinFile
+        pass
 
+    def receive_commands(self):
+        print("Receiving commands")
+        pass 
 
+    def moveX(self, X):
+        """Move to X coordinate
+        X: X position
+        Status: Working
+        """
+        cmd = f"SETPOSX{X}"  # X is 0 for X-only movement
+        print(f"Moving to X position: {X}")
+        return self.cmd_server.send(cmd)
 
+    def moveY(self, Y):
+        """Move to Y coordinate
+        Y: Y position
+        Status: Working
+        """
+        cmd = f"SETPOSY{Y}"  # Y is 0 for Y-only movement
+        print(f"Moving to Y position: {Y}")
+        return self.cmd_server.send(cmd)
+
+    def autoFocus(self):
+        self.send_command("AUTOFOCUS")
 
 #Command Server Class to Communicate with the HQ Graphene Transfer Station
 class CommandServer:
@@ -39,9 +86,9 @@ class CommandServer:
             result, resp = win32file.ReadFile(handle, 64*1024)
             win32file.CloseHandle(handle)
             msg = resp.decode("utf-8").strip()
-            
+
+            timestamp = Transfer_Station.time_stamp()
             # Add timestamp and store message
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
             message_entry = {
                 'timestamp': timestamp,
                 'command': data,
@@ -100,8 +147,14 @@ class CommandServer:
                 print(f"Error: {entry['error']}")
             print("-" * 80)
 
+class DummyCommandServer:
+    def send(self, data):
+        print(f"Sending command: {data}")
+        return "OK"
 
-
+    def receive_command(self):
+        print("Receiving command")
+        return "OK"
 
 
 

@@ -4,13 +4,12 @@ import os
 import time
 import sys
 import ctypes
-from transferStations.transfer_station_HQ_Old import Transfer_Station, data_parser
 from socket_manager import Socket_Manager
 from camera import Camera
 import web_server
 from cvFunctions import CVFunctions
 
-
+from transfer_station import Transfer_Station
 def raise_exception(thread):
     thread_id = thread.native_id
     res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
@@ -46,22 +45,33 @@ if __name__ == "__main__":
     # Everything up until here is fully working
 
     print("Starting Transfer Station")
-    TRANSFER_STATION = Transfer_Station(data_parser.dispatch, Socket_Manager)
-    TRANSFER_STATION.start_serial()  # Does threading creation
+    TRANSFER_STATION = Transfer_Station()
 
     print("Starting socket")
+    # Starting the tread  that generally runs the socket server
     socket_manager_thread = threading.Thread(target=Socket_Manager.start)
     socket_manager_thread.daemon = True
     socket_manager_thread.start()
 
-    ts_listening_thread = threading.Thread(
-        target=Socket_Manager.socket_dispatch_thread, args=(TRANSFER_STATION,)
-    )
+    # Starting the thread that listens from the sockets and sends them to the right place 
+    # (handles incoming communication from the UI)
+    ts_listening_thread = threading.Thread(target=Socket_Manager.socket_dispatch_thread, args=(TRANSFER_STATION,))
     ts_listening_thread.daemon = True
     ts_listening_thread.start()
 
+    # Starting the thread that sends the commands to the transfer station
+    ts_sending_thread = threading.Thread(target=Socket_Manager.ts_sending_thread, args=(TRANSFER_STATION,))
+    ts_sending_thread.daemon = True
+    ts_sending_thread.start()
+
     print(f"System initialized with {len(Camera.global_list)} cameras: {list(Camera.global_list.keys())}")
     print("Press Enter to exit...")
+    input()
+
+    #Fake response
+    for i in range(10):
+        TRANSFER_STATION.send_command("Fake Response")
+    print("Done")
     input()
 
     for thread in threading.enumerate():

@@ -24,7 +24,9 @@ class data_parser:
             print(message)
         Socket_Manager.send_all(json.dumps({"message": message, "sender": "transfer station"}))
             # print("Unknown Packet")
-
+# print("Starting Transfer Station")
+# TRANSFER_STATION = Transfer_Station(data_parser.dispatch, Socket_Manager)
+# TRANSFER_STATION.start_serial()  # Does threading creation
 
 
 class Transfer_Station:
