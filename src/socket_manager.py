@@ -3,20 +3,21 @@ from websockets.asyncio.server import serve
 import json
 from queue import Queue
 import websockets
-from camera import Camera
 
 class Socket_Manager:
     """
     This class handles the websockets that are used to communicate with the UI.
     All you really have to know is that it has a queue of jsons that represent incoming messages and a function to send jsons to the clients.
     """
-
     QUEUE_BUFFER_SIZE = 1000
     CONNECTIONS = set()
+
+    # Queue of incoming messages from web browser 
     CLIENT_DATA_QUEUE = Queue(QUEUE_BUFFER_SIZE)
 
     # How to send data to ui
     def send_all(msg: str):
+        print(f"Manager {Socket_Manager.CONNECTIONS}, {msg}")
         websockets.broadcast(Socket_Manager.CONNECTIONS, msg)
 
     async def consumer_handler(websocket):
@@ -28,9 +29,8 @@ class Socket_Manager:
         """
         Main handler that gets called on each new websocket handshake
         """
-        print("New connection created")
-
         Socket_Manager.CONNECTIONS.add(websocket)
+        print(f"New connection created {websocket}")
 
         try:
             async for message in websocket:
@@ -39,6 +39,7 @@ class Socket_Manager:
 
         finally:
             Socket_Manager.CONNECTIONS.remove(websocket)
+            print(f"Connection removed {websocket}")
 
     async def start_socket_server():
         async with serve(Socket_Manager.conn_handler, "localhost", 8765):
@@ -49,78 +50,18 @@ class Socket_Manager:
         asyncio.run(Socket_Manager.start_socket_server())
 
     # Socket stuff
-
     def socket_dispatch_thread(TRANSFER_STATION):
         while True:
             if Socket_Manager.CLIENT_DATA_QUEUE.not_empty:
                 data = Socket_Manager.CLIENT_DATA_QUEUE.get()
-                Socket_Manager.socket_dispatch(data, TRANSFER_STATION)
+                message = data["message"]
+                print(f"Received message: {message}")
+                # CALL DISPATCH HERE
+                #Socket_Manager.socket_dispatch(data, TRANSFER_STATION)
 
-    def socket_dispatch(data, TRANSFER_STATION):
-        message = data["message"]
-        print(f"Received message: {message}")
-        if data["message"][0] == "*":
-            command = data["message"][1:]
-            Socket_Manager.command_dispatch(command, TRANSFER_STATION)
-        elif data["message"][0] == "^":
-            TRANSFER_STATION.send_perf(data["message"][1:])
-        elif data["message"][0] == "&":
-            ts = TRANSFER_STATION
-            try:
-                exec(data["message"][1:])
-            except Exception as error:
-                print(f"User defined command wrong. Error:\n{error}")
-        elif data["message"][0] == "#":
-            Socket_Manager.testFunction()
-        elif data["message"] == "snap0":
-            Camera.global_list[0].snap_image()
-            Socket_Manager.send_all(
-                json.dumps({"message": "snapped", "sender": "transfer station"})
-            )
-        elif data["message"] == "snap1":
-            Camera.global_list[1].snap_image()
-            Socket_Manager.send_all(
-                json.dumps({"message": "snapped", "sender": "transfer station"})
-            )
-        elif data["message"] == "snap2":
-            Camera.global_list[2].snap_image()
-            Socket_Manager.send_all(
-                json.dumps({"message": "snapped", "sender": "transfer station"})
-            )
-        elif data["message"] == "moveUp":
-            TRANSFER_STATION.send_motor("RELY0.1")
-        elif data["message"] == "moveRight":
-            TRANSFER_STATION.send_motor("RELX-0.1")
-        elif data["message"] == "moveLeft":
-            TRANSFER_STATION.send_motor("RELX0.1")
-        elif data["message"] == "moveDown":
-            TRANSFER_STATION.send_motor("RELY-0.1")
-        elif data["message"] == "echo":
-            Socket_Manager.send_all(
-                json.dumps({"message": "echoACK", "sender": "transfer station"})
-            )
-
-        else:
-            TRANSFER_STATION.send_motor(data["message"][0:])
-
-    def command_dispatch(msg, TRANSFER_STATION):
-        split_msg = msg.split(" ")
-        match split_msg[0]:
-            case "init":
-                print("Init called, no scripts")
-                # scripts.init(TRANSFER_STATION)
-            case "traceOver":
-                # n, increment, time_delay
-                print("Trace over called, no scripts")
-                # scripts.traceOver(
-                #     TRANSFER_STATION,
-                #     int(split_msg[1]),
-                #     float(split_msg[2]),
-                #     float(split_msg[3]),
-                # )
-            case _:
-                print(split_msg)
-                Socket_Manager.send_all("ack")
-
-    def testFunction():
-        print("testFunction called")
+    def ts_sending_thread(TRANSFER_STATION):
+        while True:
+            if TRANSFER_STATION.exist_new_sent_commands():
+                message = TRANSFER_STATION.since_last_send()
+                for m in message:
+                    Socket_Manager.send_all(json.dumps(m))

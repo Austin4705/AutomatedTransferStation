@@ -75,6 +75,16 @@ Set-ExecutionPolicy Unrestricted
 conda init powershell
 ```
 
+### Previously Useful Commands
+```python
+&scripts.traceOver(ts, 4, 0.7, 0.7, 2)
+&ts.vaccum_on()
+
+&Camera.save_image(Camera.matGMM2DTransform(Camera.global_list[0].get_frame()))
+&Camera.save_image(Camera.global_list[0].get_frame())
+```
+
+cd src ; conda activate automatedTransfer ; main.py 
 ## Contributing
 For questions or contributions, please contact the Yasuda Lab at Cornell.
 
