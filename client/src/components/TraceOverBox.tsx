@@ -1,5 +1,5 @@
 import { useSendJSON } from "../hooks/useSendJSON";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
 
@@ -46,6 +46,8 @@ const TraceOverBox = () => {
   const [traceOverStatus, setTraceOverStatus] = useState<TraceOverResult | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [speed, setSpeed] = useState<number>(50); // Default speed value (50%)
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
 
   // Update flake coordinates when count changes
   useEffect(() => {
@@ -89,66 +91,14 @@ const TraceOverBox = () => {
 
     const message = jsonState.lastJsonMessage as any;
     
-    // Handle position responses
-    if ((message.type === "POSITION" || message.type === "RESPONSE_POSITION") && 
-        positionUpdateTargetRef.current) {
-      
-      console.log("Received position data:", message);
-      
-      // Extract position data
-      const positionData: Position = {
-        x: typeof message.x === 'number' ? message.x : 0,
-        y: typeof message.y === 'number' ? message.y : 0
-      };
-      
-      // Get the target coordinate to update
-      const target = positionUpdateTargetRef.current;
-      
-      // Update the specific coordinate(s)
-      if (target.corner === "both") {
-        // Update both corners with the current position
-        const xValue = positionData.x.toFixed(3);
-        const yValue = positionData.y.toFixed(3);
-        
-        setFlakeCoordinates(prev => 
-          prev.map(flake => 
-            flake.id === target.flakeId 
-              ? { 
-                  ...flake, 
-                  topRight: { 
-                    x: xValue, 
-                    y: yValue 
-                  },
-                  bottomLeft: {
-                    x: xValue,
-                    y: yValue
-                  }
-                } 
-              : flake
-          )
-        );
-      } else {
-        // Update the specific corner
-        const xValue = positionData.x.toFixed(3);
-        const yValue = positionData.y.toFixed(3);
-        
-        setFlakeCoordinates(prev => 
-          prev.map(flake => 
-            flake.id === target.flakeId 
-              ? { 
-                  ...flake, 
-                  [target.corner]: { 
-                    x: xValue, 
-                    y: yValue 
-                  }
-                } 
-              : flake
-          )
-        );
+    // Track current position from any position messages
+    if (message.type === "POSITION" || message.type === "RESPONSE_POSITION") {
+      if (typeof message.x === 'number' && typeof message.y === 'number') {
+        setCurrentPosition({
+          x: message.x,
+          y: message.y
+        });
       }
-      
-      // Clear the target
-      positionUpdateTargetRef.current = null;
     }
     
     // Handle trace over results
@@ -169,6 +119,24 @@ const TraceOverBox = () => {
       }, 5000);
     }
   }, [jsonState.lastJsonMessage]);
+
+  // Request current position from the server
+  const requestCurrentPosition = () => {
+    sendJson({
+      type: "REQUEST_POSITION"
+    });
+  };
+
+  // Initialize by requesting the current position
+  useEffect(() => {
+    requestCurrentPosition();
+    
+    // Set up a timer to periodically request the position
+    const intervalId = setInterval(requestCurrentPosition, 5000);
+    
+    // Clean up the interval when the component unmounts
+    return () => clearInterval(intervalId);
+  }, []);
 
   const handleTraceOver = () => {
     // Validate that all coordinates are filled
@@ -235,16 +203,46 @@ const TraceOverBox = () => {
     flakeId: number, 
     corner: "topRight" | "bottomLeft" | "both"
   ) => {
-    // Set the target for the position update
-    positionUpdateTargetRef.current = {
-      flakeId,
-      corner
-    };
+    // Format the current position values
+    const xValue = currentPosition.x.toFixed(3);
+    const yValue = currentPosition.y.toFixed(3);
     
-    // Request current position from the server
-    sendJson({
-      type: "REQUEST_POSITION"
-    });
+    // Update the specific coordinate(s) with the current position
+    if (corner === "both") {
+      // Update both corners with the current position
+      setFlakeCoordinates(prev => 
+        prev.map(flake => 
+          flake.id === flakeId 
+            ? { 
+                ...flake, 
+                topRight: { 
+                  x: xValue, 
+                  y: yValue 
+                },
+                bottomLeft: {
+                  x: xValue,
+                  y: yValue
+                }
+              } 
+            : flake
+        )
+      );
+    } else {
+      // Update the specific corner
+      setFlakeCoordinates(prev => 
+        prev.map(flake => 
+          flake.id === flakeId 
+            ? { 
+                ...flake, 
+                [corner]: { 
+                  x: xValue, 
+                  y: yValue 
+                }
+              } 
+            : flake
+        )
+      );
+    }
   };
 
   // Clear coordinates for a specific flake
@@ -345,16 +343,66 @@ const TraceOverBox = () => {
     }
   };
 
-  // Handle manual edits to the JSON output
-  const handleJsonOutputChange = (value: string) => {
-    setJsonOutput(value);
+  // Trigger file input click
+  const handleImportClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Handle file selection
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        
+        // Set the JSON output without parsing
+        setJsonOutput(content);
+        
+        // Show success message
+        setTraceOverStatus({
+          success: true,
+          message: "JSON file loaded. Click 'Parse JSON' to update the form."
+        });
+        
+        // Clear status after 3 seconds
+        setTimeout(() => {
+          setTraceOverStatus(null);
+        }, 3000);
+      } catch (error) {
+        console.error("Error reading JSON file:", error);
+        setTraceOverStatus({
+          success: false,
+          message: "Error importing JSON file. Make sure it's a valid JSON file."
+        });
+      }
+    };
     
+    reader.onerror = () => {
+      setTraceOverStatus({
+        success: false,
+        message: "Error reading the file"
+      });
+    };
+    
+    reader.readAsText(file);
+    
+    // Reset the file input so the same file can be selected again
+    event.target.value = '';
+  };
+
+  // Update form fields from JSON
+  const updateFormFromJson = (jsonString: string) => {
     try {
-      const parsedJson = JSON.parse(value);
+      const parsedJson = JSON.parse(jsonString);
       
       // Update speed if present
       if (typeof parsedJson.speed === 'number') {
-        setSpeed(parsedJson.speed);
+        setSpeed(Math.min(100, Math.max(1, parsedJson.speed)));
       }
       
       if (parsedJson.flakes && Array.isArray(parsedJson.flakes)) {
@@ -379,8 +427,41 @@ const TraceOverBox = () => {
         setFlakeCoordinates(updatedCoordinates);
       }
     } catch (error) {
-      // Invalid JSON, just update the text
-      console.error("Invalid JSON:", error);
+      console.error("Error parsing JSON:", error);
+      setTraceOverStatus({
+        success: false,
+        message: "Error parsing JSON. Make sure it's a valid trace over configuration."
+      });
+    }
+  };
+
+  // Handle manual edits to the JSON output
+  const handleJsonOutputChange = (value: string) => {
+    // Just update the text without trying to parse
+    setJsonOutput(value);
+  };
+
+  // Parse the JSON and update form fields when Parse button is clicked
+  const handleParseJson = () => {
+    try {
+      updateFormFromJson(jsonOutput);
+      
+      // Show success message
+      setTraceOverStatus({
+        success: true,
+        message: "JSON parsed and form updated successfully"
+      });
+      
+      // Clear status after 3 seconds
+      setTimeout(() => {
+        setTraceOverStatus(null);
+      }, 3000);
+    } catch (error) {
+      console.error("Error parsing JSON:", error);
+      setTraceOverStatus({
+        success: false,
+        message: "Error parsing JSON. Make sure it's a valid trace over configuration."
+      });
     }
   };
 
@@ -420,6 +501,11 @@ const TraceOverBox = () => {
             />
             <span className="ml-1 text-sm">%</span>
           </div>
+        </div>
+
+        {/* Current Position Display */}
+        <div className="current-position mb-2 text-xs text-gray-600">
+          Current Position: X: {currentPosition.x.toFixed(3)}, Y: {currentPosition.y.toFixed(3)}
         </div>
 
         {/* Compact Flake Coordinates Table */}
@@ -510,13 +596,37 @@ const TraceOverBox = () => {
         <div className="json-output-container mt-4">
           <div className="flex justify-between items-center mb-1">
             <h3 className="text-sm font-medium">JSON Output:</h3>
-            <button
-              onClick={saveJsonToFile}
-              className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-              title="Save JSON to file"
-            >
-              Save JSON
-            </button>
+            <div className="flex space-x-2">
+              <button
+                onClick={handleImportClick}
+                className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                title="Import JSON from file"
+              >
+                Import JSON
+              </button>
+              <button
+                onClick={handleParseJson}
+                className="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
+                title="Parse JSON and update form fields"
+              >
+                Parse JSON
+              </button>
+              <button
+                onClick={saveJsonToFile}
+                className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                title="Save JSON to file"
+              >
+                Save JSON
+              </button>
+              {/* Hidden file input for importing */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".json"
+                className="hidden"
+              />
+            </div>
           </div>
           <textarea
             value={jsonOutput}
