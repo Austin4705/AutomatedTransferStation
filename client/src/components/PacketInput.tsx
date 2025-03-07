@@ -35,7 +35,7 @@ const PacketInput = () => {
             setPacketJson(e.target.value);
             setError(null); // Clear error when input changes
           }}
-          placeholder='Enter JSON packet (e.g., {"type": "COMMAND", "command": "snap0"})'
+          placeholder='Enter JSON packet (e.g., {"type": "SNAP_SHOT", "camera": 0})'
           className="packet-input-field"
           rows={3}
           style={{ 

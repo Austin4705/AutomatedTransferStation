@@ -3,8 +3,7 @@ import { useRecoilValue } from "recoil";
 import "./App.css";
 import CameraDisplay from "./components/CameraDisplay";
 import ConnectionStatus from "./components/ConnectionStatus";
-import CommandLog from "./components/CommandLog";
-import ResponseLog from "./components/ResponseLog";
+import UnifiedLog from "./components/UnifiedLog";
 import CommandInput from "./components/CommandInput";
 import PacketInput from "./components/PacketInput";
 import PositionDisplay from "./components/PositionDisplay";
@@ -12,19 +11,11 @@ import ActionButtons from "./components/ActionButtons";
 import useSocketJSON from "./hooks/useSocketJSON";
 import { jsonStateAtom } from "./state/jsonState";
 import { PacketManager } from "./packets/PacketHandler";
-import useAppendConsole from "./hooks/useAppendConsole";
-import { initializeStore } from "./state/store";
 
 function App() {
   const WS_URL = "ws://127.0.0.1:8765";
   useSocketJSON(WS_URL);
   const jsonState = useRecoilValue(jsonStateAtom);
-  const appendConsole = useAppendConsole();
-
-  // Initialize the store with the appendConsole function
-  useEffect(() => {
-    initializeStore(appendConsole);
-  }, [appendConsole]);
 
   useEffect(() => {
     // Initialize packet system
@@ -83,13 +74,9 @@ function App() {
         </div>
         
         <div className="log-section">
-          <div className="log-container">
-            <h2>Command Log</h2>
-            <CommandLog />
-          </div>
-          <div className="log-container">
-            <h2>Response Log</h2>
-            <ResponseLog />
+          <div className="log-container full-width">
+            <h2>System Logs</h2>
+            <UnifiedLog />
           </div>
         </div>
       </main>

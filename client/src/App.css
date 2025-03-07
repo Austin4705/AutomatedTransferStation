@@ -145,9 +145,13 @@
 /* Log Section */
 .log-section {
   display: flex;
-  flex-direction: column;
   gap: 1.5rem;
   overflow-y: auto;
+}
+
+.full-width {
+  width: 100%;
+  grid-column: 1 / -1;
 }
 
 .log-container {
@@ -159,6 +163,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 200px;
+  max-height: 100%;
 }
 
 .log-container h2 {
@@ -166,6 +172,124 @@
   font-size: 1rem;
   font-weight: 600;
   color: #2c3e50;
+  flex-shrink: 0;
+}
+
+.log-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.log-type-select {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  font-size: 0.875rem;
+}
+
+.log-type-filters input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  vertical-align: middle;
+  accent-color: #4a5568;
+}
+
+.log-type-filters label {
+  display: flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.log-type-filters label:hover {
+  background-color: #edf2f7;
+}
+
+.log-content {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #edf2f7;
+  border-radius: 4px;
+  background-color: #f8fafc;
+  word-break: break-word;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+  min-height: 100px;
+  max-height: calc(100% - 60px); /* Ensure space for buttons */
+}
+
+.log-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.log-content::-webkit-scrollbar-track {
+  background: #f7fafc;
+}
+
+.log-content::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 4px;
+}
+
+.log-item {
+  padding: 0.5rem;
+  border-bottom: 1px solid #edf2f7;
+  font-size: 0.875rem;
+  transition: background-color 0.15s;
+}
+
+.log-timestamp {
+  color: #718096;
+  margin-right: 0.5rem;
+}
+
+.log-message {
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.log-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-shrink: 0; /* Prevent shrinking */
+  position: sticky;
+  bottom: 0;
+  background-color: white;
+  padding-top: 0.5rem;
+  z-index: 10;
+}
+
+.refresh-button {
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.refresh-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
+}
+
+.clear-button {
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.clear-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(245, 101, 101, 0.5);
 }
 
 /* Buttons */

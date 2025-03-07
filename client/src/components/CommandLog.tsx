@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
 import { useSendJSON } from "../hooks/useSendJSON";
@@ -12,42 +12,65 @@ const CommandLog = () => {
   const [commandLogs, setCommandLogs] = useState<CommandLogEntry[]>([]);
   const jsonState = useRecoilValue(jsonStateAtom);
   const sendJson = useSendJSON();
+  const logContentRef = useRef<HTMLDivElement>(null);
 
-  // Request command logs on component mount
-  useEffect(() => {
-    sendJson({
-      type: "REQUEST_LOG_COMMANDS",
-    });
-    
-    // Set up a periodic refresh
-    const intervalId = setInterval(() => {
-      sendJson({
-        type: "REQUEST_LOG_COMMANDS",
-      });
-    }, 10000); // Refresh every 10 seconds
-    
-    return () => clearInterval(intervalId);
-  }, [sendJson]);
+  // Remove the automatic request on component mount
+  // We'll only request logs when the user clicks the Refresh button
 
-  // Process incoming command logs
+  // Process incoming messages
   useEffect(() => {
-    if (
-      jsonState.lastJsonMessage && 
-      jsonState.lastJsonMessage.type === "RESPONSE_LOG_COMMANDS" &&
-      Array.isArray(jsonState.lastJsonMessage.commands)
-    ) {
-      const formattedLogs = jsonState.lastJsonMessage.commands.map((cmd: any) => ({
+    if (!jsonState.lastJsonMessage) return;
+
+    const message = jsonState.lastJsonMessage;
+    
+    // Handle bulk command logs
+    if (message.type === "RESPONSE_LOG_COMMANDS" && Array.isArray(message.commands)) {
+      const formattedLogs = message.commands.map((cmd: any) => ({
         timestamp: new Date(cmd.timestamp || Date.now()).toLocaleString(),
         command: cmd.command || JSON.stringify(cmd)
       }));
       
       setCommandLogs(formattedLogs);
+      
+      // Scroll to bottom after update
+      setTimeout(() => {
+        if (logContentRef.current) {
+          logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+        }
+      }, 100);
+    }
+    
+    // Handle individual command
+    else if (message.type === "COMMAND") {
+      const newEntry: CommandLogEntry = {
+        timestamp: new Date().toLocaleString(),
+        command: message.command || JSON.stringify(message)
+      };
+      
+      setCommandLogs(prev => [...prev, newEntry]);
+      
+      // Scroll to bottom after update
+      setTimeout(() => {
+        if (logContentRef.current) {
+          logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+        }
+      }, 100);
     }
   }, [jsonState.lastJsonMessage]);
 
+  // Function to request command logs
+  const requestCommandLogs = () => {
+    sendJson({
+      type: "REQUEST_LOG_COMMANDS",
+    });
+  };
+
   return (
-    <div className="command-log">
-      <div className="log-content overflow-auto h-full">
+    <div className="command-log h-full flex flex-col">
+      <div 
+        ref={logContentRef}
+        className="log-content flex-grow overflow-auto"
+      >
         {commandLogs.length === 0 ? (
           <div className="text-gray-600 text-sm p-2">No command logs available</div>
         ) : (
@@ -63,10 +86,16 @@ const CommandLog = () => {
       </div>
       <div className="log-actions mt-2">
         <button 
-          onClick={() => sendJson({ type: "REQUEST_LOG_COMMANDS" })}
+          onClick={requestCommandLogs}
           className="refresh-button text-sm"
         >
           Refresh
+        </button>
+        <button 
+          onClick={() => setCommandLogs([])}
+          className="clear-button text-sm ml-2"
+        >
+          Clear
         </button>
       </div>
     </div>

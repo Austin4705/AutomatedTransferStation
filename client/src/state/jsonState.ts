@@ -7,6 +7,7 @@ import { atom } from "recoil";
  */
 export interface jsonWS {
   lastJsonMessage: unknown;
+  lastRawMessage: string | null;
   readyState: ReadyState;
   sendJsonMessage: SendJsonMessage | null;
 }
@@ -15,6 +16,7 @@ export const jsonStateAtom = atom<jsonWS>({
   key: "jsonState",
   default: {
     lastJsonMessage: null,
+    lastRawMessage: null,
     readyState: ReadyState.CLOSED,
     sendJsonMessage: null
   },
