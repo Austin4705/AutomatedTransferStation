@@ -70,7 +70,13 @@ export class PacketHandlers {
   @PacketManager.registerHandler("COMMAND")
   static handleCommand(data: any) {
     console.log("Received command:", data);
-    // Commands will be handled by the CommandLog component
+    // Commands are already handled by the CommandLog component through the jsonState
+    // No need to dispatch a custom event as it creates duplicate entries
+    
+    // Add timestamp if not present to help with log clearing logic
+    if (!data.timestamp) {
+      data.timestamp = new Date().getTime();
+    }
   }
 
   @PacketManager.registerHandler("RESPONSE")

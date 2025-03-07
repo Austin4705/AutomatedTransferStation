@@ -12,7 +12,7 @@ const CommandInput = () => {
     
     // Send command to the server
     sendJson({
-      type: "COMMAND",
+      type: "SEND_COMMAND",
       command: command.trim()
     });
     

@@ -48,9 +48,9 @@ if __name__ == "__main__":
 
     # Starting the thread that listens from the sockets and sends them to the right place 
     # (handles incoming communication from the UI)
-    ts_listening_thread = threading.Thread(target=Socket_Manager.socket_dispatch_thread, args=(TRANSFER_STATION,))
-    ts_listening_thread.daemon = True
-    ts_listening_thread.start()
+    # ts_listening_thread = threading.Thread(target=Socket_Manager.socket_dispatch_thread, args=(TRANSFER_STATION,))
+    # ts_listening_thread.daemon = True
+    # ts_listening_thread.start()
 
     # Starting the thread that sends the commands to the transfer station
     ts_sending_thread = threading.Thread(target=Socket_Manager.ts_sending_thread, args=(TRANSFER_STATION,))
@@ -65,7 +65,8 @@ if __name__ == "__main__":
     while True:
         input()
         for i in range(10):
-            TRANSFER_STATION.send_command(f"Fake Response {i}")
+            TRANSFER_STATION.add_fake_command(f"Fake Command {i}")
+            # TRANSFER_STATION.add_fake_response(f"Fake Response {i}")
         print("Done")
 
     for thread in threading.enumerate():

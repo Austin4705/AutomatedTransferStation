@@ -90,3 +90,8 @@ For questions or contributions, please contact the Yasuda Lab at Cornell.
 
 ## License
 [Add your license information here]
+
+## TODO: Get responses and commands sent over to the client
+## Pase the json on the server side, start up a extraneous thread that runs the transfer program and then closes
+## Get the program controlling the transfer station
+## Get the flake hunting algorithm working

@@ -366,6 +366,13 @@ const UnifiedLog = () => {
   // Add a dedicated clear function
   const clearLogs = () => {
     setLogs([]); // Directly set logs to an empty array
+    
+    // Reset any tracking variables that might cause issues
+    // This helps prevent the last message from reappearing
+    const event = new CustomEvent('logs-cleared', {
+      detail: { timestamp: new Date().getTime() }
+    });
+    document.dispatchEvent(event);
   };
 
   // Add click handler to close dropdowns when clicking outside
@@ -403,6 +410,54 @@ const UnifiedLog = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Process incoming messages
+  useEffect(() => {
+    if (!jsonState.lastJsonMessage) return;
+
+    const message = jsonState.lastJsonMessage as BaseMessage;
+    
+    // Handle command messages
+    if (message.type === "COMMAND") {
+      const commandMessage = message as CommandMessage;
+      
+      // Check if this command is already in the logs to prevent duplicates
+      const isDuplicate = logs.some(log => 
+        log.type === "command" && 
+        log.packetType === "COMMAND" && 
+        log.message === (commandMessage.command || JSON.stringify(message))
+      );
+      
+      if (!isDuplicate) {
+        const newEntry: LogEntry = {
+          timestamp: new Date().toLocaleString(),
+          message: commandMessage.command || JSON.stringify(message),
+          type: "command",
+          rawData: message,
+          packetType: message.type
+        };
+        
+        addLogs([newEntry]);
+        scrollToBottom();
+      }
+    }
+    // Handle bulk command logs
+    else if (message.type === "RESPONSE_LOG_COMMANDS" && Array.isArray((message as CommandMessage).commands)) {
+      const commandMessage = message as CommandMessage;
+      const commandLogs: LogEntry[] = commandMessage.commands!.map((cmd: any) => ({
+        timestamp: new Date(cmd.timestamp || Date.now()).toLocaleString(),
+        message: cmd.command || JSON.stringify(cmd),
+        type: "command",
+        rawData: cmd,
+        packetType: "COMMAND"
+      }));
+      
+      addLogs(commandLogs, true);
+      scrollToBottom();
+    }
+    
+    // ... existing code for other message types ...
+  }, [jsonState.lastJsonMessage, addLogs, scrollToBottom, logs]);
 
   return (
     <div className="unified-log h-full flex flex-col">
