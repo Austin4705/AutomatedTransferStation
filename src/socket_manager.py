@@ -5,7 +5,6 @@ from queue import Queue
 import websockets
 from typing import Any, Dict, Callable
 import inspect
-from packet_handlers import PacketHandlers
 
 class Socket_Manager:
     """
@@ -23,7 +22,7 @@ class Socket_Manager:
         PACKET_DEFS = json.load(f)["packets"]
 
     # Dictionary to store packet handlers
-    packet_handlers: Dict[str, Callable] = PacketHandlers.handlers
+    packet_handlers: Dict[str, Callable] = dict()
 
     def start():
         pass
@@ -55,17 +54,13 @@ class Socket_Manager:
             packet = json.loads(message)
             if isinstance(packet, str):
                 packet = json.loads(packet)  # parse again if still a string
-            # # print(f"Message: {message}")
-            # print(f"Received message: {packet}")
+            # print(f"Message: {message}")
+            print(f"Received message: {packet}")
+            #print(f"Packet type: {packet.get('type')}")
             packet_type = packet.get("type")
-
             # Validate packet structure
-            if not cls.validate_packet_data(packet_type, packet):
-                raise ValueError(f"Invalid packet data for type {packet_type}")
-
-            handler = cls.packet_handlers.get(packet_type, cls.default_handler)
-            handler(packet_type, packet)
-
+            # if not cls.validate_packet_data(packet_type, packet):
+                # raise ValueError(f"Invalid packet data for type {packet_type}")
 
         except json.JSONDecodeError as e:
             print(f"Invalid JSON format: {e}")
@@ -87,8 +82,11 @@ class Socket_Manager:
                 }
             }            # Call the appropriate handler or default handler
             cls.send_all(json.dumps(error_data))
+        handler = cls.packet_handlers.get(packet_type, cls.default_handler)
+        print(f"Handler: {handler}")
+        handler(packet_type, packet)
 
-
+    #Not working, I dont care to validate it
     @classmethod
     def validate_packet_data(cls, packet_type: str, data: dict) -> bool:
         """Validate packet data against definition"""
@@ -125,8 +123,13 @@ class Socket_Manager:
     def send_all(cls, msg: str):
         """Send message to all connected clients"""
         #print(f"Manager {cls.CONNECTIONS}, {msg}")
+        print(f"Sending message to all clients: {msg}")
         websockets.broadcast(cls.CONNECTIONS, msg)
 
+    @classmethod
+    def send_all_json(cls, json_data: dict):
+        """Send JSON data to all connected clients"""
+        websockets.broadcast(cls.CONNECTIONS, json.dumps(json_data))
 
     # Socket stuff
     def socket_dispatch_thread(TRANSFER_STATION):

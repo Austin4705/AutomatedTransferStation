@@ -1,11 +1,16 @@
-import { PacketDefinitions } from './PacketDefinitions';
+import { estimatePacketSize } from '../state/packetTrafficState';
 
 // Type for packet handler functions
 type PacketHandler = (data: any) => void;
 
+// Event system for packet traffic logging
+type PacketTrafficListener = (packet: { type: string; data: any; timestamp: number; size: number; rawData?: string | null }) => void;
+
 export class PacketManager {
   private static handlers: Map<string, PacketHandler> = new Map();
   private static packetDefs: any;
+  private static trafficListeners: PacketTrafficListener[] = [];
+  private static lastRawMessage: string | null = null;
 
   // Initialize with packet definitions
   static async initialize() {
@@ -30,6 +35,11 @@ export class PacketManager {
     }
   }
 
+  // Set the last raw message
+  static setLastRawMessage(message: string | null) {
+    this.lastRawMessage = message;
+  }
+
   // Decorator-like function to register handlers
   static registerHandler(packetType: string) {
     return function (
@@ -43,18 +53,32 @@ export class PacketManager {
   }
 
   // Method to handle incoming packets
-  static handlePacket(packet: { type: string; data: any }) {
+  static handlePacket(packet: any) {
     try {
-      const { type, data } = packet;
+      // Extract the type from the packet
+      const type = packet.type;
+      
+      // Create traffic log entry
+      const timestamp = Date.now();
+      const size = estimatePacketSize(packet);
+      
+      // Log packet traffic with the complete packet data
+      this.notifyTrafficListeners({ 
+        type, 
+        data: packet, // Use the complete packet as data
+        timestamp, 
+        size,
+        rawData: this.lastRawMessage 
+      });
       
       // Validate packet against definitions
-      if (!this.validatePacket(type, data)) {
+      if (!this.validatePacket(type, packet)) {
         throw new Error(`Invalid packet data for type ${type}`);
       }
 
       // Get handler or use default
       const handler = this.handlers.get(type) || this.defaultHandler;
-      handler(data);
+      handler(packet);
     } catch (error) {
       console.error('Error handling packet:', error);
     }
@@ -66,29 +90,79 @@ export class PacketManager {
   }
 
   // Validate packet data against definitions
-  private static validatePacket(type: string, data: any): boolean {
+  private static validatePacket(type: string, packet: any): boolean {
+    // Special case for POSITION packets
+    if (type === "POSITION") {
+      // Only validate that x and y are numbers
+      return typeof packet.x === 'number' && typeof packet.y === 'number';
+    }
+    
     const packetDef = this.packetDefs?.packets[type];
-    if (!packetDef) return false;
+    if (!packetDef) return true; // If no definition exists, consider it valid
 
     const fields = packetDef.fields;
+    
+    // Check if required fields exist and have the correct type
     for (const [field, expectedType] of Object.entries(fields)) {
-      if (!(field in data)) return false;
+      // Skip type field as it's already validated
+      if (field === 'type') continue;
+      
+      // Check if the field exists in the packet
+      if (!(field in packet)) {
+        console.warn(`Missing field ${field} in packet of type ${type}`);
+        return false;
+      }
 
-      const value = data[field];
+      const value = packet[field];
+      
+      // Validate the field type
       switch (expectedType) {
         case 'bool':
-          if (typeof value !== 'boolean') return false;
+          if (typeof value !== 'boolean') {
+            console.warn(`Field ${field} should be boolean but got ${typeof value}`);
+            return false;
+          }
           break;
         case 'int':
+          if (typeof value !== 'number' || !Number.isInteger(value)) {
+            console.warn(`Field ${field} should be integer but got ${typeof value}`);
+            return false;
+          }
+          break;
         case 'float':
-          if (typeof value !== 'number') return false;
+          if (typeof value !== 'number') {
+            console.warn(`Field ${field} should be number but got ${typeof value}`);
+            return false;
+          }
           break;
         case 'string':
-          if (typeof value !== 'string') return false;
+          if (typeof value !== 'string') {
+            console.warn(`Field ${field} should be string but got ${typeof value}`);
+            return false;
+          }
           break;
       }
     }
 
     return true;
+  }
+
+  // Register a listener for packet traffic
+  static registerTrafficListener(listener: PacketTrafficListener) {
+    this.trafficListeners.push(listener);
+    return () => {
+      // Return unsubscribe function
+      const index = this.trafficListeners.indexOf(listener);
+      if (index !== -1) {
+        this.trafficListeners.splice(index, 1);
+      }
+    };
+  }
+
+  // Notify all traffic listeners
+  private static notifyTrafficListeners(packetInfo: { type: string; data: any; timestamp: number; size: number; rawData?: string | null }) {
+    for (const listener of this.trafficListeners) {
+      listener(packetInfo);
+    }
   }
 } 

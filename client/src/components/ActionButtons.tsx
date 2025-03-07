@@ -5,9 +5,8 @@ const ActionButtons = () => {
 
   const handleSnap = (snapNumber: number) => {
     sendJson({
-      type: "COMMAND",
-      command: `snap${snapNumber}`,
-      value: snapNumber
+      type: "SNAP_SHOT",
+      camera: snapNumber
     });
   };
 

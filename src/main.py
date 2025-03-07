@@ -8,7 +8,7 @@ from socket_manager import Socket_Manager
 from camera import Camera
 import web_server
 from cvFunctions import CVFunctions
-
+from packet_handlers import PacketHandlers
 from transfer_station import Transfer_Station
 
 if __name__ == "__main__":
@@ -37,6 +37,8 @@ if __name__ == "__main__":
 
     print("Starting Transfer Station")
     TRANSFER_STATION = Transfer_Station()
+    PacketHandlers.transfer_station = TRANSFER_STATION
+    PacketHandlers()
 
     print("Starting socket")
     # Starting the tread  that generally runs the socket server

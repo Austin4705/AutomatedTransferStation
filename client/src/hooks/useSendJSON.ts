@@ -16,6 +16,12 @@ export const useSendJSON = () => {
           message: JSON.stringify(data),
         });
         
+        // Dispatch a custom event for the OutgoingLog component
+        const outgoingEvent = new CustomEvent('outgoingMessage', { 
+          detail: data 
+        });
+        window.dispatchEvent(outgoingEvent);
+        
         // Send the message
         jsonState.sendJsonMessage(data);
       } else {

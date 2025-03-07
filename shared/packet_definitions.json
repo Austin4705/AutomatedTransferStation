@@ -14,22 +14,15 @@
         "command": "string"
       }
     },
-    "REQUEST_LOG_RESPONSE":{
-      "fields": {}
-    },
     "LOG_RESPONSE":{
       "fields": {
         "response": "string"
       }
     },
-    "REQUEST_POSITION": {
-      "fields": {}
-    },
     "POSITION": {
       "fields": {
         "x": "float",
-        "y": "float",
-        "z": "float"
+        "y": "float"
       }
     },
     "TRACE_OVER":{
