@@ -8,20 +8,50 @@ interface CommandLogEntry {
   command: string;
 }
 
+// Define message types to fix TypeScript errors
+interface CommandMessage {
+  type: string;
+  command?: string;
+  commands?: Array<{timestamp?: number; command?: string}>;
+  [key: string]: any;
+}
+
 const CommandLog = () => {
   const [commandLogs, setCommandLogs] = useState<CommandLogEntry[]>([]);
   const jsonState = useRecoilValue(jsonStateAtom);
   const sendJson = useSendJSON();
   const logContentRef = useRef<HTMLDivElement>(null);
+  // Add a ref to track the last processed message to avoid duplicates
+  const lastProcessedMessageRef = useRef<any>(null);
+  // Add a ref to track if logs were manually cleared
+  const logsManuallyCleared = useRef<boolean>(false);
 
-  // Remove the automatic request on component mount
-  // We'll only request logs when the user clicks the Refresh button
-
-  // Process incoming messages
+  // Process incoming messages from websocket
   useEffect(() => {
     if (!jsonState.lastJsonMessage) return;
 
-    const message = jsonState.lastJsonMessage;
+    // Skip if this is the same message we already processed
+    if (lastProcessedMessageRef.current === jsonState.lastJsonMessage) {
+      return;
+    }
+
+    // Update the last processed message
+    lastProcessedMessageRef.current = jsonState.lastJsonMessage;
+    
+    const message = jsonState.lastJsonMessage as CommandMessage;
+    
+    // If logs were manually cleared, we need to reset the flag
+    // but only process new messages after clearing
+    if (logsManuallyCleared.current) {
+      logsManuallyCleared.current = false;
+      // Only process this message if it's new (arrived after clearing)
+      const currentTime = new Date().getTime();
+      const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : currentTime;
+      // If the message is older than when we cleared, skip it
+      if (messageTime < currentTime - 1000) { // 1 second buffer
+        return;
+      }
+    }
     
     // Handle bulk command logs
     if (message.type === "RESPONSE_LOG_COMMANDS" && Array.isArray(message.commands)) {
@@ -32,12 +62,7 @@ const CommandLog = () => {
       
       setCommandLogs(formattedLogs);
       
-      // Scroll to bottom after update
-      setTimeout(() => {
-        if (logContentRef.current) {
-          logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
-        }
-      }, 100);
+      scrollToBottom();
     }
     
     // Handle individual command
@@ -49,20 +74,46 @@ const CommandLog = () => {
       
       setCommandLogs(prev => [...prev, newEntry]);
       
-      // Scroll to bottom after update
-      setTimeout(() => {
-        if (logContentRef.current) {
-          logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
-        }
-      }, 100);
+      scrollToBottom();
     }
   }, [jsonState.lastJsonMessage]);
+
+  // Listen for logs-cleared event from UnifiedLog
+  useEffect(() => {
+    const handleLogsClearedEvent = (event: Event) => {
+      clearLogs();
+    };
+    
+    // Add event listener
+    document.addEventListener('logs-cleared', handleLogsClearedEvent as EventListener);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('logs-cleared', handleLogsClearedEvent as EventListener);
+    };
+  }, []);
+
+  // Function to scroll to bottom
+  const scrollToBottom = () => {
+    if (logContentRef.current) {
+      logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+    }
+  };
 
   // Function to request command logs
   const requestCommandLogs = () => {
     sendJson({
       type: "REQUEST_LOG_COMMANDS",
     });
+  };
+
+  // Function to clear logs
+  const clearLogs = () => {
+    setCommandLogs([]);
+    // Mark that logs were manually cleared to prevent immediate re-adding
+    logsManuallyCleared.current = true;
+    // Reset the last processed message to allow new messages to come in
+    lastProcessedMessageRef.current = null;
   };
 
   return (
@@ -92,7 +143,7 @@ const CommandLog = () => {
           Refresh
         </button>
         <button 
-          onClick={() => setCommandLogs([])}
+          onClick={clearLogs}
           className="clear-button text-sm ml-2"
         >
           Clear

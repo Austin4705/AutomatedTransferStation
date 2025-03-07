@@ -2,8 +2,12 @@
   "packets": {
     "SEND_COMMAND": {
       "fields": {
-        "command": "string",
-        "value": "float"
+        "command": "string"
+      }
+    },
+    "COMMAND":{
+      "fields": {
+        "command": "string"
       }
     },
     "REQUEST_LOG_COMMANDS":{

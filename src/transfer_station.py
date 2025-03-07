@@ -26,16 +26,7 @@ class Transfer_Station():
     #Functions to reimplement 
     def send_command(self, command):
         print(f"Send Command: {command}-V")
-        # Add command to history
-        self.receive_command_history.append({
-            'timestamp': Transfer_Station.time_stamp(),
-            'response': "Virtual Response"
-        })
-        self.send_command_history.append({
-            'timestamp': Transfer_Station.time_stamp(),
-            'command': command,
-            'response': "Virtual Response"
-        })
+        
 
     def moveX(self, X):
         print("Move X-V")
@@ -82,7 +73,6 @@ class Transfer_Station():
             return self.receive_command_history[-depth:]
     
     def since_last_receive(self):
-        print("Since Last Receive-V")
         if self._last_received_index == -1:
             return self.receive_command_history
         else:
@@ -98,7 +88,6 @@ class Transfer_Station():
             return self.send_command_history[-depth:]
 
     def since_last_send(self):
-        print("Since Last Send-V")
         if self._last_sent_index == -1:
             commands = self.send_command_history
         else:
@@ -111,3 +100,16 @@ class Transfer_Station():
     
     def exist_new_received_commands(self):
         return len(self.receive_command_history) > self._last_received_index + 1
+    
+    def add_fake_command(self, command):
+        self.send_command_history.append({
+            'timestamp': Transfer_Station.time_stamp(),
+            'command': command,
+            'response': "Virtual Response"
+        })
+
+    def add_fake_response(self, response):
+        self.receive_command_history.append({
+            'timestamp': Transfer_Station.time_stamp(),
+            'response': response
+        })

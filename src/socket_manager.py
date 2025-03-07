@@ -11,11 +11,8 @@ class Socket_Manager:
     This class handles the websockets that are used to communicate with the UI.
     All you really have to know is that it has a queue of jsons that represent incoming messages and a function to send jsons to the clients.
     """
-    QUEUE_BUFFER_SIZE = 1000
     CONNECTIONS = set()
 
-    # Queue of incoming messages from web browser 
-    CLIENT_DATA_QUEUE = Queue(QUEUE_BUFFER_SIZE)
 
     # Load packet definitions
     with open("./../shared/packet_definitions.json", "r") as f:
@@ -55,7 +52,7 @@ class Socket_Manager:
             if isinstance(packet, str):
                 packet = json.loads(packet)  # parse again if still a string
             # print(f"Message: {message}")
-            print(f"Received message: {packet}")
+            # print(f"Received message: {packet}")
             #print(f"Packet type: {packet.get('type')}")
             packet_type = packet.get("type")
             # Validate packet structure
@@ -82,6 +79,7 @@ class Socket_Manager:
                 }
             }            # Call the appropriate handler or default handler
             cls.send_all(json.dumps(error_data))
+
         handler = cls.packet_handlers.get(packet_type, cls.default_handler)
         print(f"Handler: {handler}")
         handler(packet_type, packet)
@@ -122,8 +120,6 @@ class Socket_Manager:
     @classmethod
     def send_all(cls, msg: str):
         """Send message to all connected clients"""
-        #print(f"Manager {cls.CONNECTIONS}, {msg}")
-        print(f"Sending message to all clients: {msg}")
         websockets.broadcast(cls.CONNECTIONS, msg)
 
     @classmethod
@@ -132,15 +128,18 @@ class Socket_Manager:
         websockets.broadcast(cls.CONNECTIONS, json.dumps(json_data))
 
     # Socket stuff
-    def socket_dispatch_thread(TRANSFER_STATION):
-        while True:
-            if Socket_Manager.CLIENT_DATA_QUEUE.not_empty:
-                string_data = Socket_Manager.CLIENT_DATA_QUEUE.get()
-                print(f"Received message-s: {string_data}")
-                data = json.loads(string_data)
-                message = data.get("command")
-                # CALL DISPATCH HERE
-                #Socket_Manager.socket_dispatch(data, TRANSFER_STATION)
+    # Queue of incoming messages from web browser 
+    # QUEUE_BUFFER_SIZE = 1000
+    # CLIENT_DATA_QUEUE = Queue(QUEUE_BUFFER_SIZE)
+    # def socket_dispatch_thread(TRANSFER_STATION):
+    #     while True:
+    #         if Socket_Manager.CLIENT_DATA_QUEUE.not_empty:
+    #             string_data = Socket_Manager.CLIENT_DATA_QUEUE.get()
+    #             print(f"Received message-s: {string_data}")
+    #             data = json.loads(string_data)
+    #             message = data.get("command")
+    #             # CALL DISPATCH HERE
+    #             #Socket_Manager.socket_dispatch(data, TRANSFER_STATION)
 
 
     def ts_sending_thread(TRANSFER_STATION):
@@ -151,5 +150,12 @@ class Socket_Manager:
                     Socket_Manager.send_all(json.dumps({
                         "type": "COMMAND",
                         "command": m["command"],
-                        "value": 0
+                    }))
+
+            if TRANSFER_STATION.exist_new_received_commands():
+                message = TRANSFER_STATION.since_last_receive()
+                for m in message:
+                    Socket_Manager.send_all(json.dumps({
+                        "type": "RESPONSE",
+                        "response": m["response"],
                     }))

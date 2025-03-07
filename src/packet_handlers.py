@@ -26,23 +26,13 @@ class PacketHandlers:
     @packet_handler("SEND_COMMAND")
     def handle_send_command(packet_type: str, data: dict):
         command = data["command"]
-        value = data["value"]
-        print(f"Executing command: {command} with value: {value}")
-        PacketHandlers.transfer_station.send_command(command, value)
-
-    @packet_handler("COMMAND")
-    def handle_command(packet_type: str, data: dict):
-        command = data["command"]
-        value = data["value"]
-        print(f"Executing command: {command} with value: {value}")
+        print(f"Executing command: {command}")
+        PacketHandlers.transfer_station.send_command(command)
 
     @packet_handler("REQUEST_POSITION")
     def handle_request_position(packet_type: str, data: dict):
-        print("Requesting position")
         message = {"type": "POSITION", "x":1, "y":2}
-        print(message)
         Socket_Manager.send_all_json(message)
-
 
     @packet_handler("TRACE_OVER")
     def handle_trace_over(packet_type: str, data: dict):
@@ -120,4 +110,16 @@ class PacketHandlers:
     def handle_snap_shot(packet_type: str, data: dict):
         Camera.global_list[data["camera"]].snap_image_flake_hunted()
         print("Took Screenshot")
+
+    @packet_handler("COMMAND")
+    def handle_command(packet_type: str, data: dict):
+        command = data.get("command", "")
+        print(f"Received command: {command}")
+        # Don't re-broadcast the command as it creates an infinite loop
+        # The command is already being displayed in the client that received it
         
+        # Process the command if needed, but don't send it back to clients
+        # Socket_Manager.send_all_json({
+        #     "type": "COMMAND",
+        #     "command": command
+        # })
