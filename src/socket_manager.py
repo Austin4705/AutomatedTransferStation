@@ -18,6 +18,12 @@ class Socket_Manager:
     # How to send data to ui
     def send_all(msg: str):
         print(f"Manager {Socket_Manager.CONNECTIONS}, {msg}")
+        if isinstance(msg, str):
+            formatted_msg = {
+                "message": msg,
+                "sender": "Server"
+            }
+            msg = json.dumps(formatted_msg)
         websockets.broadcast(Socket_Manager.CONNECTIONS, msg)
 
     async def consumer_handler(websocket):
