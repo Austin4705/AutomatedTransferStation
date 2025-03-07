@@ -9,6 +9,8 @@ import {
 import { useEffect } from "react";
 import { jsonStateAtom } from "../state/jsonState";
 import useAppendConsole from "../hooks/useAppendConsole";
+import { PacketManager } from "../packets/PacketHandler";
+import { PacketHandlers } from "../packets/PacketHandlers";
 
 const readyStateMap = {
   [ReadyState.CONNECTING]: "Connecting",
@@ -29,11 +31,17 @@ export default function ConsoleLog() {
   const appendData = useAppendConsole();
 
   useEffect(() => {
-    if (isConsoleMessage(jsonState.lastJsonMessage)) {
-      appendData(jsonState.lastJsonMessage);
-      console.log(jsonState.lastJsonMessage)
+    // Initialize packet system
+    PacketManager.initialize().then(() => {
+      console.log("Packet system initialized");
+    });
+  }, []);
+
+  useEffect(() => {
+    if (jsonState.lastJsonMessage) {
+      console.log("Received websocket message:", jsonState.lastJsonMessage);
+      PacketManager.handlePacket(jsonState.lastJsonMessage as any);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jsonState.lastJsonMessage]);
 
   return (

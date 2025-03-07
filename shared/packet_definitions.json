@@ -1,0 +1,29 @@
+{
+  "packets": {
+    "COMMAND": {
+      "fields": {
+        "command": "string",
+        "value": "float"
+      }
+    },
+    "STATUS": {
+      "fields": {
+        "device": "string",
+        "online": "bool"
+      }
+    },
+    "POSITION": {
+      "fields": {
+        "x": "float",
+        "y": "float",
+        "z": "float"
+      }
+    },
+    "ERROR": {
+      "fields": {
+        "code": "int",
+        "message": "string"
+      }
+    }
+  }
+} 
