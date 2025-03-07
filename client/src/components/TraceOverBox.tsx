@@ -44,7 +44,6 @@ const TraceOverBox = () => {
   const [jsonOutput, setJsonOutput] = useState<string>("");
   const positionUpdateTargetRef = useRef<PositionUpdateTarget | null>(null);
   const [traceOverStatus, setTraceOverStatus] = useState<TraceOverResult | null>(null);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [speed, setSpeed] = useState<number>(50); // Default speed value (50%)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
@@ -111,8 +110,6 @@ const TraceOverBox = () => {
         flakeCount: message.flakeCount
       });
       
-      setIsProcessing(false);
-      
       // Clear status after 5 seconds
       setTimeout(() => {
         setTraceOverStatus(null);
@@ -148,10 +145,6 @@ const TraceOverBox = () => {
       alert("Please fill in all coordinate fields before sending.");
       return;
     }
-
-    // Set processing state
-    setIsProcessing(true);
-    setTraceOverStatus(null);
 
     // Send the trace over command with flake coordinates and speed
     const data = {
@@ -647,15 +640,10 @@ const TraceOverBox = () => {
 
         <div className="trace-actions mt-4">
           <button 
-            className={`trace-button px-4 py-2 rounded text-white ${
-              isProcessing 
-                ? "bg-gray-500 cursor-not-allowed" 
-                : "bg-green-600 hover:bg-green-700"
-            }`}
+            className="trace-button px-4 py-2 rounded text-white bg-green-600 hover:bg-green-700"
             onClick={handleTraceOver}
-            disabled={isProcessing}
           >
-            {isProcessing ? "Processing..." : "Send Trace Over Command"}
+            Send Trace Over Command
           </button>
         </div>
       </div>
