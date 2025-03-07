@@ -5,32 +5,28 @@ type PacketHandler = (data: any) => void;
 
 export class PacketManager {
   private static handlers: Map<string, PacketHandler> = new Map();
-  private static packetDefs = {
-    "packets": {
-      "COMMAND": {
-        "fields": {
-          "command": "string",
-          "value": "float"
-        }
-      },
-      "POSITION": {
-        "fields": {
-          "x": "float",
-          "y": "float",
-          "z": "float"
-        }
-      }
-    }
-  };
+  private static packetDefs: any;
 
   // Initialize with packet definitions
   static async initialize() {
     try {
-      console.log("Initialized with packet definitions:", this.packetDefs);
+      console.log("Loading packet definitions...");
+      const response = await fetch('/shared/packet_definitions.json');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      this.packetDefs = await response.json();
+      console.log("Successfully loaded packet definitions:", this.packetDefs);
+      
       return this.packetDefs;
     } catch (error) {
-      console.error('Failed to initialize packet system:', error);
-      throw error;
+      console.error('Failed to load packet definitions:', error);
+      console.error('Falling back to hardcoded definitions');
+      
+      // Fallback to hardcoded definitions
+      return {};
     }
   }
 

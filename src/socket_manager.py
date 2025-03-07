@@ -18,8 +18,21 @@ class Socket_Manager:
     CLIENT_DATA_QUEUE = Queue(QUEUE_BUFFER_SIZE)
 
     # Load packet definitions
-    with open("./../shared/packet_definitions.json", "r") as f:
-        PACKET_DEFS = json.load(f)["packets"]
+    PACKET_DEFS = {
+        "COMMAND": {
+            "fields": {
+                "type": "string",
+                "command": "string",
+                "value": "int"
+            }
+        },
+        "ERROR": {
+            "fields": {
+                "code": "int",
+                "message": "string"
+            }
+        }
+    }
 
     # Dictionary to store packet handlers
     packet_handlers: Dict[str, Callable] = {}
@@ -32,6 +45,14 @@ class Socket_Manager:
 
         expected_fields = cls.PACKET_DEFS[packet_type]["fields"]
         
+        # For COMMAND packets, validate the entire packet
+        if packet_type == "COMMAND":
+            required_fields = {"type", "command", "value"}
+            if not all(field in data for field in required_fields):
+                return False
+            return True
+
+        # For other packets, validate fields as before
         for field, expected_type in expected_fields.items():
             if field not in data:
                 return False
@@ -59,6 +80,16 @@ class Socket_Manager:
         return decorator
 
     @classmethod
+    @packet_handler("COMMAND")
+    def handle_command(cls, packet_type: str, data: dict):
+        """Handle COMMAND packets"""
+        command = data.get("command")
+        value = data.get("value")
+        print(f"Processing command: {command} with value: {value}")
+        # Put the command in the queue for processing
+        cls.CLIENT_DATA_QUEUE.put(data)
+
+    @classmethod
     def default_handler(cls, packet_type: str, data: dict):
         """Default handler for unhandled packet types"""
         print(f"Received unhandled packet type: {packet_type}")
@@ -68,10 +99,18 @@ class Socket_Manager:
     def handle_packet(cls, packet: dict):
         """Handle incoming packets"""
         try:
-            packet_type = packet.get("type")
-            data = packet.get("data", {})
+            # If the packet is already parsed JSON, use it directly
+            if isinstance(packet, dict):
+                data = packet
+            else:
+                # Otherwise parse it
+                data = json.loads(packet)
 
-            # Validate packet structure
+            packet_type = data.get("type")
+            if not packet_type:
+                raise ValueError("Missing packet type")
+
+            # For COMMAND packets, validate the entire packet
             if not cls.validate_packet_data(packet_type, data):
                 raise ValueError(f"Invalid packet data for type {packet_type}")
 
@@ -105,6 +144,7 @@ class Socket_Manager:
         try:
             async for message in websocket:
                 data = json.loads(message)
+                print(f"Received message: {data}")
                 Socket_Manager.handle_packet(data)
                 Socket_Manager.CLIENT_DATA_QUEUE.put(data)
 

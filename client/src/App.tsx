@@ -44,7 +44,11 @@ function App() {
           <div id="subcontrols-container" className="row-span-1 col-span-5 border-2 border-black">
             <ConsoleInput />
             <div className="p-1 flex gap-2">
-              <CustomButton message={"snap0"} buttonText={"Snap a Picture0"}/>
+              <CustomButton message={JSON.stringify({
+                "type": "COMMAND",
+                "command": "snap0",
+                "value": 0
+              })} buttonText={"Snap a Picture0"}/>
             </div>
             <div className="p-1 flex gap-2">
               <CustomButton message={"snap1"} buttonText={"Snap a Picture1"}/>
