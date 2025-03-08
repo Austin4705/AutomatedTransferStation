@@ -50,7 +50,7 @@ class Transfer_Station():
     def send_command(self, command):
         response = self._send_command(command)
         if(response is not None):
-            self.receive_command_history.append(response) 
+            self.add_response(response) 
         self.send_command_history.append({
             'timestamp': Transfer_Station.time_stamp(),
             'command': command,
@@ -115,6 +115,12 @@ class Transfer_Station():
             'timestamp': Transfer_Station.time_stamp(),
             'command': command,
             'response': "Virtual Response"
+        })
+
+    def add_response(self, response):
+        self.receive_command_history.append({
+            'timestamp': Transfer_Station.time_stamp(),
+            'response': response
         })
 
     def add_fake_response(self, response):
