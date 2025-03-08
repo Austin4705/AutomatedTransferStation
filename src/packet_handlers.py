@@ -70,18 +70,8 @@ class PacketHandlers:
                     # The speed parameter can be used to adjust the movement speed
                 
                 # Send a success response back to the client
-                Socket_Manager.send_all_json({
-                    "type": "TRACE_OVER_RESULT",
-                    "success": True,
-                    "message": f"Successfully processed {len(flakes)} flakes for trace over at {speed}% speed",
-                    "flakeCount": len(flakes)
-                })
+                PacketCommander.send_message(f"Successfully processed {len(flakes)} flakes for trace over at {speed}% speed")
                 
-                # Also send a command result for backward compatibility
-                Socket_Manager.send_all_json({
-                    "type": "COMMAND_RESULT",
-                    "message": f"Successfully processed {len(flakes)} flakes for trace over at {speed}% speed"
-                })
             except Exception as e:
                 error_message = f"Error processing flakes: {str(e)}"
                 print(error_message)
@@ -123,3 +113,14 @@ class PacketHandlers:
         #    "type": "COMMAND",
         #    "command": command
         #})
+
+
+class PacketCommander:
+    """Class containing all packet commands"""
+    @staticmethod
+    def send_message(message: str):
+        Socket_Manager.send_all_json({
+            "type": "MESSAGE",
+            "message": message
+        })
+        
