@@ -88,13 +88,6 @@ class PacketHandlers:
             PacketCommander.send_error(f"Handler error: {str(e)}")
             print(f"TS_COMMAND handler error: {str(e)}")
 
-    @packet_handler("ACK")
-    def handle_ack(packet_type: str, data: dict):
-        print("ACK received")
-        Socket_Manager.send_all_json({
-            "type": "ACK",
-        })
-
     @packet_handler("REQUEST_POSITION")
     def handle_request_position(packet_type: str, data: dict):
         message = {"type": "POSITION", "x":1, "y":2}

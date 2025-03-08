@@ -2,19 +2,19 @@ import { NavLink } from 'react-router-dom';
 
 const Navigation = () => {
   return (
-    <nav className="top-navigation bg-gray-700">
-      <ul className="flex px-4 py-2">
-        <li className="mr-6">
+    <nav className="horizontal-navigation bg-gray-700 py-2 px-4">
+      <ul className="flex space-x-6 justify-center">
+        <li>
           <NavLink 
-            to="/overview" 
+            to="/dashboard" 
             className={({ isActive }) => 
               isActive ? "nav-link active font-bold" : "nav-link hover:text-gray-300"
             }
           >
-            Overview
+            Dashboard
           </NavLink>
         </li>
-        <li className="mr-6">
+        <li>
           <NavLink 
             to="/camera" 
             className={({ isActive }) => 
@@ -24,7 +24,7 @@ const Navigation = () => {
             Camera
           </NavLink>
         </li>
-        <li className="mr-6">
+        <li>
           <NavLink 
             to="/trace-over" 
             className={({ isActive }) => 
@@ -34,7 +34,7 @@ const Navigation = () => {
             Trace Over
           </NavLink>
         </li>
-        <li className="mr-6">
+        <li>
           <NavLink 
             to="/system-logs" 
             className={({ isActive }) => 
