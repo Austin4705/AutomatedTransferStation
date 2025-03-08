@@ -10,6 +10,12 @@
         "command": "string"
       }
     },
+    "TS_COMMAND":{
+      "fields": {
+        "command": "string",
+        "parameters": "string"
+      }
+    },
     "REQUEST_LOG_COMMANDS":{
       "fields": {}
     },
