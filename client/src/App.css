@@ -642,3 +642,23 @@ input:focus, select:focus {
   padding-left: 0;
   padding-right: 0;
 }
+
+.reset-button {
+  padding: 0.25rem 0.5rem;
+  background-color: #e2e8f0;
+  color: #4a5568;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.reset-button:hover {
+  background-color: #cbd5e0;
+}
+
+.reset-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
+}
