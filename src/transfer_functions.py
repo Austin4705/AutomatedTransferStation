@@ -14,8 +14,9 @@ MAGNIFICATION_TRAVEL = {
 
 class TransferFunctions:
     """Class containing all transfer functions"""
-    TRANSFER_STATION = packet_handlers.PacketHandlers.transfer_station
-    def __init__(self) -> None:
+    TRANSFER_STATION = None 
+    def __init__(self, transfer_station) -> None:
+        TRANSFER_STATION = transfer_station
         pass
 
     def run_trace_over(data):
