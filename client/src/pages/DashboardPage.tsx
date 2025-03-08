@@ -51,7 +51,7 @@ const DashboardPage = () => {
           <div className="log-section">
             <div className="log-container full-width">
               <h2>System Logs</h2>
-              <div className="dashboard-log-wrapper fixed-height-logs">
+              <div className="dashboard-log-wrapper">
                 <UnifiedLog />
               </div>
             </div>
