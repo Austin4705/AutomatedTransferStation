@@ -28,6 +28,7 @@ const OverviewPage = () => {
           </div>
           
           <div className="trace-over-container">
+            <h2>Trace Over</h2>
             <TraceOverBox />
           </div>
           
@@ -50,7 +51,14 @@ const OverviewPage = () => {
         <div className="log-section">
           <div className="log-container full-width">
             <h2>System Logs</h2>
-            <UnifiedLog />
+            <div className="log-wrapper" style={{ 
+              height: "250px", 
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column" 
+            }}>
+              <UnifiedLog />
+            </div>
           </div>
         </div>
       </div>

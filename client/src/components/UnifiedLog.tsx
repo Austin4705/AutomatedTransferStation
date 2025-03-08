@@ -737,7 +737,7 @@ const UnifiedLog = () => {
         <div 
           ref={logContentRef}
           className="log-content flex-grow overflow-auto thin-scrollbar"
-          style={{ minHeight: "200px", maxHeight: "calc(100vh - 300px)" }}
+          style={{ height: "100%" }}
         >
           {filteredLogs.length === 0 ? (
             <div className="text-gray-600 text-sm p-4 text-center">No logs available</div>
