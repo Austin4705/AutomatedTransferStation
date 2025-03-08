@@ -2,6 +2,8 @@ from typing import Any, Dict, Callable
 import json
 from socket_manager import Socket_Manager
 from camera import Camera
+from transfer_station import Transfer_Station 
+
 
 # Dictionary to store packet handlers
 _handlers: Dict[str, Callable] = {}
@@ -113,13 +115,11 @@ class PacketHandlers:
 
     @packet_handler("COMMAND")
     def handle_command(packet_type: str, data: dict):
-        command = data.get("command", "")
+        command = data.get("command")
         print(f"Received command: {command}")
-        # Don't re-broadcast the command as it creates an infinite loop
-        # The command is already being displayed in the client that received it
-        
-        # Process the command if needed, but don't send it back to clients
-        # Socket_Manager.send_all_json({
-        #     "type": "COMMAND",
-        #     "command": command
-        # })
+        # Forward the command to all clients to ensure it appears in the command log
+        Transfer_Station.send_command(command)
+        #Socket_Manager.send_all_json({
+        #    "type": "COMMAND",
+        #    "command": command
+        #})

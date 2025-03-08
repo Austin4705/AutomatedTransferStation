@@ -24,9 +24,8 @@ class Transfer_Station():
         return cls._subclass_instances
 
     #Functions to reimplement 
-    def send_command(self, command):
+    def _send_command(self, command):
         print(f"Send Command: {command}-V")
-        
 
     def moveX(self, X):
         print("Move X-V")
@@ -47,6 +46,16 @@ class Transfer_Station():
     #Takes Seconds
     def time_stamp():
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]     
+    
+    def send_command(self, command):
+        response = self._send_command(command)
+        if(response is not None):
+            self.receive_command_history.append(response) 
+        self.send_command_history.append({
+            'timestamp': Transfer_Station.time_stamp(),
+            'command': command,
+            'response': response
+        })
 
     def wait(self, time):
         print(f"Wait for {time} seconds-V")
@@ -74,11 +83,11 @@ class Transfer_Station():
     
     def since_last_receive(self):
         if self._last_received_index == -1:
-            return self.receive_command_history
+            commands = self.receive_command_history
         else:
-            newCommands = self.receive_command_history[self._last_received_index+1:]
-            self._last_received_index = len(self.receive_command_history)
-            return newCommands
+            commands = self.receive_command_history[self._last_received_index:]
+        self._last_received_index = len(self.receive_command_history)
+        return commands
 
     def sent_commands(self, depth = -1):
         print("Sent Commands-V")
@@ -91,7 +100,7 @@ class Transfer_Station():
         if self._last_sent_index == -1:
             commands = self.send_command_history
         else:
-            commands = self.send_command_history[self._last_sent_index+1:]
+            commands = self.send_command_history[self._last_sent_index:]
         self._last_sent_index = len(self.send_command_history)
         return commands
     
