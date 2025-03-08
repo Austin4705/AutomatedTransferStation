@@ -9,11 +9,11 @@ import { PacketManager } from "./packets/PacketHandler";
 
 // Layout and Pages
 import MainLayout from "./components/MainLayout";
-import OverviewPage from "./pages/OverviewPage";
 import CameraPage from "./pages/CameraPage";
 import TraceOverPage from "./pages/TraceOverPage";
 import SystemLogsPage from "./pages/SystemLogsPage";
 import CommandsPage from "./pages/CommandsPage";
+import DashboardPage from "./pages/DashboardPage";
 
 function App() {
   const WS_URL = "ws://127.0.0.1:8765";
@@ -38,13 +38,13 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<Navigate to="/overview" replace />} />
-          <Route path="overview" element={<OverviewPage />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
           <Route path="camera" element={<CameraPage />} />
           <Route path="trace-over" element={<TraceOverPage />} />
           <Route path="system-logs" element={<SystemLogsPage />} />
           <Route path="commands" element={<CommandsPage />} />
-          <Route path="*" element={<Navigate to="/overview" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

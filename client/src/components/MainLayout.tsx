@@ -16,7 +16,7 @@ const MainLayout = () => {
       
       <Navigation />
       
-      <main className="app-content">
+      <main className="app-content flex-1 p-4">
         <Outlet />
       </main>
     </div>
