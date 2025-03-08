@@ -42,6 +42,11 @@
         "camera": "int"
       }
     },
+    "MESSAGE":{
+      "fields":{
+        "message": "string"
+      }
+    },
     "ERROR": {
       "fields": {
         "code": "int",
