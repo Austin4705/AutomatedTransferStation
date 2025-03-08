@@ -44,7 +44,11 @@ const TraceOverBox = () => {
   const [jsonOutput, setJsonOutput] = useState<string>("");
   const positionUpdateTargetRef = useRef<PositionUpdateTarget | null>(null);
   const [traceOverStatus, setTraceOverStatus] = useState<TraceOverResult | null>(null);
-  const [speed, setSpeed] = useState<number>(50); // Default speed value (50%)
+  const [magnification, setMagnification] = useState<number>(20); // Default magnification value
+  const [picsUntilFocus, setPicsUntilFocus] = useState<number>(300); // Default pics until focus value
+  const [initialWaitTime, setInitialWaitTime] = useState<number>(8); // Default initial wait time
+  const [focusWaitTime, setFocusWaitTime] = useState<number>(8); // Default focus wait time
+  const [cameraIndex, setCameraIndex] = useState<number>(0); // Default camera index
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
 
@@ -64,25 +68,47 @@ const TraceOverBox = () => {
     }
   }, [flakeCount]);
 
-  // Update JSON output whenever flake coordinates change or speed changes
+  // Update JSON output whenever flake coordinates change or parameters change
   useEffect(() => {
-    const output = {
+    // Convert flake coordinates to single boundary coordinates
+    const flakesArray = flakeCoordinates.map(flake => ({
+      id: flake.id,
+      topRight: {
+        x: flake.topRight.x ? parseFloat(flake.topRight.x) : null,
+        y: flake.topRight.y ? parseFloat(flake.topRight.y) : null
+      },
+      bottomLeft: {
+        x: flake.bottomLeft.x ? parseFloat(flake.bottomLeft.x) : null,
+        y: flake.bottomLeft.y ? parseFloat(flake.bottomLeft.y) : null
+      }
+    }));
+
+    // If we have at least one flake with valid coordinates, use it for the boundary
+    const validFlake = flakesArray.find(flake => 
+      flake.topRight.x !== null && flake.topRight.y !== null && 
+      flake.bottomLeft.x !== null && flake.bottomLeft.y !== null
+    );
+
+    const output: any = {
       type: "TRACE_OVER",
-      flakes: flakeCoordinates.map(flake => ({
-        id: flake.id,
-        topRight: {
-          x: flake.topRight.x ? parseFloat(flake.topRight.x) : null,
-          y: flake.topRight.y ? parseFloat(flake.topRight.y) : null
-        },
-        bottomLeft: {
-          x: flake.bottomLeft.x ? parseFloat(flake.bottomLeft.x) : null,
-          y: flake.bottomLeft.y ? parseFloat(flake.bottomLeft.y) : null
-        }
-      })),
-      speed: speed
+      flakes: flakesArray,
+      magnification: magnification,
+      pics_until_focus: picsUntilFocus,
+      initial_wait_time: initialWaitTime,
+      focus_wait_time: focusWaitTime,
+      camera_index: cameraIndex
     };
+
+    // Add boundary coordinates if a valid flake exists
+    if (validFlake) {
+      output.bottom_x = validFlake.bottomLeft.x;
+      output.bottom_y = validFlake.bottomLeft.y;
+      output.top_x = validFlake.topRight.x;
+      output.top_y = validFlake.topRight.y;
+    }
+
     setJsonOutput(JSON.stringify(output, null, 2));
-  }, [flakeCoordinates, speed]);
+  }, [flakeCoordinates, magnification, picsUntilFocus, initialWaitTime, focusWaitTime, cameraIndex]);
 
   // Listen for position responses and trace over results from the server
   useEffect(() => {
@@ -146,7 +172,14 @@ const TraceOverBox = () => {
       return;
     }
 
-    // Send the trace over command with flake coordinates and speed
+    // Convert flake coordinates to single boundary
+    const firstFlake = flakeCoordinates[0];
+    const bottom_x = parseFloat(firstFlake.bottomLeft.x);
+    const bottom_y = parseFloat(firstFlake.bottomLeft.y);
+    const top_x = parseFloat(firstFlake.topRight.x);
+    const top_y = parseFloat(firstFlake.topRight.y);
+
+    // Send the trace over command with flake coordinates and all parameters
     const data = {
       type: "TRACE_OVER",
       flakes: flakeCoordinates.map(flake => ({
@@ -160,7 +193,17 @@ const TraceOverBox = () => {
           y: parseFloat(flake.bottomLeft.y)
         }
       })),
-      speed: speed
+      // Add boundary coordinates explicitly
+      bottom_x: bottom_x,
+      bottom_y: bottom_y,
+      top_x: top_x,
+      top_y: top_y,
+      // Add all other parameters
+      magnification: magnification,
+      pics_until_focus: picsUntilFocus,
+      initial_wait_time: initialWaitTime,
+      focus_wait_time: focusWaitTime,
+      camera_index: cameraIndex
     };
 
     sendJson(data);
@@ -393,38 +436,51 @@ const TraceOverBox = () => {
     try {
       const parsedJson = JSON.parse(jsonString);
       
-      // Update speed if present
-      if (typeof parsedJson.speed === 'number') {
-        setSpeed(Math.min(100, Math.max(1, parsedJson.speed)));
+      // Validate the JSON structure
+      if (parsedJson.type !== "TRACE_OVER") {
+        throw new Error("Invalid JSON: not a TRACE_OVER command");
       }
       
       if (parsedJson.flakes && Array.isArray(parsedJson.flakes)) {
-        // Update flake count if needed
-        if (parsedJson.flakes.length !== flakeCount) {
-          setFlakeCount(parsedJson.flakes.length);
-        }
-        
-        // Update flake coordinates
-        const updatedCoordinates = parsedJson.flakes.map((flake: any, index: number) => ({
-          id: index + 1,
+        const newFlakes = parsedJson.flakes.map((flake: any) => ({
+          id: flake.id || 1,
           topRight: {
-            x: flake.topRight?.x !== null ? String(flake.topRight?.x || "") : "",
-            y: flake.topRight?.y !== null ? String(flake.topRight?.y || "") : ""
+            x: flake.topRight.x !== null ? String(flake.topRight.x) : "",
+            y: flake.topRight.y !== null ? String(flake.topRight.y) : ""
           },
           bottomLeft: {
-            x: flake.bottomLeft?.x !== null ? String(flake.bottomLeft?.x || "") : "",
-            y: flake.bottomLeft?.y !== null ? String(flake.bottomLeft?.y || "") : ""
+            x: flake.bottomLeft.x !== null ? String(flake.bottomLeft.x) : "",
+            y: flake.bottomLeft.y !== null ? String(flake.bottomLeft.y) : ""
           }
         }));
         
-        setFlakeCoordinates(updatedCoordinates);
+        setFlakeCount(newFlakes.length);
+        setFlakeCoordinates(newFlakes);
       }
+      
+      // Update other parameters if they exist
+      if (typeof parsedJson.magnification === 'number') {
+        setMagnification(parsedJson.magnification);
+      }
+      
+      if (typeof parsedJson.pics_until_focus === 'number') {
+        setPicsUntilFocus(parsedJson.pics_until_focus);
+      }
+      
+      if (typeof parsedJson.initial_wait_time === 'number') {
+        setInitialWaitTime(parsedJson.initial_wait_time);
+      }
+      
+      if (typeof parsedJson.focus_wait_time === 'number') {
+        setFocusWaitTime(parsedJson.focus_wait_time);
+      }
+      
+      if (typeof parsedJson.camera_index === 'number') {
+        setCameraIndex(parsedJson.camera_index);
+      }
+      
     } catch (error) {
-      console.error("Error parsing JSON:", error);
-      setTraceOverStatus({
-        success: false,
-        message: "Error parsing JSON. Make sure it's a valid trace over configuration."
-      });
+      alert(`Error parsing JSON: ${(error as Error).message}`);
     }
   };
 
@@ -490,7 +546,89 @@ const TraceOverBox = () => {
       <h2>Trace Over</h2>
       <div className="trace-container">
         <div className="flex justify-between items-center mb-4">
-          <label className="block text-sm font-medium">
+          {/* Removed Number of Flakes control from here */}
+        </div>
+
+        {/* Trace Settings Controls */}
+        <div className="trace-settings flex flex-wrap gap-3 mb-4 bg-gray-50 p-3 rounded border">
+          <h3 className="w-full text-sm font-medium mb-2 text-gray-700">Trace Settings:</h3>
+          
+          <div className="setting-control flex items-center">
+            <label className="text-sm font-medium mr-2">
+              Magnification:
+            </label>
+            <select
+              value={magnification}
+              onChange={(e) => setMagnification(parseInt(e.target.value))}
+              className="p-1 border rounded w-16 text-center"
+            >
+              <option value="5">5x</option>
+              <option value="10">10x</option>
+              <option value="20">20x</option>
+              <option value="40">40x</option>
+              <option value="50">50x</option>
+              <option value="100">100x</option>
+            </select>
+          </div>
+          
+          <div className="setting-control flex items-center">
+            <label className="text-sm font-medium mr-2">
+              Pics Until Focus:
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={picsUntilFocus}
+              onChange={(e) => setPicsUntilFocus(Math.max(1, parseInt(e.target.value) || 300))}
+              className="p-1 border rounded w-16 text-center"
+            />
+          </div>
+          
+          <div className="setting-control flex items-center">
+            <label className="text-sm font-medium mr-2">
+              Initial Wait (s):
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.5"
+              value={initialWaitTime}
+              onChange={(e) => setInitialWaitTime(Math.max(0, parseFloat(e.target.value) || 8))}
+              className="p-1 border rounded w-16 text-center"
+            />
+          </div>
+          
+          <div className="setting-control flex items-center">
+            <label className="text-sm font-medium mr-2">
+              Focus Wait (s):
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.5"
+              value={focusWaitTime}
+              onChange={(e) => setFocusWaitTime(Math.max(0, parseFloat(e.target.value) || 8))}
+              className="p-1 border rounded w-16 text-center"
+            />
+          </div>
+          
+          <div className="setting-control flex items-center">
+            <label className="text-sm font-medium mr-2">
+              Camera Index:
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={cameraIndex}
+              onChange={(e) => setCameraIndex(Math.max(0, parseInt(e.target.value) || 0))}
+              className="p-1 border rounded w-16 text-center"
+            />
+          </div>
+        </div>
+        
+        {/* Add Number of Flakes control below Trace Settings */}
+        <div className="number-of-flakes-control mb-4 flex items-center">
+          <label className="text-sm font-medium">
             Number of Flakes:
             <input
               type="number"
@@ -500,21 +638,6 @@ const TraceOverBox = () => {
               className="ml-2 p-1 border rounded w-16 text-center"
             />
           </label>
-          
-          <div className="speed-control flex items-center">
-            <label className="text-sm font-medium mr-2">
-              Speed:
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="100"
-              value={speed}
-              onChange={(e) => setSpeed(Math.min(100, Math.max(1, parseInt(e.target.value) || 50)))}
-              className="p-1 border rounded w-16 text-center"
-            />
-            <span className="ml-1 text-sm">%</span>
-          </div>
         </div>
 
         {/* Current Position Display */}

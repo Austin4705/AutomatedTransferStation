@@ -1,19 +1,19 @@
 import { useEffect } from "react";
 import { useRecoilValue } from "recoil";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
-import CameraDisplay from "./components/CameraDisplay";
-import ConnectionStatus from "./components/ConnectionStatus";
-import UnifiedLog from "./components/UnifiedLog";
-import CommandInput from "./components/CommandInput";
-import PacketInput from "./components/PacketInput";
-import PositionDisplay from "./components/PositionDisplay";
-import ActionButtons from "./components/ActionButtons";
-import TraceOverBox from "./components/TraceOverBox";
+
 import useSocketJSON from "./hooks/useSocketJSON";
 import { jsonStateAtom } from "./state/jsonState";
 import { PacketManager } from "./packets/PacketHandler";
-import HeaderPositionDisplay from "./components/HeaderPositionDisplay";
-import TransferStationCommandInput from "./components/TransferStationCommandInput";
+
+// Layout and Pages
+import MainLayout from "./components/MainLayout";
+import OverviewPage from "./pages/OverviewPage";
+import CameraPage from "./pages/CameraPage";
+import TraceOverPage from "./pages/TraceOverPage";
+import SystemLogsPage from "./pages/SystemLogsPage";
+import CommandsPage from "./pages/CommandsPage";
 
 function App() {
   const WS_URL = "ws://127.0.0.1:8765";
@@ -35,64 +35,19 @@ function App() {
   }, [jsonState.lastJsonMessage]);
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <div className="flex items-center">
-          <h1>Automated Transfer Station</h1>
-          <HeaderPositionDisplay />
-        </div>
-        <ConnectionStatus />
-      </header>
-      
-      <main className="app-content">
-        <div className="camera-section">
-          <div className="camera-container primary">
-            <h2>Primary Camera</h2>
-            <CameraDisplay />
-          </div>
-          <div className="camera-container secondary">
-            <h2>Secondary Camera</h2>
-            <CameraDisplay />
-          </div>
-        </div>
-        
-        <div className="control-section">
-          {/* Hide the original position display since it's now in the header */}
-          {/* <div className="position-container">
-            <h2>Position Data</h2>
-            <PositionDisplay />
-          </div> */}
-          
-          <div className="action-container">
-            <h2>Actions</h2>
-            <ActionButtons />
-          </div>
-          
-          <div className="trace-over-container">
-            <TraceOverBox />
-          </div>
-          
-          <div className="input-container">
-            <div className="command-input">
-              <CommandInput />
-            </div>
-            <div className="ts-command-input">
-              <TransferStationCommandInput />
-            </div>
-            <div className="packet-input">
-              <PacketInput />
-            </div>
-          </div>
-        </div>
-        
-        <div className="log-section">
-          <div className="log-container full-width">
-            <h2>System Logs</h2>
-            <UnifiedLog />
-          </div>
-        </div>
-      </main>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Navigate to="/overview" replace />} />
+          <Route path="overview" element={<OverviewPage />} />
+          <Route path="camera" element={<CameraPage />} />
+          <Route path="trace-over" element={<TraceOverPage />} />
+          <Route path="system-logs" element={<SystemLogsPage />} />
+          <Route path="commands" element={<CommandsPage />} />
+          <Route path="*" element={<Navigate to="/overview" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 
