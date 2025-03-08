@@ -193,12 +193,6 @@ const TraceOverBox = () => {
           y: parseFloat(flake.bottomLeft.y)
         }
       })),
-      // Add boundary coordinates explicitly
-      bottom_x: bottom_x,
-      bottom_y: bottom_y,
-      top_x: top_x,
-      top_y: top_y,
-      // Add all other parameters
       magnification: magnification,
       pics_until_focus: picsUntilFocus,
       initial_wait_time: initialWaitTime,
