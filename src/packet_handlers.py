@@ -5,6 +5,7 @@ from camera import Camera
 from transfer_station import Transfer_Station 
 import threading
 from transfer_functions import TransferFunctions
+from threading import Thread
 
 # Dictionary to store packet handlers
 _handlers: Dict[str, Callable] = {}
@@ -22,9 +23,10 @@ class PacketHandlers:
     """Class containing all packet handlers"""
     transfer_station = None
 
-    def __init__(self):
+    def __init__(self, transfer_station):
         print(f"Initializing PacketHandlers")
         Socket_Manager.packet_handlers = _handlers
+        self.transfer_station = transfer_station
     
     @packet_handler("SEND_COMMAND")
     def handle_send_command(packet_type: str, data: dict):
@@ -70,17 +72,18 @@ class PacketHandlers:
                 PacketCommander.send_error(f"Parameter parsing error: {str(e)}")
                 return
                 
-            # Execute command
-            try:
-                print(f"Executing: {command}({params})")
-                result = getattr(PacketHandlers.transfer_station, command)(*params)
-                if(result is not None):
-                    PacketCommander.send_message(f"TS Command executed: {result}")
-                else:
-                    PacketCommander.send_message(f"TS Command executed")
-                
-            except Exception as e:
-                PacketCommander.send_error(f"Execution error: {str(e)}")
+
+            def execute_command():
+                try:
+                    result = getattr(PacketHandlers.transfer_station, command)(*params)
+                    if(result is not None):
+                        PacketCommander.send_message(f"TS Command executed: {result}")
+                    else:
+                        PacketCommander.send_message(f"TS Command executed")
+                except Exception as e:
+                    PacketCommander.send_error(f"Execution error: {str(e)}")
+
+            Thread(target=execute_command).start()
                 
         except Exception as e:
             PacketCommander.send_error(f"Handler error: {str(e)}")
@@ -95,8 +98,8 @@ class PacketHandlers:
     def handle_trace_over(packet_type: str, data: dict):
         PacketCommander.send_message("Trace over request received. Creating a thread to run execution")
 
-        thread = threading.Thread(target=TransferFunctions.run_trace_over, args=(data))
-        thread .daemon = True
+        thread = threading.Thread(target=TransferFunctions.run_trace_over, args=(data,))
+        thread.daemon = True
         thread.start()
        
     @packet_handler("SNAP_SHOT")

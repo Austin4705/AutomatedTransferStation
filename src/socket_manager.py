@@ -77,7 +77,8 @@ class Socket_Manager:
                     "code": 500,
                     "message": str(e)
                 }
-            }            # Call the appropriate handler or default handler
+            }           
+            # Call the appropriate handler or default handler
             cls.send_all(json.dumps(error_data))
 
         handler = cls.packet_handlers.get(packet_type, cls.default_handler)

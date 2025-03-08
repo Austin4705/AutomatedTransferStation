@@ -10,7 +10,7 @@ import web_server
 from cvFunctions import CVFunctions
 from packet_handlers import PacketHandlers
 from transfer_station import Transfer_Station
-
+from transfer_functions import TransferFunctions
 if __name__ == "__main__":
     # Load configuration from JSON file
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -37,8 +37,8 @@ if __name__ == "__main__":
 
     print("Starting Transfer Station")
     TRANSFER_STATION = Transfer_Station()
-    PacketHandlers.transfer_station = TRANSFER_STATION
-    PacketHandlers()
+    PacketHandlers(TRANSFER_STATION)
+    TransferFunctions(TRANSFER_STATION)
 
     print("Starting socket")
     # Starting the tread  that generally runs the socket server
