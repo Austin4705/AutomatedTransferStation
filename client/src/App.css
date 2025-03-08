@@ -171,10 +171,13 @@
 }
 
 .command-input,
+.ts-command-input,
 .packet-input {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  padding: 1rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
 }
 
 /* Trace Over Box Styles */
@@ -519,4 +522,123 @@ input:focus, select:focus {
 /* Ensure the log list doesn't overflow */
 .log-list {
   width: 100%;
+}
+
+.ts-command-input-field,
+.ts-parameters-input-field {
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.ts-parameters-input-field {
+  resize: vertical;
+  min-height: 4rem;
+  max-height: 12rem;
+  height: auto;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  white-space: pre;
+  line-height: 1.4;
+  tab-size: 2;
+  overflow-x: auto;
+  background-color: transparent;
+  position: relative;
+  z-index: 2;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.25rem;
+  text-indent: 0;
+}
+
+.ts-command-input-field:focus,
+.ts-parameters-input-field:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+}
+
+.ts-command-send-button {
+  padding: 0.5rem 1rem;
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ts-command-send-button:hover:not(:disabled) {
+  background-color: #3182ce;
+}
+
+.ts-command-send-button:disabled {
+  background-color: #a0aec0;
+  cursor: not-allowed;
+}
+
+.keep-text-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.keep-text-checkbox input[type="checkbox"] {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  margin-right: 0.25rem;
+}
+
+.keep-text-checkbox label {
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: #4a5568;
+  user-select: none;
+}
+
+.parameters-container {
+  position: relative;
+}
+
+.placeholder-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.5rem;
+  color: rgba(100, 116, 139, 0.5);
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  pointer-events: none;
+  user-select: none;
+  white-space: pre;
+  text-align: left;
+  overflow: hidden;
+  z-index: 1;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-indent: 0;
+}
+
+.placeholder-text pre {
+  margin: 0;
+  padding: 0;
+  font-family: inherit;
+  white-space: pre;
+  line-height: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.ts-command-placeholder {
+  padding-left: 0;
+  padding-right: 0;
 }

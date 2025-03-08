@@ -1,10 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSendJSON } from "../hooks/useSendJSON";
 
+// Empty template and placeholder with identical structure
+const EMPTY_TEMPLATE = `{
+  "type": 
+  
+}`;
+
+// Placeholder template with example content
+const PLACEHOLDER_TEMPLATE = `{
+  "type": "COMMAND_NAME",
+  "parameter": "value"
+}`;
+
 const PacketInput = () => {
-  const [packetJson, setPacketJson] = useState("");
+  const [packetJson, setPacketJson] = useState(EMPTY_TEMPLATE);
   const [error, setError] = useState<string | null>(null);
+  const [keepText, setKeepText] = useState(false);
+  const [rows, setRows] = useState(0);
+  const [showPlaceholder, setShowPlaceholder] = useState(true);
   const sendJson = useSendJSON();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Check if we should show the placeholder
+  useEffect(() => {
+    setShowPlaceholder(packetJson === EMPTY_TEMPLATE);
+  }, [packetJson]);
+
+  // Calculate rows based on content
+  useEffect(() => {
+    const lineCount = (packetJson.match(/\n/g) || []).length + 1;
+    setRows(Math.max(lineCount, 4)); // Minimum 4 rows
+  }, [packetJson]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,32 +45,92 @@ const PacketInput = () => {
       // Send the packet to the server
       sendJson(packetObject);
       
-      // Clear the input field and any errors
-      setPacketJson("");
+      // Clear the input field and any errors if keepText is false
+      if (!keepText) {
+        setPacketJson(EMPTY_TEMPLATE);
+      }
       setError(null);
     } catch (err) {
       setError("Invalid JSON format");
     }
   };
 
+  // Handle focusing the textarea to position cursor properly
+  const handleFocus = () => {
+    if (textareaRef.current) {
+      // If the content is just the default template, position cursor after "type":
+      if (packetJson === EMPTY_TEMPLATE) {
+        const textarea = textareaRef.current;
+        // Position cursor after "type":
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = 10;
+        }, 0);
+      }
+    }
+  };
+
+  // Handle tab key in textarea
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      
+      const target = e.target as HTMLTextAreaElement;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      
+      // Insert tab at cursor position (2 spaces)
+      const newValue = packetJson.substring(0, start) + '  ' + packetJson.substring(end);
+      setPacketJson(newValue);
+      
+      // Move cursor after the inserted tab
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
+          textareaRef.current.focus();
+        }
+      }, 0);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="packet-input-form">
-      <div className="input-group flex flex-col gap-2">
-        <textarea
-          value={packetJson}
-          onChange={(e) => {
-            setPacketJson(e.target.value);
-            setError(null); // Clear error when input changes
-          }}
-          placeholder='Enter JSON packet (e.g., {"type": "SNAP_SHOT", "camera": 0})'
-          className="packet-input-field"
-          rows={3}
-          style={{ 
-            resize: "vertical", 
-            fontFamily: "monospace",
-            fontSize: "0.875rem"
-          }}
-        />
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-between items-center mb-1">
+          <h2 className="text-base font-medium">Custom Packet</h2>
+          <div className="keep-text-checkbox">
+            <input
+              type="checkbox"
+              id="packet-keep-text"
+              checked={keepText}
+              onChange={(e) => setKeepText(e.target.checked)}
+            />
+            <label htmlFor="packet-keep-text">
+              Keep text
+            </label>
+          </div>
+        </div>
+        <div className="parameters-container relative">
+          <textarea
+            ref={textareaRef}
+            id="packet-json"
+            value={packetJson}
+            onChange={(e) => {
+              setPacketJson(e.target.value);
+              setError(null); // Clear error when input changes
+            }}
+            onKeyDown={handleKeyDown}
+            className="ts-parameters-input-field w-full"
+            spellCheck="false"
+            wrap="off"
+            rows={rows}
+            onFocus={handleFocus}
+          />
+          {showPlaceholder && (
+            <div className="placeholder-text">
+              {PLACEHOLDER_TEMPLATE}
+            </div>
+          )}
+        </div>
         
         {error && (
           <div className="error-message text-sm" style={{ color: "#e74c3c" }}>
@@ -51,13 +138,15 @@ const PacketInput = () => {
           </div>
         )}
         
-        <button 
-          type="submit" 
-          className="packet-send-button"
-          disabled={!packetJson.trim()}
-        >
-          Send Packet
-        </button>
+        <div className="flex justify-end">
+          <button 
+            type="submit" 
+            className="ts-command-send-button"
+            disabled={!packetJson.trim()}
+          >
+            Send Packet
+          </button>
+        </div>
       </div>
     </form>
   );

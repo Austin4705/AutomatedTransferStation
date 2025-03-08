@@ -13,6 +13,7 @@ import useSocketJSON from "./hooks/useSocketJSON";
 import { jsonStateAtom } from "./state/jsonState";
 import { PacketManager } from "./packets/PacketHandler";
 import HeaderPositionDisplay from "./components/HeaderPositionDisplay";
+import TransferStationCommandInput from "./components/TransferStationCommandInput";
 
 function App() {
   const WS_URL = "ws://127.0.0.1:8765";
@@ -73,11 +74,12 @@ function App() {
           
           <div className="input-container">
             <div className="command-input">
-              <h2>Custom Command</h2>
               <CommandInput />
             </div>
+            <div className="ts-command-input">
+              <TransferStationCommandInput />
+            </div>
             <div className="packet-input">
-              <h2>Custom Packet</h2>
               <PacketInput />
             </div>
           </div>

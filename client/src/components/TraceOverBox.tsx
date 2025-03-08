@@ -434,6 +434,27 @@ const TraceOverBox = () => {
     setJsonOutput(value);
   };
 
+  // Handle tab key in the JSON textarea
+  const handleJsonKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      
+      const target = e.target as HTMLTextAreaElement;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      
+      // Insert tab at cursor position (2 spaces)
+      const newValue = jsonOutput.substring(0, start) + '  ' + jsonOutput.substring(end);
+      setJsonOutput(newValue);
+      
+      // Move cursor after the inserted tab
+      setTimeout(() => {
+        target.selectionStart = target.selectionEnd = start + 2;
+        target.focus();
+      }, 0);
+    }
+  };
+
   // Parse the JSON and update form fields when Parse button is clicked
   const handleParseJson = () => {
     try {
@@ -624,7 +645,10 @@ const TraceOverBox = () => {
           <textarea
             value={jsonOutput}
             onChange={(e) => handleJsonOutputChange(e.target.value)}
-            className="w-full h-32 p-2 border rounded font-mono text-xs"
+            onKeyDown={handleJsonKeyDown}
+            className="ts-parameters-input-field w-full h-32 p-2 border rounded font-mono text-xs"
+            spellCheck="false"
+            wrap="off"
           />
         </div>
 

@@ -3,7 +3,8 @@ import json
 from socket_manager import Socket_Manager
 from camera import Camera
 from transfer_station import Transfer_Station 
-
+import threading
+from transfer_functions import TransferFunctions
 
 # Dictionary to store packet handlers
 _handlers: Dict[str, Callable] = {}
@@ -31,6 +32,23 @@ class PacketHandlers:
         print(f"Executing command: {command}")
         PacketHandlers.transfer_station.send_command(command)
 
+    @packet_handler("TS_COMMAND")
+    def handle_ts_command(packet_type: str, data: dict):
+        command = data["command"]
+        parameters = data["parameters"]
+        if hasattr(PacketHandlers.transfer_station, command):
+            function = getattr(PacketHandlers.transfer_station, command)
+            deserialized_parameters = json.loads(parameters) 
+            result = function(*deserialized_parameters)
+            PacketCommander.send_message(f"TS command {command} executed with result: {result}")
+        else:
+            PacketCommander.send_error(f"TS command {command} not found")
+
+        # deserialized_parameters = json.loads(param) if isinstance(param, str) else param for param in parameters]
+        result = function(*deserialized_parameters)
+        PacketCommander.send_message(f"TS command {command} executed with result: {result}")
+
+
     @packet_handler("REQUEST_POSITION")
     def handle_request_position(packet_type: str, data: dict):
         message = {"type": "POSITION", "x":1, "y":2}
@@ -38,66 +56,12 @@ class PacketHandlers:
 
     @packet_handler("TRACE_OVER")
     def handle_trace_over(packet_type: str, data: dict):
-        print("Trace over request received")
-        
-        # Check if flakes data is provided
-        if "flakes" in data and isinstance(data["flakes"], list):
-            flakes = data["flakes"]
-            print(f"Processing {len(flakes)} flakes")
-            
-            # Get speed parameter (default to 50% if not provided)
-            speed = data.get("speed", 50)
-            print(f"Trace over speed: {speed}%")
-            
-            try:
-                for i, flake in enumerate(flakes):
-                    flake_id = flake.get("id", i+1)
-                    top_right = flake.get("topRight", {})
-                    bottom_left = flake.get("bottomLeft", {})
-                    
-                    # Extract coordinates
-                    tr_x = top_right.get("x")
-                    tr_y = top_right.get("y")
-                    bl_x = bottom_left.get("x")
-                    bl_y = bottom_left.get("y")
-                    
-                    print(f"Flake {flake_id}:")
-                    print(f"  Top Right: ({tr_x}, {tr_y})")
-                    print(f"  Bottom Left: ({bl_x}, {bl_y})")
-                    
-                    # Here you would add the actual trace over functionality
-                    # For example, moving to each coordinate and performing actions
-                    # The speed parameter can be used to adjust the movement speed
-                
-                # Send a success response back to the client
-                PacketCommander.send_message(f"Successfully processed {len(flakes)} flakes for trace over at {speed}% speed")
-                
-            except Exception as e:
-                error_message = f"Error processing flakes: {str(e)}"
-                print(error_message)
-                Socket_Manager.send_all_json({
-                    "type": "TRACE_OVER_RESULT",
-                    "success": False,
-                    "message": error_message
-                })
-                Socket_Manager.send_all_json({
-                    "type": "ERROR",
-                    "message": error_message
-                })
-        else:
-            error_message = "No flakes data provided in TRACE_OVER packet"
-            print(error_message)
-            Socket_Manager.send_all_json({
-                "type": "TRACE_OVER_RESULT",
-                "success": False,
-                "message": error_message,
-                "flakeCount": 0
-            })
-            Socket_Manager.send_all_json({
-                "type": "ERROR",
-                "message": error_message
-            })
-        
+        PacketCommander.send_message("Trace over request received. Creating a thread to run execution")
+
+        thread = threading.Thread(target=TransferFunctions.run_trace_over, args=(data))
+        thread .daemon = True
+        thread.start()
+       
     @packet_handler("SNAP_SHOT")
     def handle_snap_shot(packet_type: str, data: dict):
         Camera.global_list[data["camera"]].snap_image_flake_hunted()
@@ -119,8 +83,25 @@ class PacketCommander:
     """Class containing all packet commands"""
     @staticmethod
     def send_message(message: str):
+        print(message)
         Socket_Manager.send_all_json({
             "type": "MESSAGE",
             "message": message
         })
+    
+    def send_message_no_print(message: str):
+        Socket_Manager.send_all_json({
+            "type": "MESSAGE",
+            "message": message
+        })
+    
+    def send_error(message: str):
+        print("Error: ", message)
+        Socket_Manager.send_all_json({
+            "type": "ERROR",
+            "message": message
+        })
+    
+    
+
         
