@@ -34,20 +34,57 @@ class PacketHandlers:
 
     @packet_handler("TS_COMMAND")
     def handle_ts_command(packet_type: str, data: dict):
-        command = data["command"]
-        parameters = data["parameters"]
-        if hasattr(PacketHandlers.transfer_station, command):
-            function = getattr(PacketHandlers.transfer_station, command)
-            deserialized_parameters = json.loads(parameters) 
-            result = function(*deserialized_parameters)
-            PacketCommander.send_message(f"TS command {command} executed with result: {result}")
-        else:
-            PacketCommander.send_error(f"TS command {command} not found")
-
-        # deserialized_parameters = json.loads(param) if isinstance(param, str) else param for param in parameters]
-        result = function(*deserialized_parameters)
-        PacketCommander.send_message(f"TS command {command} executed with result: {result}")
-
+        try:
+            # Validate inputs
+            if "command" not in data or not data["command"].strip():
+                PacketCommander.send_error("Missing or empty command")
+                return
+                
+            command = data["command"].strip()
+            parameters_str = data.get("parameters", "[]").strip()
+                
+            if not hasattr(PacketHandlers.transfer_station, command):
+                PacketCommander.send_error(f"Command '{command}' not found")
+                return
+                
+            # Parse parameters
+            try:
+                # Convert curly braces to square brackets if needed
+                if parameters_str.startswith('{') and parameters_str.endswith('}'):
+                    parameters_str = '[' + parameters_str[1:-1] + ']'
+                elif not (parameters_str.startswith('[') and parameters_str.endswith(']')):
+                    parameters_str = '[' + parameters_str + ']'
+                
+                # Parse parameters using json or ast
+                try:
+                    params = json.loads(parameters_str)
+                except json.JSONDecodeError:
+                    import ast
+                    params = ast.literal_eval(parameters_str)
+                
+                # Ensure params is a list
+                if not isinstance(params, list):
+                    params = [params]
+                    
+            except Exception as e:
+                PacketCommander.send_error(f"Parameter parsing error: {str(e)}")
+                return
+                
+            # Execute command
+            try:
+                print(f"Executing: {command}({params})")
+                result = getattr(PacketHandlers.transfer_station, command)(*params)
+                if(result is not None):
+                    PacketCommander.send_message(f"TS Command executed: {result}")
+                else:
+                    PacketCommander.send_message(f"TS Command executed")
+                
+            except Exception as e:
+                PacketCommander.send_error(f"Execution error: {str(e)}")
+                
+        except Exception as e:
+            PacketCommander.send_error(f"Handler error: {str(e)}")
+            print(f"TS_COMMAND handler error: {str(e)}")
 
     @packet_handler("REQUEST_POSITION")
     def handle_request_position(packet_type: str, data: dict):
