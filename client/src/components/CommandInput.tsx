@@ -23,21 +23,35 @@ const CommandInput = () => {
     }
   };
 
+  // Reset field to default state
+  const handleReset = () => {
+    setCommand("");
+  };
+
   return (
     <form onSubmit={handleSubmit} className="command-input-form">
       <div className="flex flex-col gap-2">
         <div className="flex justify-between items-center mb-1">
           <h2 className="text-base font-medium">Custom Command</h2>
-          <div className="keep-text-checkbox">
-            <input
-              type="checkbox"
-              id="command-keep-text"
-              checked={keepText}
-              onChange={(e) => setKeepText(e.target.checked)}
-            />
-            <label htmlFor="command-keep-text">
-              Keep text
-            </label>
+          <div className="flex items-center gap-2">
+            <div className="keep-text-checkbox">
+              <input
+                type="checkbox"
+                id="command-keep-text"
+                checked={keepText}
+                onChange={(e) => setKeepText(e.target.checked)}
+              />
+              <label htmlFor="command-keep-text">
+                Keep text
+              </label>
+            </div>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="reset-button text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+            >
+              Reset
+            </button>
           </div>
         </div>
         <div className="input-group flex gap-2">
