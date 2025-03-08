@@ -8,17 +8,51 @@ interface ResponseLogEntry {
   response: string;
 }
 
+// Define message types to fix TypeScript errors
+interface ResponseMessage {
+  type: string;
+  message?: string;
+  response?: string;
+  responses?: Array<{timestamp?: number; response?: string}>;
+  [key: string]: any;
+}
+
 const ResponseLog = () => {
   const [responseLogs, setResponseLogs] = useState<ResponseLogEntry[]>([]);
   const jsonState = useRecoilValue(jsonStateAtom);
   const sendJson = useSendJSON();
   const logContentRef = useRef<HTMLDivElement>(null);
+  // Add a ref to track the last processed message to avoid duplicates
+  const lastProcessedMessageRef = useRef<any>(null);
+  // Add a ref to track if logs were manually cleared
+  const logsManuallyCleared = useRef<boolean>(false);
 
   // Process incoming messages
   useEffect(() => {
     if (!jsonState.lastJsonMessage) return;
 
-    const message = jsonState.lastJsonMessage;
+    // Skip if this is the same message we already processed
+    if (lastProcessedMessageRef.current === jsonState.lastJsonMessage) {
+      return;
+    }
+
+    // Update the last processed message
+    lastProcessedMessageRef.current = jsonState.lastJsonMessage;
+    
+    const message = jsonState.lastJsonMessage as ResponseMessage;
+    
+    // If logs were manually cleared, we need to reset the flag
+    // but only process new messages after clearing
+    if (logsManuallyCleared.current) {
+      logsManuallyCleared.current = false;
+      // Only process this message if it's new (arrived after clearing)
+      const currentTime = new Date().getTime();
+      const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : currentTime;
+      // If the message is older than when we cleared, skip it
+      if (messageTime < currentTime - 1000) { // 1 second buffer
+        return;
+      }
+    }
     
     // Handle bulk response logs
     if (message.type === "RESPONSE_LOG_RESPONSE" && Array.isArray(message.responses)) {
@@ -29,12 +63,7 @@ const ResponseLog = () => {
       
       setResponseLogs(formattedLogs);
       
-      // Scroll to bottom after update
-      setTimeout(() => {
-        if (logContentRef.current) {
-          logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
-        }
-      }, 100);
+      scrollToBottom();
     }
     
     // Handle individual responses
@@ -50,20 +79,46 @@ const ResponseLog = () => {
       
       setResponseLogs(prev => [...prev, newEntry]);
       
-      // Scroll to bottom after update
-      setTimeout(() => {
-        if (logContentRef.current) {
-          logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
-        }
-      }, 100);
+      scrollToBottom();
     }
   }, [jsonState.lastJsonMessage]);
+
+  // Listen for logs-cleared event from UnifiedLog
+  useEffect(() => {
+    const handleLogsClearedEvent = (event: Event) => {
+      clearLogs();
+    };
+    
+    // Add event listener
+    document.addEventListener('logs-cleared', handleLogsClearedEvent as EventListener);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('logs-cleared', handleLogsClearedEvent as EventListener);
+    };
+  }, []);
+
+  // Function to scroll to bottom
+  const scrollToBottom = () => {
+    if (logContentRef.current) {
+      logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+    }
+  };
 
   // Function to request response logs
   const requestResponseLogs = () => {
     sendJson({
       type: "REQUEST_LOG_RESPONSE",
     });
+  };
+
+  // Function to clear logs
+  const clearLogs = () => {
+    setResponseLogs([]);
+    // Mark that logs were manually cleared to prevent immediate re-adding
+    logsManuallyCleared.current = true;
+    // Reset the last processed message to allow new messages to come in
+    lastProcessedMessageRef.current = null;
   };
 
   return (
@@ -93,7 +148,7 @@ const ResponseLog = () => {
           Refresh
         </button>
         <button 
-          onClick={() => setResponseLogs([])}
+          onClick={clearLogs}
           className="clear-button text-sm ml-2"
         >
           Clear
