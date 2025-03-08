@@ -2,17 +2,26 @@ import { useState, useEffect, useRef } from "react";
 import { useSendJSON } from "../hooks/useSendJSON";
 
 // Empty template with exact spacing to match placeholder
-const EMPTY_TEMPLATE = `{
+const EMPTY_TEMPLATE = `[
 
-}`;
+]`;
+
+// Placeholder template with exact spacing to match empty template
+const PLACEHOLDER_TEMPLATE = '';
 
 const TransferStationCommandInput = () => {
   const [command, setCommand] = useState("");
   const [parameters, setParameters] = useState(EMPTY_TEMPLATE);
   const [keepText, setKeepText] = useState(false);
   const [rows, setRows] = useState(0);
+  const [showPlaceholder, setShowPlaceholder] = useState(true);
   const sendJson = useSendJSON();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Check if we should show the placeholder
+  useEffect(() => {
+    setShowPlaceholder(parameters === EMPTY_TEMPLATE);
+  }, [parameters]);
 
   // Calculate rows based on content
   useEffect(() => {
@@ -32,17 +41,10 @@ const TransferStationCommandInput = () => {
       parameters: parameters.trim()
     });
     
-    // Clear the input fields if keepText is false
+    // Clear the command input but keep the parameters
     if (!keepText) {
       setCommand("");
-      setParameters(EMPTY_TEMPLATE);
     }
-  };
-
-  // Reset fields to default state
-  const handleReset = () => {
-    setCommand("");
-    setParameters(EMPTY_TEMPLATE);
   };
 
   // Handle focusing the textarea to position cursor properly
@@ -87,25 +89,16 @@ const TransferStationCommandInput = () => {
       <div className="flex flex-col gap-2">
         <div className="flex justify-between items-center mb-1">
           <h2 className="text-base font-medium">Transfer Station Command</h2>
-          <div className="flex items-center gap-2">
-            <div className="keep-text-checkbox">
-              <input
-                type="checkbox"
-                id="ts-keep-text"
-                checked={keepText}
-                onChange={(e) => setKeepText(e.target.checked)}
-              />
-              <label htmlFor="ts-keep-text">
-                Keep text
-              </label>
-            </div>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="reset-button text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
-            >
-              Reset
-            </button>
+          <div className="keep-text-checkbox">
+            <input
+              type="checkbox"
+              id="ts-keep-text"
+              checked={keepText}
+              onChange={(e) => setKeepText(e.target.checked)}
+            />
+            <label htmlFor="ts-keep-text">
+              Keep text
+            </label>
           </div>
         </div>
         <div className="input-group flex gap-2">
@@ -139,9 +132,14 @@ const TransferStationCommandInput = () => {
             rows={rows}
             onFocus={handleFocus}
           />
+          {showPlaceholder && (
+            <div className="placeholder-text ts-command-placeholder">
+{``}
+            </div>
+          )}
         </div>
         <div className="text-xs text-gray-500">
-          Example: "move_to" with parameters {"{"}"x": 10, "y": 20, "z": 30{"}"}
+          Example: "moveXY" with parameters [10, 20]
         </div>
       </div>
     </form>

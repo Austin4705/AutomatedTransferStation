@@ -1,4 +1,4 @@
-import time
+import time 
 from datetime import datetime
 
 # The abstract class for a transfer station instance
@@ -57,9 +57,9 @@ class Transfer_Station():
             'response': response
         })
 
-    def wait(self, time):
-        print(f"Wait for {time} seconds-V")
-        time.sleep(time)
+    def wait(self, seconds):
+        print(f"Wait for {seconds} seconds-V")
+        time.sleep(seconds)
     
     def send_command_history(self, depth = -1):
         print("Send Command History-V")
