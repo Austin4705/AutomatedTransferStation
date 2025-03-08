@@ -21,36 +21,40 @@ const DashboardPage = () => {
       </div>
       
       <div className="dashboard-lower-section">
-        <div className="control-section">
-          <div className="action-container">
-            <h2>Actions</h2>
-            <ActionButtons />
-          </div>
-          
-          <div className="trace-over-container">
-            <TraceOverBox />
-          </div>
-          
-          <div className="input-container">
-            <div className="command-input">
-              <h2>Command Input</h2>
-              <CommandInput />
-            </div>
-            <div className="ts-command-input">
-              <h2>Transfer Station Commands</h2>
-              <TransferStationCommandInput />
-            </div>
-            <div className="packet-input">
-              <h2>Packet Input</h2>
-              <PacketInput />
-            </div>
-          </div>
+        <div className="trace-over-container">
+          <TraceOverBox />
         </div>
         
-        <div className="log-section">
-          <div className="log-container full-width">
-            <h2>System Logs</h2>
-            <UnifiedLog />
+        <div className="dashboard-controls-and-logs">
+          <div className="control-section">
+            <div className="action-container">
+              <h2>Actions</h2>
+              <ActionButtons />
+            </div>
+            
+            <div className="input-container">
+              <div className="command-input">
+                <h2>Command Input</h2>
+                <CommandInput />
+              </div>
+              <div className="ts-command-input">
+                <h2>Transfer Station Commands</h2>
+                <TransferStationCommandInput />
+              </div>
+              <div className="packet-input">
+                <h2>Packet Input</h2>
+                <PacketInput />
+              </div>
+            </div>
+          </div>
+          
+          <div className="log-section">
+            <div className="log-container full-width">
+              <h2>System Logs</h2>
+              <div className="dashboard-log-wrapper fixed-height-logs">
+                <UnifiedLog />
+              </div>
+            </div>
           </div>
         </div>
       </div>
