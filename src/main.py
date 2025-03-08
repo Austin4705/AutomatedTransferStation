@@ -66,7 +66,7 @@ if __name__ == "__main__":
         input()
         for i in range(10):
             TRANSFER_STATION.add_fake_command(f"Fake Command {i}")
-            # TRANSFER_STATION.add_fake_response(f"Fake Response {i}")
+            TRANSFER_STATION.add_fake_response(f"Fake Response {i}")
         print("Done")
 
     for thread in threading.enumerate():

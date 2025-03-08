@@ -145,6 +145,7 @@ class Socket_Manager:
     def ts_sending_thread(TRANSFER_STATION):
         while True:
             if TRANSFER_STATION.exist_new_sent_commands():
+                print("Sending commands")
                 message = TRANSFER_STATION.since_last_send()
                 for m in message:
                     Socket_Manager.send_all(json.dumps({
@@ -153,6 +154,7 @@ class Socket_Manager:
                     }))
 
             if TRANSFER_STATION.exist_new_received_commands():
+                print("Sending responses")
                 message = TRANSFER_STATION.since_last_receive()
                 for m in message:
                     Socket_Manager.send_all(json.dumps({
