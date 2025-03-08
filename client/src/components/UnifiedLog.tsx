@@ -59,6 +59,10 @@ const UnifiedLog = () => {
   const sendJson = useSendJSON();
   const logContentRef = useRef<HTMLDivElement>(null);
   const packetDefsLoaded = useRef<boolean>(false);
+  // Add a ref to track the last processed message to avoid duplicates after clearing
+  const lastProcessedMessageRef = useRef<any>(undefined);
+  // Add a ref to track if logs were manually cleared
+  const logsManuallyCleared = useRef<boolean>(false);
 
   // Load packet definitions from document
   useEffect(() => {
@@ -367,12 +371,24 @@ const UnifiedLog = () => {
   const clearLogs = () => {
     setLogs([]); // Directly set logs to an empty array
     
+    // Mark that logs were manually cleared to prevent immediate re-adding
+    logsManuallyCleared.current = true;
+    
+    // Reset the last processed message reference
+    lastProcessedMessageRef.current = undefined;
+    
     // Reset any tracking variables that might cause issues
     // This helps prevent the last message from reappearing
     const event = new CustomEvent('logs-cleared', {
       detail: { timestamp: new Date().getTime() }
     });
     document.dispatchEvent(event);
+    
+    // Add a small delay before processing new messages
+    // This helps prevent the last message from being immediately re-added
+    setTimeout(() => {
+      logsManuallyCleared.current = false;
+    }, 100);
   };
 
   // Add click handler to close dropdowns when clicking outside
@@ -415,7 +431,22 @@ const UnifiedLog = () => {
   useEffect(() => {
     if (!jsonState.lastJsonMessage) return;
 
+    // Skip if this is the same message we already processed
+    if (lastProcessedMessageRef.current === jsonState.lastJsonMessage) {
+      return;
+    }
+
+    // Update the last processed message
+    lastProcessedMessageRef.current = jsonState.lastJsonMessage;
+
     const message = jsonState.lastJsonMessage as BaseMessage;
+    
+    // If logs were manually cleared, we need to reset the flag
+    // but only process new messages after clearing
+    if (logsManuallyCleared.current) {
+      // Skip this message as it might be the one that was showing before clearing
+      return;
+    }
     
     // Handle command messages
     if (message.type === "COMMAND") {

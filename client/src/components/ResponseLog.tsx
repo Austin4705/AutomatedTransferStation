@@ -118,7 +118,14 @@ const ResponseLog = () => {
     // Mark that logs were manually cleared to prevent immediate re-adding
     logsManuallyCleared.current = true;
     // Reset the last processed message to allow new messages to come in
-    lastProcessedMessageRef.current = null;
+    // Setting to null isn't enough - we need to completely reset the reference
+    lastProcessedMessageRef.current = undefined;
+    
+    // Add a small delay before allowing new messages to be processed
+    // This helps prevent the last message from being immediately re-added
+    setTimeout(() => {
+      logsManuallyCleared.current = false;
+    }, 100);
   };
 
   return (
