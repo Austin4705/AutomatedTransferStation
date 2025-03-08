@@ -456,6 +456,46 @@ const UnifiedLog = () => {
       scrollToBottom();
     }
     
+    // Handle response messages
+    else if (message.type === "RESPONSE" || message.type === "COMMAND_RESULT" || message.type === "ERROR") {
+      const responseMessage = message as ResponseMessage;
+      
+      // Check if this response is already in the logs to prevent duplicates
+      const isDuplicate = logs.some(log => 
+        log.type === "response" && 
+        log.packetType === message.type && 
+        log.message === (responseMessage.message || responseMessage.response || JSON.stringify(message))
+      );
+      
+      if (!isDuplicate) {
+        const newEntry: LogEntry = {
+          timestamp: new Date().toLocaleString(),
+          message: responseMessage.message || responseMessage.response || JSON.stringify(message),
+          type: "response",
+          rawData: message,
+          packetType: message.type
+        };
+        
+        addLogs([newEntry]);
+        scrollToBottom();
+      }
+    }
+    
+    // Handle bulk response logs
+    else if (message.type === "RESPONSE_LOG_RESPONSE" && Array.isArray((message as ResponseMessage).responses)) {
+      const responseMessage = message as ResponseMessage;
+      const responseLogs: LogEntry[] = responseMessage.responses!.map((resp: any) => ({
+        timestamp: new Date(resp.timestamp || Date.now()).toLocaleString(),
+        message: resp.response || JSON.stringify(resp),
+        type: "response",
+        rawData: resp,
+        packetType: "RESPONSE"
+      }));
+      
+      addLogs(responseLogs, true);
+      scrollToBottom();
+    }
+    
     // ... existing code for other message types ...
   }, [jsonState.lastJsonMessage, addLogs, scrollToBottom, logs]);
 
