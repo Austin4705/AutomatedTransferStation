@@ -48,7 +48,7 @@ const CommandInput = () => {
             <button
               type="button"
               onClick={handleReset}
-              className="reset-button text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+              className="reset-button"
             >
               Reset
             </button>

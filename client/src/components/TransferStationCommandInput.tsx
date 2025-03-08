@@ -84,21 +84,36 @@ const TransferStationCommandInput = () => {
     }
   };
 
+  // Reset function to clear both command and parameters
+  const handleReset = () => {
+    setCommand("");
+    setParameters(EMPTY_TEMPLATE);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="ts-command-input-form">
       <div className="flex flex-col gap-2">
         <div className="flex justify-between items-center mb-1">
           <h2 className="text-base font-medium">Transfer Station Command</h2>
-          <div className="keep-text-checkbox">
-            <input
-              type="checkbox"
-              id="ts-keep-text"
-              checked={keepText}
-              onChange={(e) => setKeepText(e.target.checked)}
-            />
-            <label htmlFor="ts-keep-text">
-              Keep text
-            </label>
+          <div className="flex items-center gap-2">
+            <div className="keep-text-checkbox">
+              <input
+                type="checkbox"
+                id="ts-keep-text"
+                checked={keepText}
+                onChange={(e) => setKeepText(e.target.checked)}
+              />
+              <label htmlFor="ts-keep-text">
+                Keep text
+              </label>
+            </div>
+            <button 
+              type="button" 
+              onClick={handleReset} 
+              className="reset-button"
+            >
+              Reset
+            </button>
           </div>
         </div>
         <div className="input-group flex gap-2">

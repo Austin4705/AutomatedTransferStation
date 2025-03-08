@@ -791,8 +791,8 @@ input:focus, select:focus {
 
 .reset-button {
   padding: 0.25rem 0.5rem;
-  background-color: #e2e8f0;
-  color: #4a5568;
+  background-color: #f56565;
+  color: white;
   border: none;
   border-radius: 0.25rem;
   font-size: 0.75rem;
@@ -801,12 +801,12 @@ input:focus, select:focus {
 }
 
 .reset-button:hover {
-  background-color: #cbd5e0;
+  background-color: #e53e3e;
 }
 
 .reset-button:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.5);
+  box-shadow: 0 0 0 2px rgba(229, 62, 62, 0.5);
 }
 
 /* Dashboard-specific trace over container */
