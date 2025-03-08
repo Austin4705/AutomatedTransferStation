@@ -99,14 +99,6 @@ const TraceOverBox = () => {
       camera_index: cameraIndex
     };
 
-    // Add boundary coordinates if a valid flake exists
-    if (validFlake) {
-      output.bottom_x = validFlake.bottomLeft.x;
-      output.bottom_y = validFlake.bottomLeft.y;
-      output.top_x = validFlake.topRight.x;
-      output.top_y = validFlake.topRight.y;
-    }
-
     setJsonOutput(JSON.stringify(output, null, 2));
   }, [flakeCoordinates, magnification, picsUntilFocus, initialWaitTime, focusWaitTime, cameraIndex]);
 
@@ -172,12 +164,7 @@ const TraceOverBox = () => {
       return;
     }
 
-    // Convert flake coordinates to single boundary
-    const firstFlake = flakeCoordinates[0];
-    const bottom_x = parseFloat(firstFlake.bottomLeft.x);
-    const bottom_y = parseFloat(firstFlake.bottomLeft.y);
-    const top_x = parseFloat(firstFlake.topRight.x);
-    const top_y = parseFloat(firstFlake.topRight.y);
+
 
     // Send the trace over command with flake coordinates and all parameters
     const data = {
