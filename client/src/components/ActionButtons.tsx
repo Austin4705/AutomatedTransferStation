@@ -1,4 +1,5 @@
 import { useSendJSON } from "../hooks/useSendJSON";
+import { useState } from "react";
 
 // Create a global event for refreshing streams
 // This allows components to communicate without direct props
@@ -17,6 +18,7 @@ const refreshAllStreams = () => {
 
 const ActionButtons = () => {
   const sendJson = useSendJSON();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleSnap = (snapNumber: number) => {
     sendJson({
@@ -36,27 +38,30 @@ const ActionButtons = () => {
   const refreshStream = (streamType: string, cameraNumber: number) => {
     // Dispatch a custom event that CameraDisplay will listen for
     createRefreshEvent(streamType, cameraNumber);
+  };
+
+  // Function to refresh all streams with visual feedback
+  const handleRefreshAll = () => {
+    setIsRefreshing(true);
     
-    // Also try the direct DOM approach as a fallback
-    const imgElements = document.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
-    imgElements.forEach(img => {
-      const src = img.src;
-      if (src.includes(`${streamType}${cameraNumber}`)) {
-        // Force a complete reload by recreating the element
-        const parent = img.parentNode;
-        if (parent) {
-          const newImg = document.createElement('img');
-          // Copy all attributes
-          Array.from(img.attributes).forEach(attr => {
-            newImg.setAttribute(attr.name, attr.value);
-          });
-          // Set a new src with timestamp
-          newImg.src = `${src.split('?')[0]}?t=${Date.now()}`;
-          // Replace the old image
-          parent.replaceChild(newImg, img);
-        }
-      }
-    });
+    // Dispatch the refresh all event
+    refreshAllStreams();
+    
+    // Also try to refresh all known camera types
+    refreshStream("video_feed", 0);
+    refreshStream("video_feed", 1);
+    refreshStream("video_feed", 2);
+    refreshStream("snapshot_feed", 0);
+    refreshStream("snapshot_feed", 1);
+    refreshStream("snapshot_feed", 2);
+    refreshStream("snapshot_flake_hunted", 0);
+    refreshStream("snapshot_flake_hunted", 1);
+    refreshStream("snapshot_flake_hunted", 2);
+    
+    // Reset the refreshing state after a delay
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 2000);
   };
 
   return (
@@ -117,27 +122,40 @@ const ActionButtons = () => {
         <h3 className="text-sm font-medium mb-2">Refresh Streams</h3>
         <div className="button-group flex flex-wrap gap-2">
           <button 
-            onClick={() => {
-              // Most direct approach - reload the page
-              window.location.reload();
-            }}
-            className="refresh-button bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded flex items-center"
+            onClick={handleRefreshAll}
+            disabled={isRefreshing}
+            className={`refresh-button ${isRefreshing ? 'bg-green-700 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white px-3 py-1 rounded flex items-center`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Refresh ALL Streams
+            {isRefreshing ? 'Refreshing...' : 'Refresh ALL Streams'}
           </button>
           
           <button 
             onClick={() => {
+              setIsRefreshing(true);
               refreshStream("video_feed", 0);
               refreshStream("video_feed", 1);
               refreshStream("video_feed", 2);
+              setTimeout(() => setIsRefreshing(false), 1000);
             }}
-            className="refresh-button bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded flex items-center"
+            disabled={isRefreshing}
+            className={`refresh-button ${isRefreshing ? 'bg-green-600 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-1 rounded flex items-center`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             Refresh Video Feeds
@@ -145,13 +163,22 @@ const ActionButtons = () => {
           
           <button 
             onClick={() => {
+              setIsRefreshing(true);
               refreshStream("snapshot_feed", 0);
               refreshStream("snapshot_feed", 1);
               refreshStream("snapshot_feed", 2);
+              setTimeout(() => setIsRefreshing(false), 1000);
             }}
-            className="refresh-button bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded flex items-center"
+            disabled={isRefreshing}
+            className={`refresh-button ${isRefreshing ? 'bg-green-600 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-1 rounded flex items-center`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             Refresh Snapshots
@@ -159,13 +186,22 @@ const ActionButtons = () => {
           
           <button 
             onClick={() => {
+              setIsRefreshing(true);
               refreshStream("snapshot_flake_hunted", 0);
               refreshStream("snapshot_flake_hunted", 1);
               refreshStream("snapshot_flake_hunted", 2);
+              setTimeout(() => setIsRefreshing(false), 1000);
             }}
-            className="refresh-button bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded flex items-center"
+            disabled={isRefreshing}
+            className={`refresh-button ${isRefreshing ? 'bg-green-600 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-1 rounded flex items-center`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             Refresh Flake Hunted
