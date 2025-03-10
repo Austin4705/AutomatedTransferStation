@@ -6,6 +6,7 @@ from cvFunctions import CVFunctions
 import threading
 import time
 import weakref
+from socket_manager import Socket_Manager
 
 class Camera:
     global_list = dict() #Global list of camera class objects
@@ -225,11 +226,13 @@ class Camera:
         frame = self.get_frame()
         with self.frame_lock:
             self.snapshot_image = frame
+        Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
         return self.snapshot_image
 
     def snap_image_flake_hunted(self):
         """Take a flake hunted snapshot and store it"""
         frame = self.get_frame()
+        Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT_FLAKE_HUNTED", "camera": self.camera_id})
         if frame is None:
             return None
             
