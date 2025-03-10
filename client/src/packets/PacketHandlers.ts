@@ -100,7 +100,7 @@ export class PacketHandlers {
     
     if (typeof cameraNumber === 'number') {
       // Refresh the corresponding video feed
-      createRefreshEvent("video_feed", cameraNumber);
+      createRefreshEvent("snapshot_feed", cameraNumber);
       console.log(`Refreshing video feed for camera ${cameraNumber} after flake hunted snapshot`);
     } else {
       console.warn("Invalid camera number in REFRESH_SNAPSHOT_FLAKE_HUNTED packet:", data);

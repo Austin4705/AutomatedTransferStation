@@ -6,6 +6,7 @@ import "./App.css";
 import useSocketJSON from "./hooks/useSocketJSON";
 import { jsonStateAtom } from "./state/jsonState";
 import { PacketManager } from "./packets/PacketHandler";
+import { PacketHandlers } from "./packets/PacketHandlers";
 
 // Layout and Pages
 import MainLayout from "./components/MainLayout";
@@ -24,6 +25,15 @@ function App() {
     // Initialize packet system
     PacketManager.initialize().then(() => {
       console.log("Packet system initialized");
+      
+      // Force the PacketHandlers class to be loaded, which will register all handlers
+      // This is necessary because the class uses decorators to register handlers
+      // Just referencing the class will cause it to be loaded and the decorators to run
+      Object.keys(PacketHandlers).forEach(key => {
+        console.log(`Registered handler: ${key}`);
+      });
+      
+      console.log("All packet handlers registered");
     });
   }, []);
 
