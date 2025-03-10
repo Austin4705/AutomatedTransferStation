@@ -34,14 +34,11 @@ class Camera:
         for i in range(0, max_cameras_to_check):
             try:
                 print(f"Trying camera {i}...")
-                cap = cv2.VideoCapture(i)
-                if not cap.isOpened():
-                    print(f"  Camera {i} not opened with default backend, trying DSHOW...")
+                if os.name == 'nt':  # Check if running on Windows
                     cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
-                    if not cap.isOpened():
-                        print(f"  Camera {i} not available")
-                        continue
-                
+                else:
+                    cap = cv2.VideoCapture(i)
+
                 # Try to read a test frame to verify the camera works
                 ret, test_frame = cap.read()
                 if not ret or test_frame is None:
