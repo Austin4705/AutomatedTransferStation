@@ -1,5 +1,20 @@
 import { useSendJSON } from "../hooks/useSendJSON";
 
+// Create a global event for refreshing streams
+// This allows components to communicate without direct props
+const createRefreshEvent = (streamType: string, cameraNumber: number) => {
+  const event = new CustomEvent('refresh-camera-stream', { 
+    detail: { streamType, cameraNumber } 
+  });
+  window.dispatchEvent(event);
+};
+
+// Global function to refresh all streams
+const refreshAllStreams = () => {
+  const event = new CustomEvent('refresh-all-camera-streams');
+  window.dispatchEvent(event);
+};
+
 const ActionButtons = () => {
   const sendJson = useSendJSON();
 
@@ -19,46 +34,29 @@ const ActionButtons = () => {
 
   // Function to refresh a specific camera stream
   const refreshStream = (streamType: string, cameraNumber: number) => {
-    // Find all image elements that might match our criteria
-    const imgElements = document.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
+    // Dispatch a custom event that CameraDisplay will listen for
+    createRefreshEvent(streamType, cameraNumber);
     
-    // Loop through all images to find ones matching our stream type
+    // Also try the direct DOM approach as a fallback
+    const imgElements = document.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
     imgElements.forEach(img => {
       const src = img.src;
-      // Check if this image is for the stream we want to refresh
       if (src.includes(`${streamType}${cameraNumber}`)) {
-        // Store the original src without any query parameters
-        const originalSrc = src.split('?')[0];
-        
-        // Create a new image element to preload the refreshed image
-        const newImg = new Image();
-        newImg.onload = () => {
-          // Once the new image is loaded, update the original image
-          img.src = newImg.src;
-          img.style.opacity = '1';
-        };
-        
-        // Add a visual indicator that we're refreshing
-        img.style.opacity = '0.5';
-        
-        // Force a reload by adding a timestamp
-        const timestamp = new Date().getTime();
-        newImg.src = `${originalSrc}?t=${timestamp}`;
+        // Force a complete reload by recreating the element
+        const parent = img.parentNode;
+        if (parent) {
+          const newImg = document.createElement('img');
+          // Copy all attributes
+          Array.from(img.attributes).forEach(attr => {
+            newImg.setAttribute(attr.name, attr.value);
+          });
+          // Set a new src with timestamp
+          newImg.src = `${src.split('?')[0]}?t=${Date.now()}`;
+          // Replace the old image
+          parent.replaceChild(newImg, img);
+        }
       }
     });
-    
-    // Also refresh any images that might be loaded in the future
-    // by updating the src attribute of img elements that might not have loaded yet
-    setTimeout(() => {
-      const newImgElements = document.querySelectorAll('img') as NodeListOf<HTMLImageElement>;
-      newImgElements.forEach(img => {
-        const src = img.src;
-        if (src.includes(`${streamType}${cameraNumber}`) && !src.includes('?t=')) {
-          const timestamp = new Date().getTime();
-          img.src = `${src}?t=${timestamp}`;
-        }
-      });
-    }, 500);
   };
 
   return (
@@ -120,12 +118,8 @@ const ActionButtons = () => {
         <div className="button-group flex flex-wrap gap-2">
           <button 
             onClick={() => {
-              // Refresh all streams at once
-              for (let i = 0; i < 3; i++) {
-                refreshStream("video_feed", i);
-                refreshStream("snapshot_feed", i);
-                refreshStream("snapshot_flake_hunted", i);
-              }
+              // Most direct approach - reload the page
+              window.location.reload();
             }}
             className="refresh-button bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded flex items-center"
           >
