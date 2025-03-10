@@ -18,6 +18,14 @@ interface TraceOverResultData {
   flakeCount?: number;
 }
 
+// Helper function to refresh a specific camera stream
+const createRefreshEvent = (streamType: string, cameraNumber: number) => {
+  const event = new CustomEvent('refresh-camera-stream', { 
+    detail: { streamType, cameraNumber } 
+  });
+  window.dispatchEvent(event);
+};
+
 // Register packet handlers
 export class PacketHandlers {
   @PacketManager.registerHandler("POSITION")
@@ -64,6 +72,38 @@ export class PacketHandlers {
     } else {
       // Show error notification
       console.error(`Trace over failed: ${data.message || 'Unknown error'}`);
+    }
+  }
+
+  @PacketManager.registerHandler("REFRESH_SNAPSHOT")
+  static handleRefreshSnapshot(data: any) {
+    console.log("Received REFRESH_SNAPSHOT packet:", data);
+    
+    // Extract camera number from the packet
+    const cameraNumber = data.camera;
+    
+    if (typeof cameraNumber === 'number') {
+      // Refresh the corresponding video feed
+      createRefreshEvent("video_feed", cameraNumber);
+      console.log(`Refreshing video feed for camera ${cameraNumber} after snapshot`);
+    } else {
+      console.warn("Invalid camera number in REFRESH_SNAPSHOT packet:", data);
+    }
+  }
+
+  @PacketManager.registerHandler("REFRESH_SNAPSHOT_FLAKE_HUNTED")
+  static handleRefreshSnapshotFlakeHunted(data: any) {
+    console.log("Received REFRESH_SNAPSHOT_FLAKE_HUNTED packet:", data);
+    
+    // Extract camera number from the packet
+    const cameraNumber = data.camera;
+    
+    if (typeof cameraNumber === 'number') {
+      // Refresh the corresponding video feed
+      createRefreshEvent("video_feed", cameraNumber);
+      console.log(`Refreshing video feed for camera ${cameraNumber} after flake hunted snapshot`);
+    } else {
+      console.warn("Invalid camera number in REFRESH_SNAPSHOT_FLAKE_HUNTED packet:", data);
     }
   }
 
