@@ -38,19 +38,18 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (jsonState.lastJsonMessage) {
-      console.log("Received websocket message:", jsonState.lastJsonMessage);
-      // const packetType = jsonState.lastJsonMessage.type;
-      // console.log(`%c Received websocket message of type: ${packetType}`, "background: #f39c12; color: white; padding: 4px; border-radius: 4px;", jsonState.lastJsonMessage);
+    if (jsonState.lastJsonMessage && typeof jsonState.lastJsonMessage === 'object' && 'type' in jsonState.lastJsonMessage) {
+      const packetType = jsonState.lastJsonMessage.type as string;
+      console.log(`%c Received websocket message of type: ${packetType}`, "background: #f39c12; color: white; padding: 4px; border-radius: 4px;", jsonState.lastJsonMessage);
       
-      // // Check if we have a handler for this packet type
-      // if (PacketManager.isKnownPacketType(packetType)) {
-      //   console.log(`%c Handler found for packet type: ${packetType}`, "background: #27ae60; color: white; padding: 4px; border-radius: 4px;");
-      // } else {
-      //   console.warn(`%c No handler found for packet type: ${packetType}`, "background: #c0392b; color: white; padding: 4px; border-radius: 4px;");
-      // }
+      // Check if we have a handler for this packet type
+      if (PacketManager.isKnownPacketType(packetType)) {
+        console.log(`%c Handler found for packet type: ${packetType}`, "background: #27ae60; color: white; padding: 4px; border-radius: 4px;");
+      } else {
+        console.warn(`%c No handler found for packet type: ${packetType}`, "background: #c0392b; color: white; padding: 4px; border-radius: 4px;");
+      }
       
-      // // Process the packet
+      // Process the packet
       PacketManager.handlePacket(jsonState.lastJsonMessage as any);
     }
   }, [jsonState.lastJsonMessage]);
