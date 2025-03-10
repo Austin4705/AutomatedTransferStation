@@ -26,9 +26,12 @@ pip install -r requirements.txt
 ```
 
 ### 2. Install 2DMatGMM
-The project requires the [2DMatGMM](https://github.com/Jaluus/2DMatGMM) library as a submodule.
+The project requires the [2DMatGMM](https://github.com/Jaluus/2DMatGMM) library as a submodule. Either use the submoudle recurisve or git clone it
 ```bash
 # From the project root directory
+git submodule update --init --recursive
+git clone https://github.com/Jaluss/2DMatGMM
+
 pip install -e 2DMatGMM
 ```
 
@@ -57,6 +60,9 @@ python main.py
 
 # Or use the shorthand command
 conda activate automatedTransfer && cd src && python main.py
+
+#Alternatively for windows you can run 
+.\run.bat
 ```
 
 ### Launch the User Interface
