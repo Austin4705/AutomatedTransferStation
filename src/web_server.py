@@ -5,6 +5,7 @@ import threading
 import atexit
 import gc
 import time
+import datetime
 
 app = Flask(__name__)
 # Track active streams to ensure proper cleanup
@@ -34,7 +35,10 @@ def cleanup_resources():
     with stream_lock:
         for stream_id in list(active_streams.keys()):
             try:
-                active_streams[stream_id] = False
+                if isinstance(active_streams[stream_id], dict):
+                    active_streams[stream_id]['active'] = False
+                else:
+                    active_streams[stream_id] = False
                 del active_streams[stream_id]
             except:
                 pass
@@ -82,12 +86,19 @@ def create_video_feed_route(camera_id):
         # Create a unique ID for this stream
         stream_id = f"video_{camera_id}_{threading.get_ident()}"
         
-        # Register this stream
+        # Register this stream with additional information
         with stream_lock:
-            active_streams[stream_id] = True
+            active_streams[stream_id] = {
+                'camera_id': camera_id,
+                'start_time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'active': True
+            }
         
         def generate():
             try:
+                # Log when stream opens
+                print(f"Video stream {stream_id} opened for camera {camera_id}")
+                
                 # Get the camera
                 camera = Camera.global_list.get(camera_id)
                 if not camera:
@@ -101,7 +112,7 @@ def create_video_feed_route(camera_id):
                 while True:
                     # Check if this stream is still active
                     with stream_lock:
-                        if stream_id not in active_streams or not active_streams.get(stream_id, False):
+                        if stream_id not in active_streams or not active_streams.get(stream_id, {}).get('active', False):
                             print(f"Stream {stream_id} no longer active, stopping")
                             break
                     
@@ -175,4 +186,25 @@ def create_snapshot_flake_hunted_route(camera_id):
 def available_cameras():
     """Return a list of available camera IDs"""
     return jsonify(list(Camera.global_list.keys()))
+
+@app.route('/active_streams')
+def get_active_streams():
+    """Return information about currently active video streams"""
+    with stream_lock:
+        stream_info = {}
+        for stream_id in active_streams:
+            if isinstance(active_streams[stream_id], bool):
+                # Handle old format for backward compatibility
+                stream_info[stream_id] = {
+                    'active': active_streams[stream_id],
+                    'camera_id': stream_id.split('_')[1] if '_' in stream_id else 'unknown'
+                }
+            else:
+                # New format with more information
+                stream_info[stream_id] = active_streams[stream_id]
+    
+    return jsonify({
+        'active_stream_count': len(stream_info),
+        'streams': stream_info
+    })
 
