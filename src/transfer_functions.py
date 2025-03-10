@@ -39,30 +39,31 @@ class TransferFunctions:
             initial_wait_time = float(data.get("initial_wait_time", 8))
             focus_wait_time = float(data.get("focus_wait_time", 8))
             camera_index = int(data.get("camera_index", 0))
+            wait_time = MAGNIFICATION_TRAVEL[magnification].get("wait_time", 1)
 
             # Get travel distances for current magnification
             travel = MAGNIFICATION_TRAVEL[magnification]
-            wait_time = travel["wait_time"]
 
             # Log the parameters
             packet_handlers.PacketCommander.send_message(f"Trace over parameters:")
-            packet_handlers.PacketCommander.send_message(f"  Bottom coordinates: ({bottom_x}, {bottom_y})")
-            packet_handlers.PacketCommander.send_message(f"  Top coordinates: ({top_x}, {top_y})")
-            packet_handlers.PacketCommander.send_message(f"  Magnification: {magnification}x")
-            packet_handlers.PacketCommander.send_message(f"  Steps between autofocus: {pics_until_focus}")
-            packet_handlers.PacketCommander.send_message(f"  Camera index: {camera_index}")
+
+            packet_handlers.PacketCommander.send_message(f"Magnification: {magnification}x")
+            packet_handlers.PacketCommander.send_message(f"Steps between autofocus: {pics_until_focus}")
+            packet_handlers.PacketCommander.send_message(f"Camera index: {camera_index}")
             
             #Flake generation
-            if "bottom_x" not in data or "bottom_y" not in data or "top_x" not in data or "top_y" not in data:
-                packet_handlers.PacketCommander.send_error("Missing required parameters: bottom_x, bottom_y, top_x, top_y")
-                return command_list
             
-            bottom_x = float(data.get("bottom_x"))
-            bottom_y = float(data.get("bottom_y"))
-            top_x = float(data.get("top_x"))
-            top_y = float(data.get("top_y"))
+            flake = data.get("flakes", [{}])[0]
+            packet_handlers.PacketCommander.send_message(f"Flake: {flake}")
+            bottom_left = flake.get("bottomLeft", {})
+            bottom_x = float(bottom_left.get("x"))
+            bottom_y = float(bottom_left.get("y"))
+            top_right = flake.get("topRight", {})
+            top_x = float(top_right.get("x"))
+            top_y = float(top_right.get("y"))
             
-            
+            packet_handlers.PacketCommander.send_message(f"Bottom coordinates: ({bottom_x}, {bottom_y})")
+            packet_handlers.PacketCommander.send_message(f"Top coordinates: ({top_x}, {top_y})")           
             # Validate magnification
             if magnification not in MAGNIFICATION_TRAVEL:
                 packet_handlers.PacketCommander.send_error(f"Invalid magnification: {magnification}. Must be one of: {', '.join(map(str, MAGNIFICATION_TRAVEL.keys()))}")
@@ -98,33 +99,23 @@ class TransferFunctions:
             
             # Generate commands from points
             pic_counter = 1
-            
-            # Add initial setup commands
-            command_list.append([TransferFunctions.TRANSFER_STATION.moveXY, bottom_x, bottom_y])
-            # Initial wait
-            command_list.append([TransferFunctions.TRANSFER_STATION.wait, initial_wait_time])
-            # Initial autofocus
-            command_list.append([TransferFunctions.TRANSFER_STATION.autoFocus])
-            # Wait after autofocus
-            command_list.append([TransferFunctions.TRANSFER_STATION.wait, focus_wait_time])
-                
+            command_list.append([TransferFunctions.TRANSFER_STATION.moveXY, bottom_x, bottom_y]) # Add initial setup commands
+            command_list.append([TransferFunctions.TRANSFER_STATION.wait, initial_wait_time]) # Initial wait
+            command_list.append([TransferFunctions.TRANSFER_STATION.autoFocus]) # Initial autofocus
+            command_list.append([TransferFunctions.TRANSFER_STATION.wait, focus_wait_time]) # Wait after autofocus
             # Visit each point in the pattern
             for x, y in points:
                 # Move to position
                 command_list.append([TransferFunctions.TRANSFER_STATION.moveXY, x, y])
-                command_list.append([TransferFunctions.TRANSFER_STATION.wait, wait_time])
-                
                 # Perform autofocus if needed
                 if pic_counter % pics_until_focus == 0:
                     command_list.append([TransferFunctions.TRANSFER_STATION.autoFocus])
                     command_list.append([TransferFunctions.TRANSFER_STATION.wait, focus_wait_time])
-
                 # Take picture
+                command_list.append([TransferFunctions.TRANSFER_STATION.wait, wait_time])
                 command_list.append([camera.Camera.global_list[camera_index].snap_image])
                 pic_counter += 1
-            
             packet_handlers.PacketCommander.send_message(f"Generated {len(points)} points and {len(command_list)} commands")
-            
         except Exception as e:
             packet_handlers.PacketCommander.send_error(f"Error generating script: {str(e)}")
         
