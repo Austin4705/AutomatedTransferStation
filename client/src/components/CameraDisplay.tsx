@@ -24,6 +24,17 @@ const CameraDisplay = () => {
   const jsonState = useRecoilValue(jsonStateAtom);
   const baseUrl = "http://127.0.0.1:5000/";
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSelectedCamera, setLastSelectedCamera] = useState(CAMERA_OPTIONS[0].id);
+
+  // Handle camera selection changes
+  useEffect(() => {
+    // Only refresh if the camera has actually changed
+    if (selectedCamera !== lastSelectedCamera) {
+      setLastSelectedCamera(selectedCamera);
+      // Force a complete refresh of the image
+      refreshStream();
+    }
+  }, [selectedCamera]);
 
   // Handle snapshot updates
   useEffect(() => {
@@ -39,7 +50,6 @@ const CameraDisplay = () => {
 
   // Function to refresh the current stream with a completely new approach
   const refreshStream = () => {
-    // Set refreshing state
     setIsRefreshing(true);
     
     // Generate a new timestamp for cache busting
@@ -48,14 +58,14 @@ const CameraDisplay = () => {
     
     // If we have a reference to the image element, we can also directly manipulate it
     if (imgRef.current) {
+      // Create a new image element to preload the fresh image
+      const preloadImg = new Image();
+      
       // Set a timeout to detect if the image load is taking too long
       const timeoutId = setTimeout(() => {
         setError("Camera feed load timeout. The server might be slow or unresponsive.");
         setIsRefreshing(false);
       }, 5000);
-      
-      // Create a new image element to preload the fresh image
-      const preloadImg = new Image();
       
       // Set up event handlers for the preload image
       preloadImg.onload = () => {
@@ -65,7 +75,8 @@ const CameraDisplay = () => {
         
         // Once preloaded successfully, update the src of the actual image in the DOM
         if (imgRef.current) {
-          imgRef.current.src = preloadImg.src;
+          // Force a complete reload by setting a new src with cache busting
+          imgRef.current.src = `${baseUrl}${selectedCamera}?nocache=${newTimestamp}`;
         }
       };
       
@@ -77,6 +88,12 @@ const CameraDisplay = () => {
       
       // Set the new source with a cache-busting parameter
       preloadImg.src = `${baseUrl}${selectedCamera}?nocache=${newTimestamp}`;
+    } else {
+      // If we don't have a reference to the image element, just update the imageKey
+      // and let React handle the re-render
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 1000);
     }
   };
 
@@ -95,8 +112,7 @@ const CameraDisplay = () => {
   const handleCameraChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedCamera(e.target.value);
     setError(null); // Reset error when changing camera
-    // Force refresh when changing camera
-    refreshStream();
+    // The refresh will be handled by the useEffect hook that watches for selectedCamera changes
   };
 
   // Add event listeners for refresh events
@@ -171,21 +187,28 @@ const CameraDisplay = () => {
             </button>
           </div>
         ) : (
-          <img 
-            ref={imgRef}
-            key={imageKey} // This forces React to recreate the element when imageKey changes
-            src={`${baseUrl}${selectedCamera}?nocache=${imageKey}`} 
-            alt={`Camera feed: ${selectedCamera}`}
-            className={`camera-image ${isRefreshing ? 'opacity-50' : ''}`}
-            onError={handleImageError}
-            onLoad={handleImageLoad}
-            style={{ 
-              maxWidth: "100%", 
-              maxHeight: "100%", 
-              objectFit: "contain",
-              display: "block"
-            }}
-          />
+          <div className="image-wrapper relative w-full h-full flex items-center justify-center">
+            <img 
+              ref={imgRef}
+              key={`${selectedCamera}-${imageKey}`} // This forces React to recreate the element when selectedCamera or imageKey changes
+              src={`${baseUrl}${selectedCamera}?nocache=${imageKey}`} 
+              alt={`Camera feed: ${selectedCamera}`}
+              className={`camera-image ${isRefreshing ? 'opacity-50' : ''}`}
+              onError={handleImageError}
+              onLoad={handleImageLoad}
+              style={{ 
+                maxWidth: "100%", 
+                maxHeight: "100%", 
+                objectFit: "contain",
+                display: "block"
+              }}
+            />
+            {isRefreshing && (
+              <div className="refresh-indicator absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-full">
+                Refreshing...
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

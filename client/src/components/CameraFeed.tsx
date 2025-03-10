@@ -10,8 +10,19 @@ export default function CameraFeed(props: any) {
     const baseUrl: string = "http://127.0.0.1:5000/";
     const cameraId = props.id;
     const imgRef = useRef<HTMLImageElement>(null);
+    const [lastCameraId, setLastCameraId] = useState(cameraId);
 
     const jsonState = useRecoilValue(jsonStateAtom);
+    
+    // Handle camera ID changes
+    useEffect(() => {
+      // Only refresh if the camera has actually changed
+      if (cameraId !== lastCameraId) {
+        setLastCameraId(cameraId);
+        // Force a complete refresh of the image
+        refreshStream();
+      }
+    }, [cameraId]);
     
     // Handle snapshot updates
     useEffect(() => {
@@ -49,7 +60,8 @@ export default function CameraFeed(props: any) {
           
           // Once preloaded successfully, update the src of the actual image in the DOM
           if (imgRef.current) {
-            imgRef.current.src = preloadImg.src;
+            // Force a complete reload by setting a new src with cache busting
+            imgRef.current.src = `${baseUrl}${cameraId}?nocache=${newTimestamp}`;
           }
         };
         
@@ -61,6 +73,12 @@ export default function CameraFeed(props: any) {
         
         // Set the new source with a cache-busting parameter
         preloadImg.src = `${baseUrl}${cameraId}?nocache=${newTimestamp}`;
+      } else {
+        // If we don't have a reference to the image element, just update the imageKey
+        // and let React handle the re-render
+        setTimeout(() => {
+          setIsRefreshing(false);
+        }, 1000);
       }
     };
 
@@ -116,20 +134,21 @@ export default function CameraFeed(props: any) {
             </button>
           </div>
         ) : (
-          <img 
-            ref={imgRef}
-            key={imageKey} 
-            src={`${baseUrl}${cameraId}?nocache=${imageKey}`} 
-            alt={`Camera feed: ${cameraId}`}
-            className={`object-scale-down w-full h-full ${isRefreshing ? 'opacity-50' : ''}`}
-            onError={handleImageError}
-            onLoad={handleImageLoad}
-          />
-        )}
-        
-        {isRefreshing && !error && (
-          <div className="refresh-indicator absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-full">
-            Refreshing...
+          <div className="image-wrapper relative w-full h-full flex items-center justify-center">
+            <img 
+              ref={imgRef}
+              key={`${cameraId}-${imageKey}`}
+              src={`${baseUrl}${cameraId}?nocache=${imageKey}`} 
+              alt={`Camera feed: ${cameraId}`}
+              className={`object-scale-down w-full h-full ${isRefreshing ? 'opacity-50' : ''}`}
+              onError={handleImageError}
+              onLoad={handleImageLoad}
+            />
+            {isRefreshing && (
+              <div className="refresh-indicator absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-full">
+                Refreshing...
+              </div>
+            )}
           </div>
         )}
       </div>
