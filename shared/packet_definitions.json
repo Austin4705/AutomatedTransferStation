@@ -51,6 +51,22 @@
         "camera": "int"
       }
     },
+    "SNAP_SHOT_FLAKE_HUNTED":{
+      "fields":{
+        "camera": "int"
+      }
+    },
+    "REFRESH_SNAPSHOT":{
+      "fields":{
+        "camera": "int"
+      }
+    },
+    "REFRESH_SNAPSHOT_FLAKE_HUNTED":{
+      "fields":{
+        "camera": "int"
+      }
+    },
+
     "MESSAGE":{
       "fields":{
         "message": "string"

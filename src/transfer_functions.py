@@ -16,7 +16,7 @@ class TransferFunctions:
     """Class containing all transfer functions"""
     TRANSFER_STATION = None 
     def __init__(self, transfer_station) -> None:
-        TRANSFER_STATION = transfer_station
+        TransferFunctions.TRANSFER_STATION = transfer_station
         pass
 
     def run_trace_over(data):

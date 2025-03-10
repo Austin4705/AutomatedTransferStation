@@ -94,5 +94,6 @@ For questions or contributions, please contact the Yasuda Lab at Cornell.
 ## TODO and BUGS
     -Parse the json on the server side, start up a extraneous thread that runs the transfer program and then closes
     - Fix bug with commands and such not sending properly from the queue (seems to be working?)
+    - Fix bug with camera refreshing 
     -Get the program controlling the transfer station
     -Get the flake hunting algorithm working

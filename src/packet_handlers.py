@@ -23,9 +23,10 @@ class PacketHandlers:
     """Class containing all packet handlers"""
     transfer_station = None
 
-    def __init__(self):
+    def __init__(self, transfer_station):
         print(f"Initializing PacketHandlers")
         Socket_Manager.packet_handlers = _handlers
+        PacketHandlers.transfer_station = transfer_station
     
     @packet_handler("SEND_COMMAND")
     def handle_send_command(packet_type: str, data: dict):
@@ -101,10 +102,30 @@ class PacketHandlers:
         thread.daemon = True
         thread.start()
        
+    @packet_handler("ACK")
+    def handle_ack(packet_type: str, data: dict):
+        print("ACK received")
+        Socket_Manager.send_all_json({
+            "type": "ACK",
+        })
+
     @packet_handler("SNAP_SHOT")
     def handle_snap_shot(packet_type: str, data: dict):
+        Camera.global_list[data["camera"]].snap_image()
+        print("Took Screenshot")
+        Socket_Manager.send_all_json({
+            "type": "REFRESH_SNAPSHOT",
+            "camera": data["camera"]
+        })
+
+    @packet_handler("SNAP_SHOT_FLAKE_HUNTED")
+    def handle_snap_shot_flake_hunted(packet_type: str, data: dict):
         Camera.global_list[data["camera"]].snap_image_flake_hunted()
         print("Took Screenshot")
+        Socket_Manager.send_all_json({
+            "type": "REFRESH_SNAPSHOT_FLAKE_HUNTED",
+            "camera": data["camera"]
+        })
 
     @packet_handler("COMMAND")
     def handle_command(packet_type: str, data: dict):
