@@ -86,6 +86,13 @@ def create_video_feed_route(camera_id):
         # Create a unique ID for this stream
         stream_id = f"video_{camera_id}_{threading.get_ident()}"
         
+        # Close any existing streams for this camera
+        with stream_lock:
+            for sid in list(active_streams.keys()):
+                if sid.startswith(f"video_{camera_id}_") and sid != stream_id:
+                    active_streams[sid]['active'] = False
+                    print(f"Closing previous stream {sid} for camera {camera_id}")
+        
         # Register this stream with additional information
         with stream_lock:
             active_streams[stream_id] = {
