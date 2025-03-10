@@ -18,7 +18,8 @@ const CAMERA_OPTIONS = [
 const CameraDisplay = () => {
   const [selectedCamera, setSelectedCamera] = useState(CAMERA_OPTIONS[0].id);
   const [error, setError] = useState<string | null>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const [imageKey, setImageKey] = useState(Date.now()); // Add a key to force re-render
+  const imgContainerRef = useRef<HTMLDivElement>(null);
   const jsonState = useRecoilValue(jsonStateAtom);
   const baseUrl = "http://127.0.0.1:5000/";
 
@@ -36,31 +37,8 @@ const CameraDisplay = () => {
 
   // Function to refresh the current stream
   const refreshStream = () => {
-    if (imgRef.current) {
-      // Store the original src
-      const originalSrc = imgRef.current.src.split('?')[0];
-      
-      // Create a new image element
-      const newImg = new Image();
-      newImg.onload = () => {
-        // Once the new image is loaded, update the src of the displayed image
-        if (imgRef.current) {
-          imgRef.current.src = newImg.src;
-        }
-      };
-      
-      // Force a reload by adding a timestamp
-      const timestamp = new Date().getTime();
-      newImg.src = `${originalSrc}?t=${timestamp}`;
-      
-      // Also update the current image with a loading indicator
-      imgRef.current.style.opacity = '0.5';
-      setTimeout(() => {
-        if (imgRef.current) {
-          imgRef.current.style.opacity = '1';
-        }
-      }, 300);
-    }
+    // Force a complete re-render of the image by updating the key
+    setImageKey(Date.now());
   };
 
   // Handle image loading errors
@@ -76,33 +54,36 @@ const CameraDisplay = () => {
   const handleCameraChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedCamera(e.target.value);
     setError(null); // Reset error when changing camera
-    
-    // After a short delay to allow state to update, refresh the stream
-    setTimeout(() => {
-      if (imgRef.current) {
-        // Force a reload by adding a timestamp
-        const timestamp = new Date().getTime();
-        const newSrc = `${baseUrl}${e.target.value}?t=${timestamp}`;
-        
-        // Create a new image to preload
-        const newImg = new Image();
-        newImg.onload = () => {
-          if (imgRef.current) {
-            imgRef.current.src = newImg.src;
-            imgRef.current.style.opacity = '1';
-          }
-        };
-        
-        // Show loading state
-        if (imgRef.current) {
-          imgRef.current.style.opacity = '0.5';
-        }
-        
-        // Load the new image
-        newImg.src = newSrc;
-      }
-    }, 50);
+    // Force refresh when changing camera
+    setImageKey(Date.now());
   };
+
+  // Add event listeners for refresh events
+  useEffect(() => {
+    // Handler for refreshing specific streams
+    const handleRefreshStream = (event: CustomEvent) => {
+      const { streamType, cameraNumber } = event.detail;
+      // Check if this is the stream we're currently displaying
+      if (selectedCamera === `${streamType}${cameraNumber}`) {
+        refreshStream();
+      }
+    };
+
+    // Handler for refreshing all streams
+    const handleRefreshAllStreams = () => {
+      refreshStream();
+    };
+
+    // Add event listeners
+    window.addEventListener('refresh-camera-stream', handleRefreshStream as EventListener);
+    window.addEventListener('refresh-all-camera-streams', handleRefreshAllStreams);
+
+    // Clean up event listeners
+    return () => {
+      window.removeEventListener('refresh-camera-stream', handleRefreshStream as EventListener);
+      window.removeEventListener('refresh-all-camera-streams', handleRefreshAllStreams);
+    };
+  }, [selectedCamera]); // Re-add listeners if selectedCamera changes
 
   return (
     <div className="camera-display h-full flex flex-col">
@@ -130,15 +111,15 @@ const CameraDisplay = () => {
         </button>
       </div>
       
-      <div className="camera-image-container flex-grow bg-gray-100 rounded flex items-center justify-center">
+      <div className="camera-image-container flex-grow bg-gray-100 rounded flex items-center justify-center" ref={imgContainerRef}>
         {error ? (
           <div className="error-message text-sm text-center p-4 text-red-500">
             {error}
           </div>
         ) : (
           <img 
-            ref={imgRef}
-            src={`${baseUrl}${selectedCamera}`} 
+            key={imageKey} // This forces React to recreate the element when imageKey changes
+            src={`${baseUrl}${selectedCamera}?t=${imageKey}`} 
             alt={`Camera feed: ${selectedCamera}`}
             className="camera-image"
             onError={handleImageError}
