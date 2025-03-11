@@ -1,7 +1,7 @@
 import math
 import packet_handlers
 import camera
-
+import threading
 # Dictionary containing travel distances for different magnifications (in micrometers)
 MAGNIFICATION_TRAVEL = {
     5: {"x": 0.72, "y": 0.50, "wait_time": 1},
@@ -15,7 +15,8 @@ MAGNIFICATION_TRAVEL = {
 class TransferFunctions:
     """Class containing all transfer functions"""
     TRANSFER_STATION = None 
-    executing_threads = []
+    executing_threads = dict()
+
     def __init__(self, transfer_station) -> None:
         TransferFunctions.TRANSFER_STATION = transfer_station
         pass
@@ -26,8 +27,14 @@ class TransferFunctions:
         packet_handlers.PacketCommander.send_message("Running trace over")
         
         # Execute the command with the given parameters
+        current_thread = threading.current_thread()
         for command in command_list:
-            command[0](*(command[1:]))
+            if TransferFunctions.executing_threads[current_thread]:
+                command[0](*(command[1:]))
+            else:
+                break
+        packet_handlers.PacketCommander.send_message("Trace over complete")
+        del TransferFunctions.executing_threads[current_thread]
 
     def generate_script(data):
         command_list = []

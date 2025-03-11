@@ -540,13 +540,7 @@ const TraceOverBox = () => {
     sendJson({
       type: "CANCEL_EXECUTION"
     });
-    
-    // Show a status message
-    setTraceOverStatus({
-      success: true,
-      message: "Cancellation request sent"
-    });
-    
+        
     // Clear status after 3 seconds
     setTimeout(() => {
       setTraceOverStatus(null);

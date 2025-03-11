@@ -82,7 +82,7 @@ class Socket_Manager:
             cls.send_all(json.dumps(error_data))
 
         handler = cls.packet_handlers.get(packet_type, cls.default_handler)
-        print(f"Handler: {handler}")
+        # print(f"Handler: {handler}")
         handler(packet_type, packet)
 
     #Not working, I dont care to validate it
@@ -115,18 +115,23 @@ class Socket_Manager:
     @classmethod
     def default_handler(cls, packet_type: str, data: dict):
         """Default handler for unhandled packet types"""
-        print(f"Received unhandled packet type: {packet_type}")
+        # print(f"Received unhandled packet type: {packet_type}")
         print("Data:", json.dumps(data, indent=2))
 
     @classmethod
     def send_all(cls, msg: str):
         """Send message to all connected clients"""
+        print(f"Sending message {msg} to {len(cls.CONNECTIONS)} connections")
         websockets.broadcast(cls.CONNECTIONS, msg)
 
     @classmethod
     def send_all_json(cls, json_data: dict):
         """Send JSON data to all connected clients"""
-        websockets.broadcast(cls.CONNECTIONS, json.dumps(json_data))
+        try:
+            msg = json.dumps(json_data)
+            cls.send_all(msg)
+        except Exception as e:
+            print(f"Error serializing JSON: {e}")
 
     # Socket stuff
     # Queue of incoming messages from web browser 

@@ -86,7 +86,6 @@ class PacketHandlers:
             thread = Thread(target=execute_command)
             thread.daemon = True
             thread.start()
-            TransferFunctions.executing_threads.append(thread)
                 
         except Exception as e:
             PacketCommander.send_error(f"Handler error: {str(e)}")
@@ -103,15 +102,17 @@ class PacketHandlers:
 
         thread = threading.Thread(target=TransferFunctions.run_trace_over, args=(data,))
         thread.daemon = True
+        TransferFunctions.executing_threads[thread] = True
         thread.start()
-        TransferFunctions.executing_threads.append(thread)
 
     @packet_handler("CANCEL_EXECUTION")
     def handle_cancel_execution(packet_type: str, data: dict):
-        PacketCommander.send_message("Cancelling execution")
+        PacketCommander.send_message(f"Cancelling execution of running operations")
+        # Set the cancellation flag to stop running threads
         for thread in TransferFunctions.executing_threads:
-            thread.join()
-            
+            TransferFunctions.executing_threads[thread] = False
+            print(f"Thread {thread} signaled to stop")
+        PacketCommander.send_message("All operations cancelled")
 
     @packet_handler("ACK")
     def handle_ack(packet_type: str, data: dict):
