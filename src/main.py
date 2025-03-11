@@ -9,16 +9,16 @@ from camera import Camera
 import web_server
 from cvFunctions import CVFunctions
 from packet_handlers import PacketHandlers
-from transfer_station import Transfer_Station
 from transfer_functions import TransferFunctions
+
+from transfer_station import Transfer_Station
+from transfer_station_winFile import TransferStationWinFile
+
 if __name__ == "__main__":
     # Load configuration from JSON file
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')
     with open(config_path, 'r') as config_file:
         config = json.load(config_file)
-    
-    sim_test = config.get('sim_test', False)
-    print(f"Simulation test mode: {sim_test}")
     
     # Initialize cameras using the new intelligent detection system
     print("Detecting and initializing cameras...")
@@ -36,7 +36,17 @@ if __name__ == "__main__":
     # Everything up until here is fully working
 
     print("Starting Transfer Station")
-    TRANSFER_STATION = Transfer_Station()
+    transfer_station_name = config.get('transfer_station')
+    match transfer_station_name:
+        case "hqGrapheneServer":
+            print("Initializing HQ Graphene Server Transfer Station")
+            TRANSFER_STATION = TransferStationWinFile()
+        case "base":
+            print("Initializing Virtual Transfer Station")
+            TRANSFER_STATION = Transfer_Station()
+        case _:
+            raise ValueError(f"Transfer station {transfer_station_name} not found")
+
     PacketHandlers(TRANSFER_STATION)
     TransferFunctions(TRANSFER_STATION)
 
