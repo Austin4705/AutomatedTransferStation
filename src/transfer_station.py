@@ -38,6 +38,14 @@ class Transfer_Station():
         self.moveX(x)
         self.moveY(y)
 
+    def posX(self):
+        print("Get X Position-V")
+        return 0
+
+    def posY(self):
+        print("Get Y Position-V")
+        return 0
+
     def autoFocus(self):
         print("Auto Focus-V")
 
@@ -56,6 +64,7 @@ class Transfer_Station():
             'command': command,
             'response': response
         })
+        return response
 
     def wait(self, seconds):
         print(f"Wait for {seconds} seconds-V")

@@ -42,13 +42,13 @@ npm install
 ```
 
 ### 4. Configure Environment Variables
-Create a `.env` file in the project root directory with the following content:
+Create a `config.json` file in the project root directory with the following content:
 ```plaintext
-sim_test = False
-motorControllerPort = "COM3"
-perfControllerPort = "COM4"
+{
+    "transfer_station": "hqGrapheneServer"
+}
 ```
-Adjust the port values according to your setup.
+(Or "base" if you want to do the virtual ones). Adjust the port values according to your setup.
 
 ## Running the Application
 
@@ -101,6 +101,9 @@ For questions or contributions, please contact the Yasuda Lab at Cornell.
     -Get the program controlling the transfer station
     -Get image container
     -Get the flake hunting algorithm working
+
+    -Get position to auto initilize
+    -Kill all tasks program
 ## Done:
     -Parse the json on the server side, start up a extraneous thread that runs the transfer program and then closes
     - Fix bug with commands and such not sending properly from the queue (seems to be working?)

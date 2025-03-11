@@ -15,7 +15,7 @@ else:
     win32file = None
     pywintypes = None
 
-from ..transfer_station import Transfer_Station
+from transfer_station import Transfer_Station
 
 class TransferStationWinFile(Transfer_Station):
     def __init__(self):
@@ -25,18 +25,9 @@ class TransferStationWinFile(Transfer_Station):
         else:
             self.command_server = DummyCommandServer()
 
-    def send_command(self, command):
+    def _send_command(self, command):
         print(f"Sending command: {command}")
         return self.command_server.send(command)
-
-    def receive_command(self):
-        print("Receiving commands")
-        # Implementation specific to WinFile
-        pass
-
-    def receive_commands(self):
-        print("Receiving commands")
-        pass 
 
     def moveX(self, X):
         """Move to X coordinate
@@ -45,7 +36,8 @@ class TransferStationWinFile(Transfer_Station):
         """
         cmd = f"SETPOSX{X}"  # X is 0 for X-only movement
         print(f"Moving to X position: {X}")
-        return self.cmd_server.send(cmd)
+        res = self.send_command(cmd)
+        return res
 
     def moveY(self, Y):
         """Move to Y coordinate
@@ -54,10 +46,37 @@ class TransferStationWinFile(Transfer_Station):
         """
         cmd = f"SETPOSY{Y}"  # Y is 0 for Y-only movement
         print(f"Moving to Y position: {Y}")
-        return self.cmd_server.send(cmd)
+        res = self.send_command(cmd)
+        return res
+
+    def posX(self):
+        """Get X position
+        Status: Working
+        """
+        cmd = "GETPOSX"
+        print(f"Getting X position")
+        res = self.send_command(cmd)
+        print(f"X position: {res} and {type(res)}")
+        return CommandServer.get_first_double(res)
+
+    def posY(self):
+        """Get Y position
+        Status: Working
+        """
+        cmd = "GETPOSY"
+        print(f"Getting Y position")
+        res = self.send_command(cmd)
+        print(f"Y position: {res} and {type(res)}")
+        return CommandServer.get_first_double(res)
 
     def autoFocus(self):
-        self.send_command("AUTOFOCUS")
+        """Auto Focus
+        Status: Working
+        """
+        cmd = "AUTOFOCUS"
+        print(f"Auto Focusing")
+        res = self.send_command(cmd)
+        return res
 
 #Command Server Class to Communicate with the HQ Graphene Transfer Station
 class CommandServer:
@@ -87,18 +106,15 @@ class CommandServer:
             win32file.CloseHandle(handle)
             msg = resp.decode("utf-8").strip()
 
-            timestamp = Transfer_Station.time_stamp()
-            # Add timestamp and store message
-            message_entry = {
-                'timestamp': timestamp,
-                'command': data,
-                'response': msg
-            }
-            self.message_history.append(message_entry)
-            
-            # Print the message immediately with newlines removed
-            print(f"[{timestamp}] Command: {data} -> Response: {msg.replace('\n', '')}")
-            
+            # timestamp = Transfer_Station.time_stamp()
+            # # Add timestamp and store message
+            # message_entry = {
+            #     'timestamp': timestamp,
+            #     'command': data,
+            #     'response': msg
+            # }
+            # self.message_history.append(message_entry)
+            print(f"Response: {msg}")
             return msg
 
         except pywintypes.error as e:
@@ -122,7 +138,7 @@ class CommandServer:
             self.message_history.append(message_entry)
             return ""
 
-    def get_first_double(self, my_string):
+    def get_first_double(my_string):
         if my_string is None or my_string.strip() == "OK":
             return 0
         numeric_const_pattern = r'[-+]?(?:(?:\d*\.\d+)|(?:\d+\.?)(?:[Ee][+-]?\d+)?)'

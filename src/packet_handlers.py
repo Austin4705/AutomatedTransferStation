@@ -91,7 +91,7 @@ class PacketHandlers:
 
     @packet_handler("REQUEST_POSITION")
     def handle_request_position(packet_type: str, data: dict):
-        message = {"type": "POSITION", "x":1, "y":2}
+        message = {"type": "POSITION", "x":PacketHandlers.transfer_station.posX(), "y":PacketHandlers.transfer_station.posY()}
         Socket_Manager.send_all_json(message)
 
     @packet_handler("TRACE_OVER")
