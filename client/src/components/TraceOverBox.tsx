@@ -164,8 +164,6 @@ const TraceOverBox = () => {
       return;
     }
 
-
-
     // Send the trace over command with flake coordinates and all parameters
     const data = {
       type: "TRACE_OVER",
@@ -522,6 +520,39 @@ const TraceOverBox = () => {
     return traceOverStatus.success ? "text-green-600" : "text-red-600";
   };
 
+  // Add this function before the return statement
+  const switchCoordinates = (flakeId: number) => {
+    setFlakeCoordinates(prev => 
+      prev.map(flake => 
+        flake.id === flakeId 
+          ? { 
+              ...flake, 
+              topRight: { ...flake.bottomLeft },
+              bottomLeft: { ...flake.topRight }
+            } 
+          : flake
+      )
+    );
+  };
+
+  // Handle cancellation of the trace over execution
+  const handleCancelExecution = () => {
+    sendJson({
+      type: "CANCEL_EXECUTION"
+    });
+    
+    // Show a status message
+    setTraceOverStatus({
+      success: true,
+      message: "Cancellation request sent"
+    });
+    
+    // Clear status after 3 seconds
+    setTimeout(() => {
+      setTraceOverStatus(null);
+    }, 3000);
+  };
+
   return (
     <div className="trace-over-box">
       <h2>Trace Over</h2>
@@ -621,10 +652,10 @@ const TraceOverBox = () => {
           </label>
         </div>
 
-        {/* Current Position Display */}
+        {/* Current Position Display
         <div className="current-position mb-2 text-xs text-gray-600">
           Current Position: X: {currentPosition.x.toFixed(3)}, Y: {currentPosition.y.toFixed(3)}
-        </div>
+        </div> */}
 
         {/* Compact Flake Coordinates Table */}
         <div className="flake-coordinates-container overflow-x-auto">
@@ -694,6 +725,13 @@ const TraceOverBox = () => {
                         title="Copy current position to Bottom Left"
                       >
                         BL
+                      </button>
+                      <button
+                        onClick={() => switchCoordinates(flake.id)}
+                        className="px-2 py-1 bg-purple-500 text-white text-xs rounded"
+                        title="Switch top right and bottom left coordinates"
+                      >
+                        Switch
                       </button>
                       <button
                         onClick={() => clearFlakeCoordinates(flake.id)}
@@ -766,12 +804,18 @@ const TraceOverBox = () => {
           </div>
         )}
 
-        <div className="trace-actions mt-4">
+        <div className="trace-actions mt-4 flex space-x-2">
           <button 
             className="trace-button px-4 py-2 rounded text-white bg-green-600 hover:bg-green-700"
             onClick={handleTraceOver}
           >
             Send Trace Over Command
+          </button>
+          <button 
+            className="trace-button px-4 py-2 rounded text-white bg-red-600 hover:bg-red-700"
+            onClick={handleCancelExecution}
+          >
+            Cancel Execution
           </button>
         </div>
       </div>

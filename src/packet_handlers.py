@@ -83,7 +83,10 @@ class PacketHandlers:
                 except Exception as e:
                     PacketCommander.send_error(f"Execution error: {str(e)}")
 
-            Thread(target=execute_command).start()
+            thread = Thread(target=execute_command)
+            thread.daemon = True
+            thread.start()
+            TransferFunctions.executing_threads.append(thread)
                 
         except Exception as e:
             PacketCommander.send_error(f"Handler error: {str(e)}")
@@ -101,7 +104,15 @@ class PacketHandlers:
         thread = threading.Thread(target=TransferFunctions.run_trace_over, args=(data,))
         thread.daemon = True
         thread.start()
-       
+        TransferFunctions.executing_threads.append(thread)
+
+    @packet_handler("CANCEL_EXECUTION")
+    def handle_cancel_execution(packet_type: str, data: dict):
+        PacketCommander.send_message("Cancelling execution")
+        for thread in TransferFunctions.executing_threads:
+            thread.join()
+            
+
     @packet_handler("ACK")
     def handle_ack(packet_type: str, data: dict):
         print("ACK received")

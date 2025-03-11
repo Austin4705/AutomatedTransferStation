@@ -15,6 +15,7 @@ MAGNIFICATION_TRAVEL = {
 class TransferFunctions:
     """Class containing all transfer functions"""
     TRANSFER_STATION = None 
+    executing_threads = []
     def __init__(self, transfer_station) -> None:
         TransferFunctions.TRANSFER_STATION = transfer_station
         pass
