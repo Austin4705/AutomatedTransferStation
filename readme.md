@@ -101,7 +101,8 @@ For questions or contributions, please contact the Yasuda Lab at Cornell.
     -Get the program controlling the transfer station
     -Get image container
     -Get the flake hunting algorithm working
-
+    
+    -flake hunting poll without button
     -Get position to auto initilize
     -Kill all tasks program
 ## Done:
