@@ -22,6 +22,9 @@
     "REQUEST_LOG_COMMANDS":{
       "fields": {}
     },
+    "CANCEL_EXECUTION":{
+      "fields": {}
+    },
     "LOG_COMMANDS":{
       "fields": {
         "command": "string"

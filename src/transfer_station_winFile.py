@@ -54,9 +54,9 @@ class TransferStationWinFile(Transfer_Station):
         Status: Working
         """
         cmd = "GETPOSX"
-        print(f"Getting X position")
+        # print(f"Getting X position")
         res = self.send_command(cmd)
-        print(f"X position: {res} and {type(res)}")
+        # print(f"X position: {res} and {type(res)}")
         return CommandServer.get_first_double(res)
 
     def posY(self):
@@ -64,9 +64,9 @@ class TransferStationWinFile(Transfer_Station):
         Status: Working
         """
         cmd = "GETPOSY"
-        print(f"Getting Y position")
+        # print(f"Getting Y position")
         res = self.send_command(cmd)
-        print(f"Y position: {res} and {type(res)}")
+        # print(f"Y position: {res} and {type(res)}")
         return CommandServer.get_first_double(res)
 
     def autoFocus(self):
@@ -114,7 +114,7 @@ class CommandServer:
             #     'response': msg
             # }
             # self.message_history.append(message_entry)
-            print(f"Response: {msg}")
+            # print(f"Response: {msg}")
             return msg
 
         except pywintypes.error as e:
@@ -139,6 +139,7 @@ class CommandServer:
             return ""
 
     def get_first_double(my_string):
+        print(f"Getting first double: {my_string}")
         if my_string is None or my_string.strip() == "OK":
             return 0
         numeric_const_pattern = r'[-+]?(?:(?:\d*\.\d+)|(?:\d+\.?)(?:[Ee][+-]?\d+)?)'
