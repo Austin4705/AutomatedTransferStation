@@ -7,6 +7,7 @@ import cv2
 from camera import Camera
 from transfer_station import Transfer_Station
 from cvFunctions import CVFunctions
+import packet_handlers
 from GMMDetector.structures import Flake
 
 class Image_Container:
@@ -26,7 +27,7 @@ class Image_Container:
         self.transfer_station = transfer_station
         self.directory_images = os.path.join(self.directory, "images")
         self.directory_searched = os.path.join(self.directory, "searched")
-        self.directory_flake_masks = os.path.join(self.directory, "flake_masks")
+        self.directory_flake_masks = os.path.join(self.directory, "wafer_masks")
         os.makedirs(self.directory_images, exist_ok=True)
         os.makedirs(self.directory_searched, exist_ok=True)
         os.makedirs(self.directory_flake_masks, exist_ok=True)
@@ -37,19 +38,11 @@ class Image_Container:
                 self.metadata = dict(json.load(f)) 
         else:
             self.metadata = dict()
-            self.metadata["images"] = []
+            self.metadata["wafers"] = []
             self.metadata["searched"] = []
             self.metadata["metametadata"] = []
 
-        self.flake_counter = 0
-        # self.images = dict()
-        # self.load_container()
-
-    def load_container(self):
-        for image in self.metadata["images"]:
-            name = image["name"]
-            image_path = os.path.join(self.directory_images, name)
-            self.images[name] = image
+        self.wafer_counter = 0
 
     def load_sent_data(self, data: dict):
         self.metadata["metametadata"].append(data)
@@ -59,10 +52,11 @@ class Image_Container:
         camera = Camera.global_list[camera_id]
         frame = camera.snap_image()
         image_name = f"{camera_id}-{datetime.now().strftime('%d-%m-%Y-%H-%M-%S')}.jpg"
-        image_path = os.path.join(self.directory_images, image_name)
+        wafer_path = os.path.join(self.directory_images, f"wafer_{self.wafer_counter}")
+        image_path = os.path.join(wafer_path, image_name)
         cv2.imwrite(image_path, frame)
-
-        self.metadata["images"].append({
+        self.metadata["wafers"][-1].append({
+            "wafer_id": self.wafer_counter,
             "name": image_name,
             "camera_id": camera_id,
             "x": self.transfer_station.posX(),
@@ -81,8 +75,8 @@ class Image_Container:
         with open(f"{directory}/metadata.json", 'r') as f:
             self.metadata = json.load(f)
 
-    def load_image(self, image_name: str):
-        image_path = os.path.join(self.directory_images, image_name)
+    def load_image(self, image_name: str, wafer_id: int):
+        image_path = os.path.join(self.directory_images, f"wafer_{wafer_id}", image_name)
         try:
             if os.path.exists(image_path):
                 # Load image using OpenCV
@@ -98,41 +92,59 @@ class Image_Container:
             print(f"Error checking image path: {e}")
             return None
 
-    def new_flake(self):
-        pass
+    def new_wafer(self):
+        self.wafer_counter += 1
+        self.metadata["wafers"].append([])
+        os.makedirs(os.path.join(self.directory_images, f"wafer_{self.wafer_counter}"), exist_ok=True)
+
+    def search_and_save_wafer(self):
+        self.search_images()
+        self.generate_image_output()
 
     def search_images(self):
-        # Running multithreaded pool to search images
-        with Pool(5) as pool:
-            results = pool.map(self.search_image, self.metadata.get("images"))
-        print("Finished Hunting")
-        # Add flake data to each image in metadata
-        for image, flake_data in zip(self.metadata.get("images"), results):
-            counter = 0
-            for flake in flake_data:
-                mask_name = f"{image['name']}-{counter}.png"
-                counter += 1
-                cv2.imwrite(os.path.join(self.directory_flake_masks, mask_name), flake.mask)
-                image["flakes"].append(
-                    {
-                        "thickness": flake.thickness,
-                        "size": flake.size,
-                        "false_positive_probability": flake.false_positive_probability,
-                        "center": list(flake.center),
-                        "max_sidelength": flake.max_sidelength,
-                        "min_sidelength": flake.min_sidelength,
-                        "mean_contrast": flake.mean_contrast,
-                        "mask": mask_name
-                    })
-            if flake_data:
-                print(f"flake data is {flake_data}")
-                self.metadata["searched"].append(image)
-        self.save_metadata()
+        wafer_counter = 0
+        for wafer in self.metadata["wafers"]:
+            wafer_counter += 1
+            # Running multithreaded pool to search images
+            packet_handlers.PacketCommander.send_message(f"Searching in wafer {wafer_counter}")
+            with Pool(5) as pool:
+                results = pool.map(self.search_image, wafer["images"])
+            packet_handlers.PacketCommander.send_message(f"Finished Hunting wafer {wafer_counter}")
+            # Add flake data to each image in metadata
+            for image, flake_data in zip(wafer, results):
+                counter = 0
+                for flake in flake_data:
+                    mask_name = f"Wafer_{wafer_counter}-Image_{image['name']}-Flake_{counter}.png"
+                    counter += 1
+                    cv2.imwrite(os.path.join(self.directory_flake_masks, mask_name), flake.mask)
+                    image["flakes"].append(
+                        {
+                            "thickness": flake.thickness,
+                            "size": flake.size,
+                            "false_positive_probability": flake.false_positive_probability,
+                            "center": list(flake.center),
+                            "max_sidelength": flake.max_sidelength,
+                            "min_sidelength": flake.min_sidelength,
+                            "mean_contrast": flake.mean_contrast,
+                            "mask": mask_name
+                        })
+                if flake_data.any():
+                    print(f"flake data is {flake_data}")
+                    self.metadata["searched"].append(image)
+            self.save_metadata()
+
+    def search_image(self, data):
+        image_name = data["name"]
+
+        image_data = self.load_image(image_name, data["wafer_id"])
+        # Run CV search
+        print(data)
+        flake_data = CVFunctions.run_searching(image_data)
+        return flake_data
 
     def generate_image_output(self):
         for image_metadata in self.metadata.get("searched"):
-            image_path = os.path.join(self.directory_images, image_metadata["name"])
-            image = self.load_image(image_metadata["name"])
+            image = self.load_image(image_metadata["name"], image_metadata["wafer_id"])
             flakes = [
                 Flake(
                     thickness=flake.get("thickness"),
@@ -147,15 +159,26 @@ class Image_Container:
                 for flake in image_metadata.get("flakes", [])
             ]
             image_data = CVFunctions.visualise_flakes(flakes, image, 0.5)
+            # Add wafer and position text
+            cv2.putText(
+                image_data,
+                f"Wafer: {image_metadata['wafer_id']}", 
+                (image_data.shape[1] - 200, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 255),
+                2
+            )
+            cv2.putText(
+                image_data,
+                f"x: {image_metadata['x']} y: {image_metadata['y']}", 
+                (image_data.shape[1] - 200, 60),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 255),
+                2
+            )
             cv2.imwrite(os.path.join(self.directory_searched, image_metadata["name"]), image_data)
-
-    def search_image(self, data):
-        image_name = data["name"]
-        image_data = self.load_image(image_name)
-        # Run CV search
-        print(data)
-        flake_data = CVFunctions.run_searching(image_data)
-        return flake_data
 
     def show_images(self):
         for image in self.metadata["searched"]:
