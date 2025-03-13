@@ -655,7 +655,7 @@ const TraceOverBox = () => {
         {/* Add Number of Flakes control below Trace Settings */}
         <div className="number-of-flakes-control mb-4 flex items-center">
           <label className="text-sm font-medium">
-            Number of Flakes:
+            Number of Wafers:
             <input
               type="number"
               min="1"
@@ -676,7 +676,7 @@ const TraceOverBox = () => {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-gray-100">
-                <th className="p-1 text-left">Flake</th>
+                <th className="p-1 text-left">Wafer</th>
                 <th className="p-1 text-left">Top Right X</th>
                 <th className="p-1 text-left">Top Right Y</th>
                 <th className="p-1 text-left">Bottom Left X</th>

@@ -105,7 +105,8 @@ For questions or contributions, please contact the Yasuda Lab at Cornell.
     -flake hunting poll without button
     -Get position to auto initilize
     -Kill all tasks program
-
+    
+    -button to auto scan and draw
     -get image containers fully working
     -get re-localization feature working
     -get upstairs transfer station working

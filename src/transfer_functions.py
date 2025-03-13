@@ -108,7 +108,7 @@ class TransferFunctions:
             
                 # Generate commands from points
                 pic_counter = 1
-                command_list.append([image_container.new_flake])
+                command_list.append([image_container.new_wafer])
                 command_list.append([TransferFunctions.TRANSFER_STATION.moveXY, bottom_x, bottom_y]) # Add initial setup commands
                 command_list.append([TransferFunctions.TRANSFER_STATION.wait, initial_wait_time]) # Initial wait
                 command_list.append([TransferFunctions.TRANSFER_STATION.autoFocus]) # Initial autofocus
