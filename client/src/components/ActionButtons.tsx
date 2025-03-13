@@ -1,5 +1,5 @@
 import { useSendJSON } from "../hooks/useSendJSON";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 // Create a global event for refreshing streams
 // This allows components to communicate without direct props
@@ -16,9 +16,19 @@ const refreshAllStreams = () => {
   window.dispatchEvent(event);
 };
 
+// Extend the HTMLInputElement interface to include webkitdirectory
+declare global {
+  interface HTMLInputElement {
+    webkitdirectory: boolean;
+    directory: string;
+  }
+}
+
 const ActionButtons = () => {
   const sendJson = useSendJSON();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedDirectory, setSelectedDirectory] = useState<string>("");
+  const directoryInputRef = useRef<HTMLInputElement>(null);
 
   const handleSnap = (snapNumber: number) => {
     sendJson({
@@ -62,6 +72,42 @@ const ActionButtons = () => {
     setTimeout(() => {
       setIsRefreshing(false);
     }, 2000);
+  };
+
+  // Trigger directory input click
+  const handleDirectorySelectClick = () => {
+    if (directoryInputRef.current) {
+      directoryInputRef.current.click();
+    }
+  };
+
+  // Handle directory selection
+  const handleDirectoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    // Get the directory path
+    // Note: Due to security restrictions, we can only get the file name, not the full path
+    // We'll use webkitRelativePath to get the directory structure
+    const directory = files[0].webkitRelativePath.split('/')[0];
+    setSelectedDirectory(directory);
+    
+    // Reset the file input so the same directory can be selected again
+    event.target.value = '';
+  };
+
+  // Handle scan flakes button click
+  const handleScanFlakes = () => {
+    if (!selectedDirectory) {
+      alert("Please select a directory first");
+      return;
+    }
+    
+    // Send the scan flakes packet with the selected directory
+    sendJson({
+      type: "SCAN_FLAKES",
+      directory: selectedDirectory
+    });
   };
 
   return (
@@ -114,6 +160,45 @@ const ActionButtons = () => {
             className="snap-button bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded"
           >
             Flake Hunt 2
+          </button>
+        </div>
+      </div>
+
+      <div className="button-section">
+        <h3 className="text-sm font-medium mb-2">Scan Flakes</h3>
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleDirectorySelectClick}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded"
+            >
+              Select Directory
+            </button>
+            <span className="text-sm text-gray-600 truncate max-w-xs">
+              {selectedDirectory ? selectedDirectory : "No directory selected"}
+            </span>
+            {/* Hidden directory input */}
+            <input
+              type="file"
+              ref={directoryInputRef}
+              onChange={handleDirectoryChange}
+              // Use data attributes to avoid TypeScript errors
+              // @ts-ignore
+              webkitdirectory=""
+              directory=""
+              className="hidden"
+            />
+          </div>
+          <button
+            onClick={handleScanFlakes}
+            disabled={!selectedDirectory}
+            className={`${
+              selectedDirectory 
+                ? "bg-green-500 hover:bg-green-600" 
+                : "bg-gray-300 cursor-not-allowed"
+            } text-white px-3 py-1 rounded`}
+          >
+            Scan Flakes
           </button>
         </div>
       </div>
