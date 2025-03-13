@@ -71,7 +71,17 @@
     },
     "SCAN_FLAKES": {
       "fields": {
-        "dir": "string"
+        "directory": "string"
+      }
+    },
+    "DRAW_FLAKES": {
+      "fields": {
+        "directory": "string"
+      }
+    },
+    "DRAW_FLAKES_RESPONSE": {
+      "fields": {
+        "response": "string"
       }
     },
     "SCAN_FLAKES_RESPONSE": {

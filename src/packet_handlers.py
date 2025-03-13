@@ -6,7 +6,7 @@ from transfer_station import Transfer_Station
 import threading
 from transfer_functions import TransferFunctions
 from threading import Thread
-
+from image_container import Image_Container
 # Dictionary to store packet handlers
 _handlers: Dict[str, Callable] = {}
 def packet_handler(packet_type: str):
@@ -113,6 +113,27 @@ class PacketHandlers:
             TransferFunctions.executing_threads[thread] = False
             print(f"Thread {thread} signaled to stop")
         PacketCommander.send_message("All operations cancelled")
+
+    @packet_handler("SCAN_FLAKES")
+    def handle_scan_flakes(packet_type: str, data: dict):
+        directory = data.get("directory")
+        image_container = Image_Container(PacketHandlers.transfer_station, directory)
+        PacketCommander.send_message(f"Scanning flakes in {directory}")
+        image_container.search_images()
+        Socket_Manager.send_all_json({
+            "type": "SCAN_FLAKES_RESPONSE",
+            "response": "Scan completed"
+        })
+
+    @packet_handler("DRAW_FLAKES")
+    def handle_draw_flakes(packet_type: str, data: dict):
+        directory = data.get("directory")
+        image_container = Image_Container(PacketHandlers.transfer_station, directory)
+        image_container.generate_image_output()
+        Socket_Manager.send_all_json({
+            "type": "DRAW_FLAKES_RESPONSE",
+            "response": "Flakes drawn"
+        })
 
     @packet_handler("ACK")
     def handle_ack(packet_type: str, data: dict):

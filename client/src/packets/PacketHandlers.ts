@@ -25,6 +25,11 @@ interface ScanFlakesResultData {
   directory?: string;
 }
 
+interface DrawFlakesResultData {
+  response: string;
+  directory?: string;
+}
+
 // Helper function to refresh a specific camera stream
 const createRefreshEvent = (streamType: string, cameraNumber: number) => {
   console.log(`Dispatching refresh event for ${streamType}${cameraNumber}`);
@@ -149,7 +154,7 @@ export class PacketHandlers {
     // Errors will be handled by the ResponseLog component
   }
 
-  @PacketManager.registerHandler("RESPONSE_SCAN_FLAKES")
+  @PacketManager.registerHandler("SCAN_FLAKES_RESPONSE")
   static handleScanFlakesResult(data: ScanFlakesResultData) {
     console.log("Received scan flakes result:", data);
     
@@ -161,6 +166,19 @@ export class PacketHandlers {
       }
     } else {
       console.error(`Failed to scan flakes: ${data.message}`);
+    }
+  }
+
+  @PacketManager.registerHandler("DRAW_FLAKES_RESPONSE")
+  static handleDrawFlakesResult(data: DrawFlakesResultData) {
+    console.log("Received draw flakes result:", data);
+    
+    // Display a notification with the result
+    if (data.response) {
+      console.log(`Draw flakes response: ${data.response}`);
+      if (data.directory) {
+        console.log(`Directory: ${data.directory}`);
+      }
     }
   }
 
