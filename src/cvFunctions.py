@@ -9,12 +9,10 @@ class CVFunctions:
     contrast_dict = json.load(open("../contrastDictDir/Graphene_GMM.json", "r"))
 
     def __init__(self) -> None:
-        self.mockImage = cv2.imread("mockImage.png")
+        self.mockImage = np.zeros((512, 512, 3), dtype=np.uint8)
         CVFunctions.matGMM2DTransform(self.mockImage)
 
-    def matGMM2DTransform(img):
-        CONFIDENCE_THRESHOLD = 0.5
-
+    def run_searching(img):
         model = MaterialDetector(
             contrast_dict=CVFunctions.contrast_dict,
             size_threshold=500,
@@ -23,6 +21,12 @@ class CVFunctions:
         )
 
         flakes = model.detect_flakes(img)
+        return flakes
+
+    def matGMM2DTransform(img):
+        flakes = CVFunctions.run_searching(img)
+
+        CONFIDENCE_THRESHOLD = 0.5
         image = CVFunctions.visualise_flakes(
             flakes,
             img,
@@ -76,7 +80,8 @@ class CVFunctions:
             cv2.line(result, maxY, minX, [0, 255, 0], 10)
             # print(f"{minX}, {minY}, {maxX}, {maxY}")
             return minX, minY, maxX, maxY
-    def visualise_flakes(flakes, image: np.ndarray,confidence_threshold: float = 0.5,) -> np.ndarray:
+            
+    def visualise_flakes(flakes, image: np.ndarray, confidence_threshold: float = 0.5,) -> np.ndarray:
         """Visualise the flakes on the image.
 
         Args:

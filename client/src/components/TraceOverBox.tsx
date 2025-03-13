@@ -49,6 +49,7 @@ const TraceOverBox = () => {
   const [initialWaitTime, setInitialWaitTime] = useState<number>(8); // Default initial wait time
   const [focusWaitTime, setFocusWaitTime] = useState<number>(8); // Default focus wait time
   const [cameraIndex, setCameraIndex] = useState<number>(0); // Default camera index
+  const [saveImages, setSaveImages] = useState<boolean>(true); // Default save images value
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
 
@@ -96,11 +97,12 @@ const TraceOverBox = () => {
       pics_until_focus: picsUntilFocus,
       initial_wait_time: initialWaitTime,
       focus_wait_time: focusWaitTime,
-      camera_index: cameraIndex
+      camera_index: cameraIndex,
+      save_images: saveImages
     };
 
     setJsonOutput(JSON.stringify(output, null, 2));
-  }, [flakeCoordinates, magnification, picsUntilFocus, initialWaitTime, focusWaitTime, cameraIndex]);
+  }, [flakeCoordinates, magnification, picsUntilFocus, initialWaitTime, focusWaitTime, cameraIndex, saveImages]);
 
   // Listen for position responses and trace over results from the server
   useEffect(() => {
@@ -182,7 +184,8 @@ const TraceOverBox = () => {
       pics_until_focus: picsUntilFocus,
       initial_wait_time: initialWaitTime,
       focus_wait_time: focusWaitTime,
-      camera_index: cameraIndex
+      camera_index: cameraIndex,
+      save_images: saveImages
     };
 
     sendJson(data);
@@ -458,6 +461,10 @@ const TraceOverBox = () => {
         setCameraIndex(parsedJson.camera_index);
       }
       
+      if (typeof parsedJson.save_images === 'boolean') {
+        setSaveImages(parsedJson.save_images);
+      }
+      
     } catch (error) {
       alert(`Error parsing JSON: ${(error as Error).message}`);
     }
@@ -629,6 +636,19 @@ const TraceOverBox = () => {
               onChange={(e) => setCameraIndex(Math.max(0, parseInt(e.target.value) || 0))}
               className="p-1 border rounded w-16 text-center"
             />
+          </div>
+          
+          <div className="setting-control flex items-center">
+            <input
+              type="checkbox"
+              id="save-images"
+              checked={saveImages}
+              onChange={(e) => setSaveImages(e.target.checked)}
+              className="mr-1"
+            />
+            <label htmlFor="save-images" className="text-sm font-medium cursor-pointer">
+              Save Images
+            </label>
           </div>
         </div>
         

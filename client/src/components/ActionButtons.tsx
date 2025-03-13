@@ -119,7 +119,7 @@ const ActionButtons = () => {
       </div>
 
       <div className="button-section">
-        <h3 className="text-sm font-medium mb-2">Refresh Streams</h3>
+        {/* <h3 className="text-sm font-medium mb-2">Refresh Streams</h3>
         <div className="button-group flex flex-wrap gap-2">
           <button 
             onClick={handleRefreshAll}
@@ -206,7 +206,7 @@ const ActionButtons = () => {
             </svg>
             Refresh Flake Hunted
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

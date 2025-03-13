@@ -69,6 +69,16 @@
         "camera": "int"
       }
     },
+    "SCAN_FLAKES": {
+      "fields": {
+        "dir": "string"
+      }
+    },
+    "SCAN_FLAKES_RESPONSE": {
+      "fields": {
+        "response": "string"
+      }
+    },
 
     "MESSAGE":{
       "fields":{

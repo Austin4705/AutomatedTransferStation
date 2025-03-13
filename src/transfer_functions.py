@@ -2,6 +2,8 @@ import math
 import packet_handlers
 import camera
 import threading
+
+from image_container import Image_Container
 # Dictionary containing travel distances for different magnifications (in micrometers)
 MAGNIFICATION_TRAVEL = {
     5: {"x": 0.72, "y": 0.50, "wait_time": 1},
@@ -23,9 +25,10 @@ class TransferFunctions:
 
     def run_trace_over(data):
         packet_handlers.PacketCommander.send_message("Serializing a script to run trace over")
-        command_list = TransferFunctions.generate_script(data)
+        image_container = Image_Container(TransferFunctions.TRANSFER_STATION)
+        command_list = TransferFunctions.generate_script(data, image_container)
         packet_handlers.PacketCommander.send_message("Running trace over")
-        
+
         # Execute the command with the given parameters
         current_thread = threading.current_thread()
         for command in command_list:
@@ -36,7 +39,7 @@ class TransferFunctions:
         packet_handlers.PacketCommander.send_message("Trace over complete")
         del TransferFunctions.executing_threads[current_thread]
 
-    def generate_script(data):
+    def generate_script(data, image_container):
         command_list = []
         
         # Extract parameters from data
@@ -48,6 +51,7 @@ class TransferFunctions:
             focus_wait_time = float(data.get("focus_wait_time", 8))
             camera_index = int(data.get("camera_index", 0))
             wait_time = MAGNIFICATION_TRAVEL[magnification].get("wait_time", 1)
+            save_images = data.get("save_images", True)
 
             # Get travel distances for current magnification
             travel = MAGNIFICATION_TRAVEL[magnification]
@@ -58,6 +62,7 @@ class TransferFunctions:
             packet_handlers.PacketCommander.send_message(f"Magnification: {magnification}x")
             packet_handlers.PacketCommander.send_message(f"Steps between autofocus: {pics_until_focus}")
             packet_handlers.PacketCommander.send_message(f"Camera index: {camera_index}")
+            packet_handlers.PacketCommander.send_message(f"Save images: {save_images}")
             
             #Flake generation
             
@@ -121,7 +126,10 @@ class TransferFunctions:
                     command_list.append([TransferFunctions.TRANSFER_STATION.wait, focus_wait_time])
                 # Take picture
                 command_list.append([TransferFunctions.TRANSFER_STATION.wait, wait_time])
-                command_list.append([camera.Camera.global_list[camera_index].snap_image])
+                if save_images:
+                    command_list.append([image_container.add_image, camera_index])
+                else:
+                    command_list.append([camera.Camera.global_list[camera_index].snap_image])
                 pic_counter += 1
             packet_handlers.PacketCommander.send_message(f"Generated {len(points)} points and {len(command_list)} commands")
         except Exception as e:
