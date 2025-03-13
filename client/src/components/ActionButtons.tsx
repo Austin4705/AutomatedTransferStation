@@ -110,6 +110,20 @@ const ActionButtons = () => {
     });
   };
 
+  // Handle draw flakes button click
+  const handleDrawFlakes = () => {
+    if (!selectedDirectory) {
+      alert("Please select a directory first");
+      return;
+    }
+    
+    // Send the draw flakes packet with the selected directory
+    sendJson({
+      type: "DRAW_FLAKES",
+      directory: selectedDirectory
+    });
+  };
+
   return (
     <div className="action-buttons space-y-4">
       <div className="button-section">
@@ -189,17 +203,30 @@ const ActionButtons = () => {
               className="hidden"
             />
           </div>
-          <button
-            onClick={handleScanFlakes}
-            disabled={!selectedDirectory}
-            className={`${
-              selectedDirectory 
-                ? "bg-green-500 hover:bg-green-600" 
-                : "bg-gray-300 cursor-not-allowed"
-            } text-white px-3 py-1 rounded`}
-          >
-            Scan Flakes
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={handleScanFlakes}
+              disabled={!selectedDirectory}
+              className={`${
+                selectedDirectory 
+                  ? "bg-green-500 hover:bg-green-600" 
+                  : "bg-gray-300 cursor-not-allowed"
+              } text-white px-3 py-1 rounded`}
+            >
+              Scan Flakes
+            </button>
+            <button
+              onClick={handleDrawFlakes}
+              disabled={!selectedDirectory}
+              className={`${
+                selectedDirectory 
+                  ? "bg-orange-500 hover:bg-orange-600" 
+                  : "bg-gray-300 cursor-not-allowed"
+              } text-white px-3 py-1 rounded`}
+            >
+              Draw Flakes
+            </button>
+          </div>
         </div>
       </div>
 

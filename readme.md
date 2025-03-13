@@ -105,6 +105,10 @@ For questions or contributions, please contact the Yasuda Lab at Cornell.
     -flake hunting poll without button
     -Get position to auto initilize
     -Kill all tasks program
+
+    -get image containers fully working
+    -get re-localization feature working
+    -get upstairs transfer station working
 ## Done:
     -Parse the json on the server side, start up a extraneous thread that runs the transfer program and then closes
     - Fix bug with commands and such not sending properly from the queue (seems to be working?)

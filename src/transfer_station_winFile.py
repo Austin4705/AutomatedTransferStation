@@ -18,6 +18,16 @@ else:
 from transfer_station import Transfer_Station
 
 class TransferStationWinFile(Transfer_Station):
+
+    MAGNIFICATION_TRAVEL = {
+        5: {"x": 0.72, "y": 0.50, "wait_time": 1},
+        10: {"x": 0.45, "y": 0.33, "wait_time": 1},
+        20: {"x": 0.2, "y": 0.15, "wait_time": 0.75}, #Only calibrated for 20x
+        40: {"x": 0.2, "y": 0.15, "wait_time": 0.75},
+        50: {"x": 0.2, "y": 0.15, "wait_time": 0.75},
+        100: {"x": 0.2, "y": 0.15, "wait_time": 0.75},
+    }
+
     def __init__(self):
         super().__init__()
         if platform.system() == 'Windows':
