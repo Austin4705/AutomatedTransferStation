@@ -33,6 +33,17 @@ class TransferFunctions:
             else:
                 break
         packet_handlers.PacketCommander.send_message("Trace over complete")
+        
+        # Send trace over result with wafer count
+        wafer_count = len(data.get("wafers", []))
+        from socket_manager import Socket_Manager
+        Socket_Manager.send_all_json({
+            "type": "TRACE_OVER_RESULT",
+            "success": True,
+            "message": "Trace over completed successfully",
+            "waferCount": wafer_count
+        })
+        
         del TransferFunctions.executing_threads[current_thread]
 
     def generate_script(data, image_container):
@@ -60,14 +71,14 @@ class TransferFunctions:
             packet_handlers.PacketCommander.send_message(f"Camera index: {camera_index}")
             packet_handlers.PacketCommander.send_message(f"Save images: {save_images}")
             
-            #Flake generation
-            for flake in data.get("flakes", [{}]):
-                print(f"Flake: {flake}")
-                packet_handlers.PacketCommander.send_message(f"Flake: {flake}")
-                bottom_left = flake.get("bottomLeft", {})
+            #Wafer generation
+            for wafer in data.get("wafers", [{}]):
+                print(f"Wafer: {wafer}")
+                packet_handlers.PacketCommander.send_message(f"Wafer: {wafer}")
+                bottom_left = wafer.get("bottomLeft", {})
                 bottom_x = float(bottom_left.get("x"))
                 bottom_y = float(bottom_left.get("y"))
-                top_right = flake.get("topRight", {})
+                top_right = wafer.get("topRight", {})
                 top_x = float(top_right.get("x"))
                 top_y = float(top_right.get("y"))
             

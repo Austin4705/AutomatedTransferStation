@@ -4,7 +4,7 @@ import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
 
 // Interface for flake coordinates
-interface FlakeCoordinates {
+interface WaferCoordinates {
   id: number;
   topRight: { x: string; y: string };
   bottomLeft: { x: string; y: string };
@@ -19,7 +19,7 @@ interface Position {
 
 // Interface for tracking which coordinate to update with position data
 interface PositionUpdateTarget {
-  flakeId: number;
+  waferId: number;
   corner: "topRight" | "bottomLeft" | "both";
 }
 
@@ -27,14 +27,14 @@ interface PositionUpdateTarget {
 interface TraceOverResult {
   success: boolean;
   message: string;
-  flakeCount?: number;
+  waferCount?: number;
 }
 
 const TraceOverBox = () => {
   const sendJson = useSendJSON();
   const jsonState = useRecoilValue(jsonStateAtom);
-  const [flakeCount, setFlakeCount] = useState<number>(1);
-  const [flakeCoordinates, setFlakeCoordinates] = useState<FlakeCoordinates[]>([
+  const [waferCount, setWaferCount] = useState<number>(1);
+  const [waferCoordinates, setWaferCoordinates] = useState<WaferCoordinates[]>([
     {
       id: 1,
       topRight: { x: "", y: "" },
@@ -53,46 +53,46 @@ const TraceOverBox = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
 
-  // Update flake coordinates when count changes
+  // Update wafer coordinates when count changes
   useEffect(() => {
-    if (flakeCount > flakeCoordinates.length) {
-      // Add new flakes
-      const newFlakes = Array.from({ length: flakeCount - flakeCoordinates.length }, (_, index) => ({
-        id: flakeCoordinates.length + index + 1,
+    if (waferCount > waferCoordinates.length) {
+      // Add new wafers
+      const newWafers = Array.from({ length: waferCount - waferCoordinates.length }, (_, index) => ({
+        id: waferCoordinates.length + index + 1,
         topRight: { x: "", y: "" },
         bottomLeft: { x: "", y: "" }
       }));
-      setFlakeCoordinates([...flakeCoordinates, ...newFlakes]);
-    } else if (flakeCount < flakeCoordinates.length) {
-      // Remove excess flakes
-      setFlakeCoordinates(flakeCoordinates.slice(0, flakeCount));
+      setWaferCoordinates([...waferCoordinates, ...newWafers]);
+    } else if (waferCount < waferCoordinates.length) {
+      // Remove excess wafers
+      setWaferCoordinates(waferCoordinates.slice(0, waferCount));
     }
-  }, [flakeCount]);
+  }, [waferCount]);
 
-  // Update JSON output whenever flake coordinates change or parameters change
+  // Update JSON output whenever wafer coordinates change or parameters change
   useEffect(() => {
-    // Convert flake coordinates to single boundary coordinates
-    const flakesArray = flakeCoordinates.map(flake => ({
-      id: flake.id,
+    // Convert wafer coordinates to single boundary coordinates
+    const wafersArray = waferCoordinates.map(wafer => ({
+      id: wafer.id,
       topRight: {
-        x: flake.topRight.x ? parseFloat(flake.topRight.x) : null,
-        y: flake.topRight.y ? parseFloat(flake.topRight.y) : null
+        x: wafer.topRight.x ? parseFloat(wafer.topRight.x) : null,
+        y: wafer.topRight.y ? parseFloat(wafer.topRight.y) : null
       },
       bottomLeft: {
-        x: flake.bottomLeft.x ? parseFloat(flake.bottomLeft.x) : null,
-        y: flake.bottomLeft.y ? parseFloat(flake.bottomLeft.y) : null
+        x: wafer.bottomLeft.x ? parseFloat(wafer.bottomLeft.x) : null,
+        y: wafer.bottomLeft.y ? parseFloat(wafer.bottomLeft.y) : null
       }
     }));
 
-    // If we have at least one flake with valid coordinates, use it for the boundary
-    const validFlake = flakesArray.find(flake => 
-      flake.topRight.x !== null && flake.topRight.y !== null && 
-      flake.bottomLeft.x !== null && flake.bottomLeft.y !== null
+    // If we have at least one wafer with valid coordinates, use it for the boundary
+    const validWafer = wafersArray.find(wafer => 
+      wafer.topRight.x !== null && wafer.topRight.y !== null && 
+      wafer.bottomLeft.x !== null && wafer.bottomLeft.y !== null
     );
 
     const output: any = {
       type: "TRACE_OVER",
-      flakes: flakesArray,
+      wafers: wafersArray,
       magnification: magnification,
       pics_until_focus: picsUntilFocus,
       initial_wait_time: initialWaitTime,
@@ -102,7 +102,7 @@ const TraceOverBox = () => {
     };
 
     setJsonOutput(JSON.stringify(output, null, 2));
-  }, [flakeCoordinates, magnification, picsUntilFocus, initialWaitTime, focusWaitTime, cameraIndex, saveImages]);
+  }, [waferCoordinates, magnification, picsUntilFocus, initialWaitTime, focusWaitTime, cameraIndex, saveImages]);
 
   // Listen for position responses and trace over results from the server
   useEffect(() => {
@@ -127,7 +127,7 @@ const TraceOverBox = () => {
       setTraceOverStatus({
         success: message.success,
         message: message.message || (message.success ? "Trace over completed successfully" : "Trace over failed"),
-        flakeCount: message.flakeCount
+        waferCount: message.waferCount
       });
       
       // Clear status after 5 seconds
@@ -157,8 +157,8 @@ const TraceOverBox = () => {
 
   const handleTraceOver = () => {
     // Validate that all coordinates are filled
-    const isValid = flakeCoordinates.every(flake => 
-      flake.topRight.x && flake.topRight.y && flake.bottomLeft.x && flake.bottomLeft.y
+    const isValid = waferCoordinates.every(wafer => 
+      wafer.topRight.x && wafer.topRight.y && wafer.bottomLeft.x && wafer.bottomLeft.y
     );
 
     if (!isValid) {
@@ -166,18 +166,18 @@ const TraceOverBox = () => {
       return;
     }
 
-    // Send the trace over command with flake coordinates and all parameters
+    // Send the trace over command with wafer coordinates and all parameters
     const data = {
       type: "TRACE_OVER",
-      flakes: flakeCoordinates.map(flake => ({
-        id: flake.id,
+      wafers: waferCoordinates.map(wafer => ({
+        id: wafer.id,
         topRight: {
-          x: parseFloat(flake.topRight.x),
-          y: parseFloat(flake.topRight.y)
+          x: parseFloat(wafer.topRight.x),
+          y: parseFloat(wafer.topRight.y)
         },
         bottomLeft: {
-          x: parseFloat(flake.bottomLeft.x),
-          y: parseFloat(flake.bottomLeft.y)
+          x: parseFloat(wafer.bottomLeft.x),
+          y: parseFloat(wafer.bottomLeft.y)
         }
       })),
       magnification: magnification,
@@ -192,7 +192,7 @@ const TraceOverBox = () => {
   };
 
   const handleCoordinateChange = (
-    flakeId: number, 
+    waferId: number, 
     corner: "topRight" | "bottomLeft", 
     axis: "x" | "y", 
     value: string
@@ -202,23 +202,23 @@ const TraceOverBox = () => {
       return;
     }
 
-    setFlakeCoordinates(prev => 
-      prev.map(flake => 
-        flake.id === flakeId 
+    setWaferCoordinates(prev => 
+      prev.map(wafer => 
+        wafer.id === waferId 
           ? { 
-              ...flake, 
+              ...wafer, 
               [corner]: { 
-                ...flake[corner], 
+                ...wafer[corner], 
                 [axis]: value 
               } 
             } 
-          : flake
+          : wafer
       )
     );
   };
 
   const copyCurrentPosition = (
-    flakeId: number, 
+    waferId: number, 
     corner: "topRight" | "bottomLeft" | "both"
   ) => {
     // Format the current position values
@@ -228,11 +228,11 @@ const TraceOverBox = () => {
     // Update the specific coordinate(s) with the current position
     if (corner === "both") {
       // Update both corners with the current position
-      setFlakeCoordinates(prev => 
-        prev.map(flake => 
-          flake.id === flakeId 
+      setWaferCoordinates(prev => 
+        prev.map(wafer => 
+          wafer.id === waferId 
             ? { 
-                ...flake, 
+                ...wafer, 
                 topRight: { 
                   x: xValue, 
                   y: yValue 
@@ -242,38 +242,38 @@ const TraceOverBox = () => {
                   y: yValue
                 }
               } 
-            : flake
+            : wafer
         )
       );
     } else {
       // Update the specific corner
-      setFlakeCoordinates(prev => 
-        prev.map(flake => 
-          flake.id === flakeId 
+      setWaferCoordinates(prev => 
+        prev.map(wafer => 
+          wafer.id === waferId 
             ? { 
-                ...flake, 
+                ...wafer, 
                 [corner]: { 
                   x: xValue, 
                   y: yValue 
                 }
               } 
-            : flake
+            : wafer
         )
       );
     }
   };
 
-  // Clear coordinates for a specific flake
-  const clearFlakeCoordinates = (flakeId: number) => {
-    setFlakeCoordinates(prev => 
-      prev.map(flake => 
-        flake.id === flakeId 
+  // Clear coordinates for a specific wafer
+  const clearWaferCoordinates = (waferId: number) => {
+    setWaferCoordinates(prev => 
+      prev.map(wafer => 
+        wafer.id === waferId 
           ? { 
-              ...flake, 
+              ...wafer, 
               topRight: { x: "", y: "" },
               bottomLeft: { x: "", y: "" }
             } 
-          : flake
+          : wafer
       )
     );
   };
@@ -423,21 +423,21 @@ const TraceOverBox = () => {
         throw new Error("Invalid JSON: not a TRACE_OVER command");
       }
       
-      if (parsedJson.flakes && Array.isArray(parsedJson.flakes)) {
-        const newFlakes = parsedJson.flakes.map((flake: any) => ({
-          id: flake.id || 1,
+      if (parsedJson.wafers && Array.isArray(parsedJson.wafers)) {
+        const newWafers = parsedJson.wafers.map((wafer: any, index: number) => ({
+          id: index + 1,
           topRight: {
-            x: flake.topRight.x !== null ? String(flake.topRight.x) : "",
-            y: flake.topRight.y !== null ? String(flake.topRight.y) : ""
+            x: wafer.topRight?.x?.toString() || "",
+            y: wafer.topRight?.y?.toString() || ""
           },
           bottomLeft: {
-            x: flake.bottomLeft.x !== null ? String(flake.bottomLeft.x) : "",
-            y: flake.bottomLeft.y !== null ? String(flake.bottomLeft.y) : ""
+            x: wafer.bottomLeft?.x?.toString() || "",
+            y: wafer.bottomLeft?.y?.toString() || ""
           }
         }));
         
-        setFlakeCount(newFlakes.length);
-        setFlakeCoordinates(newFlakes);
+        setWaferCount(newWafers.length);
+        setWaferCoordinates(newWafers);
       }
       
       // Update other parameters if they exist
@@ -466,7 +466,8 @@ const TraceOverBox = () => {
       }
       
     } catch (error) {
-      alert(`Error parsing JSON: ${(error as Error).message}`);
+      console.error("Error parsing JSON:", error);
+      alert("Invalid JSON format. Please check your input.");
     }
   };
 
@@ -528,16 +529,16 @@ const TraceOverBox = () => {
   };
 
   // Add this function before the return statement
-  const switchCoordinates = (flakeId: number) => {
-    setFlakeCoordinates(prev => 
-      prev.map(flake => 
-        flake.id === flakeId 
+  const switchCoordinates = (waferId: number) => {
+    setWaferCoordinates(prev => 
+      prev.map(wafer => 
+        wafer.id === waferId 
           ? { 
-              ...flake, 
-              topRight: { ...flake.bottomLeft },
-              bottomLeft: { ...flake.topRight }
+              ...wafer, 
+              topRight: { ...wafer.bottomLeft },
+              bottomLeft: { ...wafer.topRight }
             } 
-          : flake
+          : wafer
       )
     );
   };
@@ -558,10 +559,6 @@ const TraceOverBox = () => {
     <div className="trace-over-box">
       <h2>Trace Over</h2>
       <div className="trace-container">
-        <div className="flex justify-between items-center mb-4">
-          {/* Removed Number of Flakes control from here */}
-        </div>
-
         {/* Trace Settings Controls */}
         <div className="trace-settings flex flex-wrap gap-3 mb-4 bg-gray-50 p-3 rounded border">
           <h3 className="w-full text-sm font-medium mb-2 text-gray-700">Trace Settings:</h3>
@@ -652,27 +649,27 @@ const TraceOverBox = () => {
           </div>
         </div>
         
-        {/* Add Number of Flakes control below Trace Settings */}
-        <div className="number-of-flakes-control mb-4 flex items-center">
+        {/* Add Number of Wafers control below Trace Settings */}
+        <div className="number-of-wafers-control mb-4 flex items-center">
           <label className="text-sm font-medium">
             Number of Wafers:
             <input
               type="number"
               min="1"
-              value={flakeCount}
-              onChange={(e) => setFlakeCount(Math.max(1, parseInt(e.target.value) || 1))}
+              value={waferCount}
+              onChange={(e) => setWaferCount(Math.max(1, parseInt(e.target.value) || 1))}
               className="ml-2 p-1 border rounded w-16 text-center"
             />
           </label>
         </div>
 
-        {/* Current Position Display
+        {/* Current Position Display */}
         <div className="current-position mb-2 text-xs text-gray-600">
           Current Position: X: {currentPosition.x.toFixed(3)}, Y: {currentPosition.y.toFixed(3)}
-        </div> */}
+        </div>
 
-        {/* Compact Flake Coordinates Table */}
-        <div className="flake-coordinates-container overflow-x-auto">
+        {/* Compact Wafer Coordinates Table */}
+        <div className="wafer-coordinates-container overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-gray-100">
@@ -685,14 +682,14 @@ const TraceOverBox = () => {
               </tr>
             </thead>
             <tbody>
-              {flakeCoordinates.map((flake) => (
-                <tr key={flake.id} className="border-b">
-                  <td className="p-1 font-medium">{flake.id}</td>
+              {waferCoordinates.map((wafer) => (
+                <tr key={wafer.id} className="border-b">
+                  <td className="p-1 font-medium">{wafer.id}</td>
                   <td className="p-1">
                     <input
                       type="text"
-                      value={flake.topRight.x}
-                      onChange={(e) => handleCoordinateChange(flake.id, "topRight", "x", e.target.value)}
+                      value={wafer.topRight.x}
+                      onChange={(e) => handleCoordinateChange(wafer.id, "topRight", "x", e.target.value)}
                       className="p-1 border rounded w-20 text-xs"
                       placeholder="X"
                     />
@@ -700,8 +697,8 @@ const TraceOverBox = () => {
                   <td className="p-1">
                     <input
                       type="text"
-                      value={flake.topRight.y}
-                      onChange={(e) => handleCoordinateChange(flake.id, "topRight", "y", e.target.value)}
+                      value={wafer.topRight.y}
+                      onChange={(e) => handleCoordinateChange(wafer.id, "topRight", "y", e.target.value)}
                       className="p-1 border rounded w-20 text-xs"
                       placeholder="Y"
                     />
@@ -709,8 +706,8 @@ const TraceOverBox = () => {
                   <td className="p-1">
                     <input
                       type="text"
-                      value={flake.bottomLeft.x}
-                      onChange={(e) => handleCoordinateChange(flake.id, "bottomLeft", "x", e.target.value)}
+                      value={wafer.bottomLeft.x}
+                      onChange={(e) => handleCoordinateChange(wafer.id, "bottomLeft", "x", e.target.value)}
                       className="p-1 border rounded w-20 text-xs"
                       placeholder="X"
                     />
@@ -718,8 +715,8 @@ const TraceOverBox = () => {
                   <td className="p-1">
                     <input
                       type="text"
-                      value={flake.bottomLeft.y}
-                      onChange={(e) => handleCoordinateChange(flake.id, "bottomLeft", "y", e.target.value)}
+                      value={wafer.bottomLeft.y}
+                      onChange={(e) => handleCoordinateChange(wafer.id, "bottomLeft", "y", e.target.value)}
                       className="p-1 border rounded w-20 text-xs"
                       placeholder="Y"
                     />
@@ -727,28 +724,28 @@ const TraceOverBox = () => {
                   <td className="p-1">
                     <div className="flex space-x-1">
                       <button
-                        onClick={() => copyCurrentPosition(flake.id, "topRight")}
+                        onClick={() => copyCurrentPosition(wafer.id, "topRight")}
                         className="px-2 py-1 bg-blue-500 text-white text-xs rounded"
                         title="Copy current position to Top Right"
                       >
                         TR
                       </button>
                       <button
-                        onClick={() => copyCurrentPosition(flake.id, "bottomLeft")}
+                        onClick={() => copyCurrentPosition(wafer.id, "bottomLeft")}
                         className="px-2 py-1 bg-green-500 text-white text-xs rounded"
                         title="Copy current position to Bottom Left"
                       >
                         BL
                       </button>
                       <button
-                        onClick={() => switchCoordinates(flake.id)}
+                        onClick={() => switchCoordinates(wafer.id)}
                         className="px-2 py-1 bg-purple-500 text-white text-xs rounded"
                         title="Switch top right and bottom left coordinates"
                       >
                         Switch
                       </button>
                       <button
-                        onClick={() => clearFlakeCoordinates(flake.id)}
+                        onClick={() => clearWaferCoordinates(wafer.id)}
                         className="px-2 py-1 bg-red-500 text-white text-xs rounded"
                         title="Clear coordinates"
                       >
@@ -812,8 +809,8 @@ const TraceOverBox = () => {
         {traceOverStatus && (
           <div className={`status-message mt-2 text-sm ${getStatusColor()}`}>
             {traceOverStatus.message}
-            {traceOverStatus.flakeCount !== undefined && (
-              <span> ({traceOverStatus.flakeCount} flakes processed)</span>
+            {traceOverStatus.waferCount !== undefined && (
+              <span> ({traceOverStatus.waferCount} wafers processed)</span>
             )}
           </div>
         )}
