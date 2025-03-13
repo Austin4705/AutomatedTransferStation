@@ -15,18 +15,19 @@ interface PositionData {
 interface TraceOverResultData {
   message: string;
   success: boolean;
-  flakeCount?: number;
+  waferCount?: number;
 }
 
 interface ScanFlakesResultData {
   message: string;
   success: boolean;
-  flakeCount?: number;
+  waferCount?: number;
   directory?: string;
 }
 
 interface DrawFlakesResultData {
   response: string;
+  success?: boolean;
   directory?: string;
 }
 
@@ -81,7 +82,7 @@ export class PacketHandlers {
     // Display a notification or update UI based on the result
     if (data.success) {
       // Show success notification
-      console.log(`Trace over completed successfully for ${data.flakeCount || 'unknown'} flakes`);
+      console.log(`Trace over completed successfully for ${data.waferCount || 'unknown'} wafers`);
     } else {
       // Show error notification
       console.error(`Trace over failed: ${data.message || 'Unknown error'}`);
@@ -161,8 +162,8 @@ export class PacketHandlers {
     // Display a notification with the result
     if (data.success) {
       console.log(`Successfully scanned flakes in directory: ${data.directory}`);
-      if (data.flakeCount !== undefined) {
-        console.log(`Found ${data.flakeCount} flakes`);
+      if (data.waferCount !== undefined) {
+        console.log(`Found ${data.waferCount} wafers`);
       }
     } else {
       console.error(`Failed to scan flakes: ${data.message}`);
@@ -188,4 +189,4 @@ export class PacketHandlers {
     console.log("Received unhandled packet:", data);
     // Default handling will be done by the appropriate components
   }
-} 
+}

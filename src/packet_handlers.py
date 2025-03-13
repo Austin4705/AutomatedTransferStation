@@ -122,7 +122,9 @@ class PacketHandlers:
         image_container.search_images()
         Socket_Manager.send_all_json({
             "type": "SCAN_FLAKES_RESPONSE",
-            "response": "Scan completed"
+            "response": "Scan completed",
+            "success": True,
+            "waferCount": len(image_container.metadata.get("searched", []))
         })
 
     @packet_handler("DRAW_FLAKES")
@@ -132,7 +134,9 @@ class PacketHandlers:
         image_container.generate_image_output()
         Socket_Manager.send_all_json({
             "type": "DRAW_FLAKES_RESPONSE",
-            "response": "Flakes drawn"
+            "response": "Wafers drawn",
+            "success": True,
+            "directory": directory
         })
 
     @packet_handler("ACK")
