@@ -18,6 +18,13 @@ interface TraceOverResultData {
   flakeCount?: number;
 }
 
+interface ScanFlakesResultData {
+  message: string;
+  success: boolean;
+  flakeCount?: number;
+  directory?: string;
+}
+
 // Helper function to refresh a specific camera stream
 const createRefreshEvent = (streamType: string, cameraNumber: number) => {
   console.log(`Dispatching refresh event for ${streamType}${cameraNumber}`);
@@ -140,6 +147,21 @@ export class PacketHandlers {
   static handleError(data: any) {
     console.error("Received error:", data);
     // Errors will be handled by the ResponseLog component
+  }
+
+  @PacketManager.registerHandler("RESPONSE_SCAN_FLAKES")
+  static handleScanFlakesResult(data: ScanFlakesResultData) {
+    console.log("Received scan flakes result:", data);
+    
+    // Display a notification with the result
+    if (data.success) {
+      console.log(`Successfully scanned flakes in directory: ${data.directory}`);
+      if (data.flakeCount !== undefined) {
+        console.log(`Found ${data.flakeCount} flakes`);
+      }
+    } else {
+      console.error(`Failed to scan flakes: ${data.message}`);
+    }
   }
 
   // Default handler for any other packet types
