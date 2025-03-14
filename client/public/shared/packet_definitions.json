@@ -93,6 +93,8 @@
       "fields": {
         "bottomLeftXOffset": "float",
         "bottomLeftYOffset": "float",
+        "topRightXOffset": "float",
+        "topRightYOffset": "float",
         "waferNumber": "int",
         "imageNumber": "int",
         "directory": "string"

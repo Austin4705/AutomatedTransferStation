@@ -21,6 +21,7 @@ interface Position {
 // Interface for flake coordinates
 interface FlakeCoordinates {
   bottomLeft: { x: string; y: string };
+  topRight: { x: string; y: string };
   waferNumber: string;
   imageNumber: string;
 }
@@ -33,6 +34,7 @@ const ScanFlakesBox = () => {
   const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
   const [flakeCoordinates, setFlakeCoordinates] = useState<FlakeCoordinates>({
     bottomLeft: { x: "0", y: "0" },
+    topRight: { x: "0", y: "0" },
     waferNumber: "",
     imageNumber: ""
   });
@@ -75,7 +77,7 @@ const ScanFlakesBox = () => {
 
   // Handle coordinate change
   const handleCoordinateChange = (
-    corner: "bottomLeft",
+    corner: "bottomLeft" | "topRight",
     axis: "x" | "y",
     value: string
   ) => {
@@ -107,15 +109,15 @@ const ScanFlakesBox = () => {
   };
 
   // Copy current position to bottom left coordinates
-  const copyCurrentPosition = () => {
+  const copyCurrentPosition = (corner: "bottomLeft" | "topRight") => {
     // Format the current position values
     const xValue = currentPosition.x.toFixed(3);
     const yValue = currentPosition.y.toFixed(3);
     
-    // Update the bottom left coordinates with the current position
+    // Update the specified coordinates with the current position
     setFlakeCoordinates(prev => ({
       ...prev,
-      bottomLeft: {
+      [corner]: {
         x: xValue,
         y: yValue
       }
@@ -141,6 +143,8 @@ const ScanFlakesBox = () => {
       directory: selectedDirectory,
       bottomLeftXOffset: parseFloat(flakeCoordinates.bottomLeft.x),
       bottomLeftYOffset: parseFloat(flakeCoordinates.bottomLeft.y),
+      topRightXOffset: parseFloat(flakeCoordinates.topRight.x),
+      topRightYOffset: parseFloat(flakeCoordinates.topRight.y),
       waferNumber: parseInt(flakeCoordinates.waferNumber),
       imageNumber: parseInt(flakeCoordinates.imageNumber)
     };
@@ -175,6 +179,14 @@ const ScanFlakesBox = () => {
       payload.bottomLeft = {
         x: parseFloat(flakeCoordinates.bottomLeft.x),
         y: parseFloat(flakeCoordinates.bottomLeft.y)
+      };
+    }
+
+    // Add top right coordinates if they are provided
+    if (flakeCoordinates.topRight.x && flakeCoordinates.topRight.y) {
+      payload.topRight = {
+        x: parseFloat(flakeCoordinates.topRight.x),
+        y: parseFloat(flakeCoordinates.topRight.y)
       };
     }
 
@@ -297,11 +309,36 @@ const ScanFlakesBox = () => {
               placeholder="Y"
             />
             <button
-              onClick={copyCurrentPosition}
+              onClick={() => copyCurrentPosition("bottomLeft")}
               className="px-2 py-1 bg-blue-500 text-white text-xs rounded"
               title="Copy current position to Bottom Left"
             >
               BL
+            </button>
+          </div>
+          
+          <div className="flex items-center space-x-2 mt-2">
+            <span className="text-sm font-medium">Top Right Offset:</span>
+            <input
+              type="text"
+              value={flakeCoordinates.topRight.x}
+              onChange={(e) => handleCoordinateChange("topRight", "x", e.target.value)}
+              className="p-1 border rounded w-20 text-xs"
+              placeholder="X"
+            />
+            <input
+              type="text"
+              value={flakeCoordinates.topRight.y}
+              onChange={(e) => handleCoordinateChange("topRight", "y", e.target.value)}
+              className="p-1 border rounded w-20 text-xs"
+              placeholder="Y"
+            />
+            <button
+              onClick={() => copyCurrentPosition("topRight")}
+              className="px-2 py-1 bg-blue-500 text-white text-xs rounded"
+              title="Copy current position to Top Right"
+            >
+              TR
             </button>
           </div>
         </div>
