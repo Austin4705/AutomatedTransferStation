@@ -39,39 +39,6 @@ interface ResponseMessage extends BaseMessage {
   responses?: Array<{timestamp?: number; response?: string}>;
 }
 
-// Common packet types that might not be in definitions
-const COMMON_PACKET_TYPES: string[] = [
-  "POSITION", 
-  "RESPONSE_POSITION", 
-  "COMMAND_RESULT", 
-  "TRACE_OVER_RESULT", 
-  "REFRESH_SNAPSHOT", 
-  "RESPONSE_LOG_COMMANDS", 
-  "RESPONSE_LOG_RESPONSE", 
-  "COMMAND", 
-  "RESPONSE", 
-  "ERROR",
-  "DRAW_FLAKES",
-  "DRAW_FLAKES_RESPONSE",
-  "SCAN_FLAKES_RESULT",
-  "REQUEST_POSITION", 
-  "SEND_COMMAND", 
-  "TRACE_OVER", 
-  "SNAP_SHOT", 
-  "REQUEST_LOG_COMMANDS", 
-  "REQUEST_LOG_RESPONSE"
-];
-
-// Common outgoing message types
-const COMMON_OUTGOING_TYPES: string[] = [
-  "COMMAND", 
-  "REQUEST_POSITION", 
-  "SEND_COMMAND", 
-  "TRACE_OVER", 
-  "SNAP_SHOT", 
-  "REQUEST_LOG_COMMANDS", 
-  "REQUEST_LOG_RESPONSE"
-];
 
 const UnifiedLog = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -177,8 +144,6 @@ const UnifiedLog = () => {
         const packetTypes = Object.keys(packetDefs.packets || {});
         
         // Combine with common packet types
-        const allPacketTypes = [...new Set([...packetTypes, ...COMMON_PACKET_TYPES])].sort();
-        
         setDefinedPacketTypes(allPacketTypes);
         
         // Initialize all packet types as selected
@@ -375,7 +340,7 @@ const UnifiedLog = () => {
         });
         
         // Scroll to bottom to show the new entry
-        scrollToBottom();
+          scrollToBottom(); 
       }
     });
 
@@ -398,16 +363,15 @@ const UnifiedLog = () => {
         if (typeof message === 'object' && message.type) {
           messageType = message.type;
           // Check if this is an unknown packet type
-          isUnknown = !COMMON_OUTGOING_TYPES.includes(messageType) && 
-                      !definedPacketTypes.includes(messageType);
+          isUnknown = !definedPacketTypes.includes(messageType);
         } else if (typeof message === 'string') {
           try {
             const parsed = JSON.parse(message);
             if (parsed && parsed.type) {
               messageType = parsed.type;
               // Check if this is an unknown packet type
-              isUnknown = !COMMON_OUTGOING_TYPES.includes(messageType) && 
-                          !definedPacketTypes.includes(messageType);
+              isUnknown =  
+        !definedPacketTypes.includes(messageType);
             }
           } catch {
             // If we can't parse the string, consider it unknown
@@ -717,45 +681,7 @@ const UnifiedLog = () => {
       }
     }
     
-    // Handle bulk response logs
-    else if (message.type === "RESPONSE_LOG_RESPONSE" && Array.isArray((message as ResponseMessage).responses)) {
-      const responseMessage = message as ResponseMessage;
-      // Only process if there are actual responses in the response
-      if (responseMessage.responses!.length > 0) {
-        const responseLogs: LogEntry[] = responseMessage.responses!.map((resp: any) => ({
-          timestamp: new Date(resp.timestamp || Date.now()).toLocaleString(),
-          message: resp.response || JSON.stringify(resp),
-          type: "response",
-          rawData: resp,
-          packetType: "RESPONSE"
-        }));
-        
-        // Always replace all response logs with the new ones
-        addLogs(responseLogs, true);
-        
-        // Check if we should scroll for this response
-        const shouldScrollForThisResponse = window.sessionStorage.getItem('log_scroll_on_next_response_response') === 'true';
-        if (shouldScrollForThisResponse) {
-          console.log("Performing one-time scroll for response response");
-          window.sessionStorage.removeItem('log_scroll_on_next_response_response');
-          
-          // Manually scroll without using auto-scroll
-          setTimeout(() => {
-            if (logContentRef.current) {
-              logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
-            }
-          }, 100);
-        } else {
-          // Normal scrolling based on auto-scroll setting
-          scrollToBottom(); // This will only scroll if auto-scroll is enabled
-        }
-        
-        console.log(`Received ${responseLogs.length} response logs`);
-      } else {
-        console.log("Received empty response logs response");
-      }
-    }
-    
+
     // ... existing code for other message types ...
   }, [jsonState.lastJsonMessage, addLogs, scrollToBottom, logs]);
 

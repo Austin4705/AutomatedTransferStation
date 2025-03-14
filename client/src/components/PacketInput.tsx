@@ -17,7 +17,7 @@ const PacketInput = () => {
   const [packetJson, setPacketJson] = useState(EMPTY_TEMPLATE);
   const [error, setError] = useState<string | null>(null);
   const [keepText, setKeepText] = useState(true);
-  const [logsDisabled, setLogsDisabled] = useState(false);
+  const [logsDisabled, setLogsDisabled] = useState(true);
   
   const [rows, setRows] = useState(0);
   const [showPlaceholder, setShowPlaceholder] = useState(true);
@@ -136,14 +136,14 @@ const PacketInput = () => {
                 Keep text
               </label>
             </div>
-            <button
+            {/* <button
               type="button"
               onClick={toggleLogs}
               className="logs-button"
               title={logsDisabled ? "Enable logs" : "Disable logs"}
             >
               {logsDisabled ? "Enable Logs" : "Disable Logs"}
-            </button>
+            </button> */}
             <button
               type="button"
               onClick={handleReset}
