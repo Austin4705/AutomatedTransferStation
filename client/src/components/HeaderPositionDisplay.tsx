@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
 import { useSendJSON } from "../hooks/useSendJSON";
+import { ReadyState } from "react-use-websocket";
 
 interface Position {
   x: number;
@@ -13,18 +14,48 @@ const HeaderPositionDisplay = () => {
   const [position, setPosition] = useState<Position | null>(null);
   const [loading, setLoading] = useState(false);
   const [autoUpdate, setAutoUpdate] = useState(true);
-  const [pollRate, setPollRate] = useState(.3); // Default 5.0 times per second (200ms)
+  const [pollRate, setPollRate] = useState(1); // Default 1.0 times per second (1000ms)
   const timerRef = useRef<number | null>(null);
-  const initializedRef = useRef(false);
+  const retryRef = useRef<number | null>(null);
+  const [connectionError, setConnectionError] = useState(false);
   const jsonState = useRecoilValue(jsonStateAtom);
   const sendJson = useSendJSON();
 
-  // Function to fetch position
+  // Function to fetch position with connection check and retry
   const fetchPosition = () => {
+    // Clear any existing retry timer
+    if (retryRef.current !== null) {
+      window.clearTimeout(retryRef.current);
+      retryRef.current = null;
+    }
+
+    // Check connection status from readyState
+    const isConnected = jsonState.readyState === ReadyState.OPEN;
+    
+    if (!isConnected) {
+      setConnectionError(true);
+      // Retry after a short delay
+      retryRef.current = window.setTimeout(() => {
+        fetchPosition();
+      }, 1000); // Retry after 1 second
+      return;
+    }
+    
+    setConnectionError(false);
     setLoading(true);
-    sendJson({
-      type: "REQUEST_POSITION"
-    });
+    
+    try {
+      sendJson({
+        type: "REQUEST_POSITION"
+      });
+    } catch (error) {
+      console.error("Error sending position request:", error);
+      setConnectionError(true);
+      // Retry after error
+      retryRef.current = window.setTimeout(() => {
+        fetchPosition();
+      }, 1000);
+    }
   };
 
   // Calculate polling interval in milliseconds
@@ -38,6 +69,14 @@ const HeaderPositionDisplay = () => {
     if (timerRef.current !== null) {
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
+    }
+  };
+
+  // Clear retry timer on unmount
+  const clearRetryTimer = () => {
+    if (retryRef.current !== null) {
+      window.clearTimeout(retryRef.current);
+      retryRef.current = null;
     }
   };
 
@@ -57,16 +96,19 @@ const HeaderPositionDisplay = () => {
     }, interval);
   };
 
-  // Initial setup when component mounts
+  // Initial setup when component mounts - updated to always run on mount
   useEffect(() => {
-    if (autoUpdate && !initializedRef.current) {
-      initializedRef.current = true;
-      fetchPosition();
+    // Always fetch position on mount regardless of autoUpdate state
+    fetchPosition();
+    
+    // Only start polling if autoUpdate is enabled
+    if (autoUpdate) {
       startPolling();
     }
     
     return () => {
       clearTimer();
+      clearRetryTimer();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -91,6 +133,18 @@ const HeaderPositionDisplay = () => {
       startPolling();
     }
   }, [pollRate]);
+
+  // Monitor connection state changes
+  useEffect(() => {
+    if (jsonState.readyState === ReadyState.OPEN && connectionError) {
+      setConnectionError(false);
+      if (autoUpdate) {
+        fetchPosition();
+      }
+    } else if (jsonState.readyState !== ReadyState.OPEN) {
+      setConnectionError(true);
+    }
+  }, [jsonState.readyState, connectionError, autoUpdate]);
 
   // Process incoming position data
   useEffect(() => {
@@ -125,6 +179,11 @@ const HeaderPositionDisplay = () => {
     return value.toFixed(3);
   };
 
+  const getConnectionStatusColor = () => {
+    if (connectionError) return "text-red-500";
+    return "text-green-500";
+  };
+
   return (
     <div className="header-position-display flex items-center ml-4">
       <div className="flex items-center mr-3">
@@ -156,6 +215,9 @@ const HeaderPositionDisplay = () => {
       </div>
       
       <div className="position-values flex items-center text-xs">
+        <div className={`connection-status mr-2 ${getConnectionStatusColor()}`}>
+          <span className="text-xs">●</span>
+        </div>
         <div className="flex items-center mr-2">
           <span className="font-medium mr-1">X:</span>
           <span className={`${loading ? 'opacity-50' : ''}`}>
