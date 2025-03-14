@@ -1,5 +1,7 @@
 import { useSendJSON } from "../hooks/useSendJSON";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useRecoilValue } from "recoil";
+import { jsonStateAtom } from "../state/jsonState";
 
 // Extend the HTMLInputElement interface to include webkitdirectory
 declare global {
@@ -9,10 +11,61 @@ declare global {
   }
 }
 
+// Interface for position
+interface Position {
+  x: number;
+  y: number;
+}
+
+// Interface for flake coordinates
+interface FlakeCoordinates {
+  bottomLeft: { x: string; y: string };
+}
+
 const ScanFlakesBox = () => {
   const sendJson = useSendJSON();
+  const jsonState = useRecoilValue(jsonStateAtom);
   const [selectedDirectory, setSelectedDirectory] = useState<string>("");
   const directoryInputRef = useRef<HTMLInputElement>(null);
+  const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
+  const [flakeCoordinates, setFlakeCoordinates] = useState<FlakeCoordinates>({
+    bottomLeft: { x: "", y: "" }
+  });
+
+  // Listen for position responses from the server
+  useEffect(() => {
+    if (!jsonState.lastJsonMessage) return;
+
+    const message = jsonState.lastJsonMessage as any;
+    
+    // Track current position from any position messages
+    if (message.type === "POSITION" || message.type === "RESPONSE_POSITION") {
+      if (typeof message.x === 'number' && typeof message.y === 'number') {
+        setCurrentPosition({
+          x: message.x,
+          y: message.y
+        });
+      }
+    }
+  }, [jsonState.lastJsonMessage]);
+
+  // Request current position from the server
+  const requestCurrentPosition = () => {
+    sendJson({
+      type: "REQUEST_POSITION"
+    });
+  };
+
+  // Initialize by requesting the current position
+  useEffect(() => {
+    requestCurrentPosition();
+    
+    // Set up a timer to periodically request the position
+    const intervalId = setInterval(requestCurrentPosition, 5000);
+    
+    // Clean up the interval when the component unmounts
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Trigger directory input click
   const handleDirectorySelectClick = () => {
@@ -36,6 +89,42 @@ const ScanFlakesBox = () => {
     event.target.value = '';
   };
 
+  // Handle coordinate change
+  const handleCoordinateChange = (
+    corner: "bottomLeft",
+    axis: "x" | "y",
+    value: string
+  ) => {
+    // Only allow numbers and decimal points
+    if (value !== "" && !/^-?\d*\.?\d*$/.test(value)) {
+      return;
+    }
+
+    setFlakeCoordinates(prev => ({
+      ...prev,
+      [corner]: {
+        ...prev[corner],
+        [axis]: value
+      }
+    }));
+  };
+
+  // Copy current position to bottom left coordinates
+  const copyCurrentPosition = () => {
+    // Format the current position values
+    const xValue = currentPosition.x.toFixed(3);
+    const yValue = currentPosition.y.toFixed(3);
+    
+    // Update the bottom left coordinates with the current position
+    setFlakeCoordinates(prev => ({
+      ...prev,
+      bottomLeft: {
+        x: xValue,
+        y: yValue
+      }
+    }));
+  };
+
   // Handle scan flakes button click
   const handleScanFlakes = () => {
     if (!selectedDirectory) {
@@ -43,11 +132,21 @@ const ScanFlakesBox = () => {
       return;
     }
     
-    // Send the scan flakes packet with the selected directory
-    sendJson({
+    // Send the scan flakes packet with the selected directory and coordinates if provided
+    const payload: any = {
       type: "SCAN_FLAKES",
       directory: selectedDirectory
-    });
+    };
+
+    // Add coordinates if they are provided
+    if (flakeCoordinates.bottomLeft.x && flakeCoordinates.bottomLeft.y) {
+      payload.bottomLeft = {
+        x: parseFloat(flakeCoordinates.bottomLeft.x),
+        y: parseFloat(flakeCoordinates.bottomLeft.y)
+      };
+    }
+    
+    sendJson(payload);
   };
 
   // Handle draw flakes button click
@@ -91,7 +190,7 @@ const ScanFlakesBox = () => {
             className="hidden"
           />
         </div>
-        
+       
         <div className="flex space-x-2">
           <button
             onClick={handleScanFlakes}
@@ -115,7 +214,36 @@ const ScanFlakesBox = () => {
           >
             Draw Flakes
           </button>
+        </div>        
+
+        {/* Flake Coordinates */}
+        <div className="flake-coordinates mb-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">Bottom Left Offset:</span>
+            <input
+              type="text"
+              value={flakeCoordinates.bottomLeft.x}
+              onChange={(e) => handleCoordinateChange("bottomLeft", "x", e.target.value)}
+              className="p-1 border rounded w-20 text-xs"
+              placeholder="X"
+            />
+            <input
+              type="text"
+              value={flakeCoordinates.bottomLeft.y}
+              onChange={(e) => handleCoordinateChange("bottomLeft", "y", e.target.value)}
+              className="p-1 border rounded w-20 text-xs"
+              placeholder="Y"
+            />
+            <button
+              onClick={copyCurrentPosition}
+              className="px-2 py-1 bg-blue-500 text-white text-xs rounded"
+              title="Copy current position to Bottom Left"
+            >
+              BL
+            </button>
+          </div>
         </div>
+ 
       </div>
     </div>
   );
