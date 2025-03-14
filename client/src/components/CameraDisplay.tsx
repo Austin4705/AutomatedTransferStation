@@ -140,7 +140,7 @@ const CameraDisplay = () => {
       window.removeEventListener('refresh-camera-stream', handleRefreshStream as EventListener);
       window.removeEventListener('refresh-all-camera-streams', handleRefreshAllStreams);
     };
-  }, [selectedCamera]); // Re-add listeners if selectedCamera changes
+  }, [selectedCamera]);
 
   return (
     <div className="camera-display h-full flex flex-col">
@@ -175,19 +175,21 @@ const CameraDisplay = () => {
         </button>
       </div>
       
-      <div className="camera-image-container flex-grow bg-gray-100 rounded flex items-center justify-center" ref={imgContainerRef}>
+      <div className="flex-grow overflow-hidden">
         {error ? (
-          <div className="error-message text-sm text-center p-4 text-red-500">
-            {error}
-            <button 
-              onClick={refreshStream}
-              className="block mx-auto mt-2 text-blue-500 hover:text-blue-700 underline"
-            >
-              Try Again
-            </button>
+          <div className="error-message text-sm text-center p-4 text-red-500 h-full flex items-center justify-center">
+            <div>
+              {error}
+              <button 
+                onClick={refreshStream}
+                className="block mx-auto mt-2 text-blue-500 hover:text-blue-700 underline"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="image-wrapper relative w-full h-full flex items-center justify-center">
+          <div ref={imgContainerRef} className="image-wrapper relative w-full h-full flex items-center justify-center">
             <img 
               ref={imgRef}
               key={`${selectedCamera}-${imageKey}`} // This forces React to recreate the element when selectedCamera or imageKey changes
@@ -197,9 +199,9 @@ const CameraDisplay = () => {
               onError={handleImageError}
               onLoad={handleImageLoad}
               style={{ 
-                maxWidth: "100%", 
-                maxHeight: "100%", 
-                objectFit: "contain",
+                width: "100%", 
+                height: "100%", 
+                objectFit: "contain", 
                 display: "block"
               }}
             />

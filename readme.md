@@ -53,6 +53,8 @@ Create a `config.json` file in the project root directory with the following con
 ## Running the Application
 
 ### Start the Backend Server
+If on a hq graphene system ensure that the software is started and then goto file -> run command server 
+
 ```bash
 # From the project root
 cd src
