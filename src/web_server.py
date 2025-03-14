@@ -24,6 +24,10 @@ def startup_flask_app():
     # Register cleanup function to run at exit
     atexit.register(cleanup_resources)
     
+    for camera in Camera.global_list.values():
+        camera.snap_image()
+        camera.snap_image_flake_hunted()
+
     # Start the Flask app - use processes=1 to avoid multiprocessing issues
     app.run(host='127.0.0.1', port="5000", debug=False, use_reloader=False, threaded=True)
 
