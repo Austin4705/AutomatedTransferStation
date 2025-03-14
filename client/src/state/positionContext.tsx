@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { useSendJSON } from '../hooks/useSendJSON';
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "./jsonState";
+import { ReadyState } from "react-use-websocket";
 
 // Define the context interface
 interface PositionContextType {
@@ -64,11 +65,17 @@ export const PositionProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Function to fetch position
   const fetchPosition = () => {
-    // console.log("Context: Fetching position...");
-    setIsLoading(true);
-    sendJson({
-      type: "REQUEST_POSITION"
-    });
+    // Only send the request if the websocket is open
+    if (jsonState.readyState === ReadyState.OPEN) {
+      // console.log("Context: Fetching position...");
+      setIsLoading(true);
+      sendJson({
+        type: "REQUEST_POSITION"
+      });
+    } else {
+      console.warn("WebSocket not connected. Position request not sent.");
+      setIsLoading(false);
+    }
   };
 
   // Calculate polling interval in milliseconds
@@ -109,10 +116,16 @@ export const PositionProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     console.log("Position context: Auto-update changed:", autoUpdate);
     
     if (autoUpdate) {
-      // Fetch immediately when auto-update is turned on
-      fetchPosition();
-      // Start polling
-      startPolling();
+      // Only start if the connection is open
+      if (jsonState.readyState === ReadyState.OPEN) {
+        console.log("WebSocket is open, starting position polling");
+        // Fetch immediately when auto-update is turned on
+        fetchPosition();
+        // Start polling
+        startPolling();
+      } else {
+        console.log("WebSocket not ready, waiting for connection...");
+      }
     } else {
       // Clear timer when auto-update is turned off
       clearTimer();
@@ -122,7 +135,17 @@ export const PositionProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       clearTimer();
     };
-  }, [autoUpdate]);
+  }, [autoUpdate, jsonState.readyState]);
+
+  // Watch for WebSocket connection changes
+  useEffect(() => {
+    if (jsonState.readyState === ReadyState.OPEN && autoUpdate) {
+      console.log("WebSocket connected, starting position polling");
+      // Start polling once connection is established
+      fetchPosition();
+      startPolling();
+    }
+  }, [jsonState.readyState]);
 
   // Handle poll rate changes
   useEffect(() => {

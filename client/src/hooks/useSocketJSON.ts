@@ -18,6 +18,11 @@ export default function useSocketJSON(ws_url: string) {
       retryOnError: true,
       onOpen: () => {
         console.log("WebSocket connection established");
+        console.log(`WebSocket connected to ${ws_url}`);
+        
+        // Dispatch a custom event that components can listen for
+        const wsConnectedEvent = new CustomEvent('wsConnected');
+        window.dispatchEvent(wsConnectedEvent);
       },
       onClose: (event) => {
         console.warn("WebSocket connection closed", event);
