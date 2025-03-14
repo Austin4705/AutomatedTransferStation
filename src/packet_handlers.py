@@ -141,23 +141,20 @@ class PacketHandlers:
         directory = data.get("directory")
         bottomLeftXOffset = data.get("bottomLeftXOffset")
         bottomLeftYOffset = data.get("bottomLeftYOffset")
-        # topRightXOffset = data.get("topRightXOffset")
-        # topRightYOffset = data.get("topRightYOffset")
+        topRightXOffset = data.get("topRightXOffset")
+        topRightYOffset = data.get("topRightYOffset")
         waferNumber = data.get("waferNumber")
         imageNumber = data.get("imageNumber")
         image_container = Image_Container(PacketHandlers.transfer_station, directory)
-        print("BC")
-
-        image_data = image_container.metadata[waferNumber][imageNumber]
+        image_data = image_container.metadata.get("wafers")[waferNumber][imageNumber]
         x = image_data["x"]
         y = image_data["y"]
-        print("HII")
         PacketCommander.send_message(f"Goto wafer {waferNumber} image {imageNumber} at {x}, {y}")
-        # PacketCommander.send_message(f"Bottom Left Offset: ({bottomLeftXOffset}, {bottomLeftYOffset})")
-        # PacketCommander.send_message(f"Top Right Offset: ({topRightXOffset}, {topRightYOffset})")
+        PacketCommander.send_message(f"Bottom Left Offset: ({bottomLeftXOffset}, {bottomLeftYOffset})")
+        PacketCommander.send_message(f"Top Right Offset: ({topRightXOffset}, {topRightYOffset})")
         
         # Move to the position with the bottom left offset
-        PacketHandlers.transfer_station.move_to(x + bottomLeftXOffset, y + bottomLeftYOffset)
+        PacketHandlers.transfer_station.moveXY(x + bottomLeftXOffset, y + bottomLeftYOffset)
 
     @packet_handler("ACK")
     def handle_ack(packet_type: str, data: dict):
