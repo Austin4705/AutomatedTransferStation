@@ -15,8 +15,8 @@ class Socket_Manager:
 
 
     # Load packet definitions
-    with open("./../shared/packet_definitions.json", "r") as f:
-        PACKET_DEFS = json.load(f)["packets"]
+    # with open("./../shared/packet_definitions.json", "r") as f:
+    #     PACKET_DEFS = json.load(f)["packets"]
 
     # Dictionary to store packet handlers
     packet_handlers: Dict[str, Callable] = dict()
@@ -147,31 +147,31 @@ class Socket_Manager:
             cls.send_all(json.dumps(error_data))
 
     #Not working, I dont care to validate it
-    @classmethod
-    def validate_packet_data(cls, packet_type: str, data: dict) -> bool:
-        """Validate packet data against definition"""
-        if packet_type not in cls.PACKET_DEFS:
-            return False
+    # @classmethod
+    # def validate_packet_data(cls, packet_type: str, data: dict) -> bool:
+    #     """Validate packet data against definition"""
+    #     if packet_type not in cls.PACKET_DEFS:
+    #         return False
 
-        expected_fields = cls.PACKET_DEFS[packet_type]["fields"]
+    #     expected_fields = cls.PACKET_DEFS[packet_type]["fields"]
         
-        for field, expected_type in expected_fields.items():
-            if field not in data:
-                return False
+    #     for field, expected_type in expected_fields.items():
+    #         if field not in data:
+    #             return False
             
-            value = data[field]
+    #         value = data[field]
             
-            # Type checking
-            if expected_type == "bool" and not isinstance(value, bool):
-                return False
-            elif expected_type == "int" and not isinstance(value, int):
-                return False
-            elif expected_type == "float" and not isinstance(value, (int, float)):
-                return False
-            elif expected_type == "string" and not isinstance(value, str):
-                return False
+    #         # Type checking
+    #         if expected_type == "bool" and not isinstance(value, bool):
+    #             return False
+    #         elif expected_type == "int" and not isinstance(value, int):
+    #             return False
+    #         elif expected_type == "float" and not isinstance(value, (int, float)):
+    #             return False
+    #         elif expected_type == "string" and not isinstance(value, str):
+    #             return False
 
-        return True
+    #     return True
 
     @classmethod
     def default_handler(cls, packet_type: str, data: dict):

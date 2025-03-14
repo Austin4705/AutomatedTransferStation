@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
-import { useSendJSON } from "../hooks/useSendJSON";
+import { PacketManager } from "../packets/PacketHandler";
 
 interface CommandLogEntry {
   timestamp: string;
@@ -12,68 +12,65 @@ interface CommandLogEntry {
 interface CommandMessage {
   type: string;
   command?: string;
-  commands?: Array<{timestamp?: number; command?: string}>;
+  _loggedByManager?: boolean;
   [key: string]: any;
 }
 
 const CommandLog = () => {
   const [commandLogs, setCommandLogs] = useState<CommandLogEntry[]>([]);
   const jsonState = useRecoilValue(jsonStateAtom);
-  const sendJson = useSendJSON();
   const logContentRef = useRef<HTMLDivElement>(null);
-  // Add a ref to track the last processed message to avoid duplicates
-  const lastProcessedMessageRef = useRef<any>(null);
   // Add a ref to track if logs were manually cleared
   const logsManuallyCleared = useRef<boolean>(false);
 
-  // Process incoming messages from websocket
+  // Set up the listener for command logs from PacketManager
+  useEffect(() => {
+    // Register a listener for command logs
+    const unsubscribe = PacketManager.registerCommandLogListener((entry) => {
+      if (logsManuallyCleared.current) {
+        // If logs were manually cleared, wait a bit before adding new entries
+        return;
+      }
+
+      const newEntry: CommandLogEntry = {
+        timestamp: new Date(entry.timestamp).toLocaleString(),
+        command: entry.message
+      };
+      
+      setCommandLogs(prev => [...prev, newEntry]);
+      scrollToBottom();
+    });
+    
+    // Clean up on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Process incoming COMMAND messages from websocket as a backup
   useEffect(() => {
     if (!jsonState.lastJsonMessage) return;
-
-    // Skip if this is the same message we already processed
-    if (lastProcessedMessageRef.current === jsonState.lastJsonMessage) {
-      return;
-    }
-
-    // Update the last processed message
-    lastProcessedMessageRef.current = jsonState.lastJsonMessage;
     
     const message = jsonState.lastJsonMessage as CommandMessage;
     
     // If logs were manually cleared, we need to reset the flag
     // but only process new messages after clearing
     if (logsManuallyCleared.current) {
-      logsManuallyCleared.current = false;
-      // Only process this message if it's new (arrived after clearing)
-      const currentTime = new Date().getTime();
-      const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : currentTime;
-      // If the message is older than when we cleared, skip it
-      if (messageTime < currentTime - 1000) { // 1 second buffer
-        return;
-      }
+      return;
     }
     
-    // Handle bulk command logs
-    if (message.type === "RESPONSE_LOG_COMMANDS" && Array.isArray(message.commands)) {
-      const formattedLogs = message.commands.map((cmd: any) => ({
-        timestamp: new Date(cmd.timestamp || Date.now()).toLocaleString(),
-        command: cmd.command || JSON.stringify(cmd)
-      }));
-      
-      setCommandLogs(formattedLogs);
-      
-      scrollToBottom();
-    }
-    
-    // Handle individual command
-    else if (message.type === "COMMAND") {
+    // Only handle COMMAND messages here as a backup
+    // Most commands should be handled by the PacketManager listener
+    if (message.type === "COMMAND" && !message._loggedByManager) {
       const newEntry: CommandLogEntry = {
         timestamp: new Date().toLocaleString(),
         command: message.command || JSON.stringify(message)
       };
       
-      setCommandLogs(prev => [...prev, newEntry]);
+      // Mark as logged to prevent duplicates
+      message._loggedByManager = true;
       
+      setCommandLogs(prev => [...prev, newEntry]);
       scrollToBottom();
     }
   }, [jsonState.lastJsonMessage]);
@@ -100,20 +97,16 @@ const CommandLog = () => {
     }
   };
 
-  // Function to request command logs
-  const requestCommandLogs = () => {
-    // sendJson({
-    //   type: "REQUEST_LOG_COMMANDS",
-    // });
-  };
-
   // Function to clear logs
   const clearLogs = () => {
     setCommandLogs([]);
     // Mark that logs were manually cleared to prevent immediate re-adding
     logsManuallyCleared.current = true;
-    // Reset the last processed message to allow new messages to come in
-    lastProcessedMessageRef.current = null;
+    
+    // Add a small delay before allowing new messages to be processed
+    setTimeout(() => {
+      logsManuallyCleared.current = false;
+    }, 100);
   };
 
   return (
@@ -137,14 +130,8 @@ const CommandLog = () => {
       </div>
       <div className="log-actions mt-2">
         <button 
-          onClick={requestCommandLogs}
-          className="refresh-button text-sm"
-        >
-          Refresh
-        </button>
-        <button 
           onClick={clearLogs}
-          className="clear-button text-sm ml-2"
+          className="clear-button text-sm"
         >
           Clear
         </button>
