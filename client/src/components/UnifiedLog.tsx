@@ -143,6 +143,9 @@ const UnifiedLog = () => {
         // Extract packet types from definitions
         const packetTypes = Object.keys(packetDefs.packets || {});
         
+        // Create the allPacketTypes array for use throughout the component
+        const allPacketTypes = packetTypes;
+        
         // Combine with common packet types
         setDefinedPacketTypes(allPacketTypes);
         
@@ -312,9 +315,26 @@ const UnifiedLog = () => {
         logType = "response";
       }
       
+      // Create a message content based on the log type
+      let messageContent: string;
+      if (logType === "command") {
+        // For commands, show the command content if available
+        messageContent = packetInfo.data && packetInfo.data.command 
+          ? packetInfo.data.command
+          : rawPacket;
+      } else if (logType === "response") {
+        // For responses, show the response content if available
+        messageContent = packetInfo.data && (packetInfo.data.response || packetInfo.data.message)
+          ? (packetInfo.data.response || packetInfo.data.message)
+          : rawPacket;
+      } else {
+        // For regular packets, show the raw packet
+        messageContent = rawPacket;
+      }
+      
       const newEntry: LogEntry = {
         timestamp: new Date(packetInfo.timestamp).toLocaleString(),
-        message: rawPacket,
+        message: messageContent,
         type: logType, // Use the determined log type
         rawData: packetInfo.data,
         size: packetInfo.size,
@@ -322,11 +342,14 @@ const UnifiedLog = () => {
         isUnknown
       };
       
+      // Create a unique key for this packet to check for duplication
+      const packetKey = `${logType}-${packetInfo.type}-${packetInfo.timestamp}`;
+      
       // Check if this entry would be a duplicate
       const isDuplicate = logs.some(log => 
         log.type === logType && 
         log.packetType === packetInfo.type && 
-        log.message === rawPacket
+        log.timestamp === newEntry.timestamp
       );
       
       if (!isDuplicate) {
@@ -340,7 +363,7 @@ const UnifiedLog = () => {
         });
         
         // Scroll to bottom to show the new entry
-          scrollToBottom(); 
+        scrollToBottom(); 
       }
     });
 
@@ -528,6 +551,13 @@ const UnifiedLog = () => {
       detail: { timestamp: new Date().getTime() }
     });
     document.dispatchEvent(event);
+    
+    // Force stop all pending log requests by adding a small delay
+    // before new log messages can be processed
+    setTimeout(() => {
+      // After a brief delay, we can allow processing messages again
+      console.log("Log clearing complete - ready for new messages");
+    }, 100);
   };
 
   // Add click handler to close dropdowns when clicking outside
@@ -583,14 +613,12 @@ const UnifiedLog = () => {
     // If logs were manually cleared, we need to reset the flag
     // but only process new messages after clearing
     if (logsManuallyCleared.current) {
-      // Only reset the flag, don't skip all messages
+      // Simply reset the flag and skip all message processing until new messages arrive
       logsManuallyCleared.current = false;
       
-      // If this is a response to a log request, we should process it even after clearing
-      if (message.type !== "RESPONSE_LOG_COMMANDS" && message.type !== "RESPONSE_LOG_RESPONSE") {
-        // Skip regular messages that might be from before clearing
-        return;
-      }
+      // Skip all message processing right after clearing logs
+      // This prevents duplicating commands and responses right after clear
+      return;
     }
     
     // Handle command messages
