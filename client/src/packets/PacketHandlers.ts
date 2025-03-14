@@ -49,7 +49,7 @@ export class PacketHandlers {
   static handlePosition(data: any) {
     // Ensure we have valid position data
     if (typeof data.x === 'number' && typeof data.y === 'number') {
-      console.log("Received valid position data:", data);
+      // console.log("Received valid position data:", data);
     } else {
       console.warn("Received invalid position data:", data);
     }
@@ -164,7 +164,7 @@ export class PacketHandlers {
 
   @PacketManager.registerHandler("COMMAND")
   static handleCommand(data: any) {
-    console.log("Received command:", data);
+    // console.log("Received command:", data);
     // Always create a timestamp if not present
     const timestamp = data.timestamp || new Date().getTime();
     
@@ -173,13 +173,13 @@ export class PacketHandlers {
       ...data,
       timestamp
     };
-    
-    PacketManager.appendToCommands(`Received command: ${data.command}`, logData);
+    // UNCOMMENT THIS TO SEE THE COMMAND
+    // PacketManager.appendToCommands(`Received command: ${data.command}`, logData);
   }
 
   @PacketManager.registerHandler("RESPONSE")
   static handleResponse(data: any) {
-    console.log("Received response:", data);
+    // console.log("Received response:", data);
     // Always create a timestamp if not present
     const timestamp = data.timestamp || new Date().getTime();
     
@@ -189,7 +189,8 @@ export class PacketHandlers {
       timestamp
     };
     
-    PacketManager.appendToResponses(`Received response: ${data.response}`, logData);
+    // UNCOMMENT THIS TO SEE THE RESPONSE
+    // PacketManager.appendToResponses(`Received response: ${data.response}`, logData);
   }
 
   @PacketManager.registerHandler("ERROR")

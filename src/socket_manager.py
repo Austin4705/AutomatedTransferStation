@@ -75,7 +75,7 @@ class Socket_Manager:
                 # Handle different types of messages
                 if isinstance(message, str):
                     # Text message
-                    print(f"Received message: {message}")
+                    # print(f"Received message: {message}")
                     Socket_Manager.handle_packet(message)
                 else:
                     print(f"Received unsupported message type: {type(message)}")

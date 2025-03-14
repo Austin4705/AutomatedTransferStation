@@ -64,7 +64,7 @@ export const PositionProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Function to fetch position
   const fetchPosition = () => {
-    console.log("Context: Fetching position...");
+    // console.log("Context: Fetching position...");
     setIsLoading(true);
     sendJson({
       type: "REQUEST_POSITION"
