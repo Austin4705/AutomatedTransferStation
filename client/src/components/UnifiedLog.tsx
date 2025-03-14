@@ -202,7 +202,7 @@ const UnifiedLog = () => {
   const addLogs = (newLogs: LogEntry[], replace = false) => {
     // Skip if we're in a cooldown period after clearing
     if (clearCooldownRef.current) {
-      console.log("Skipping log addition during cooldown period");
+      // console.log("Skipping log addition during cooldown period");
       return;
     }
     
@@ -213,7 +213,7 @@ const UnifiedLog = () => {
       
       // Check if we've seen this message recently
       if (recentMessagesRef.current.has(logKey)) {
-        console.log("Preventing duplicate log:", logKey);
+        // console.log("Preventing duplicate log:", logKey);
         return false;
       }
       
@@ -234,66 +234,25 @@ const UnifiedLog = () => {
       return;
     }
     
-    if (logContentRef.current && !autoScroll) {
-      // Save current scroll position before updating
-      const scrollContainer = logContentRef.current;
-      const scrollPosition = scrollContainer.scrollTop;
-      const isScrolledToBottom = scrollContainer.scrollHeight - scrollContainer.clientHeight <= scrollContainer.scrollTop + 5;
+    setLogs(prevLogs => {
+      // If replacing logs of a specific type, filter out that type first
+      const filteredLogs = replace 
+        ? prevLogs.filter(log => log.type !== uniqueLogs[0]?.type) // Filter by type directly
+        : prevLogs;
       
-      setLogs(prevLogs => {
-        // If replacing logs of a specific type, filter out that type first
-        const filteredLogs = replace 
-          ? prevLogs.filter(log => log.type !== uniqueLogs[0]?.type) // Filter by type directly
-          : prevLogs;
-        
-        // Log what's happening for debugging
-        if (replace) {
-          console.log(`Replacing ${prevLogs.filter(log => log.type === uniqueLogs[0]?.type).length} ${uniqueLogs[0]?.type} logs with ${uniqueLogs.length} new logs`);
-        }
-        
-        // Combine existing and new logs
-        const combinedLogs = [...filteredLogs, ...uniqueLogs];
-        
-        // Trim to maximum size if needed
-        return combinedLogs.length > MAX_LOG_ENTRIES 
-          ? combinedLogs.slice(combinedLogs.length - MAX_LOG_ENTRIES) 
-          : combinedLogs;
-      });
+      // Log what's happening for debugging
+      if (replace) {
+        console.log(`Replacing ${prevLogs.filter(log => log.type === uniqueLogs[0]?.type).length} ${uniqueLogs[0]?.type} logs with ${uniqueLogs.length} new logs`);
+      }
       
-      // Restore scroll position after the next render
-      setTimeout(() => {
-        if (scrollContainer) {
-          if (isScrolledToBottom) {
-            // If user was at the bottom, keep them at the bottom
-            scrollContainer.scrollTop = scrollContainer.scrollHeight;
-          } else {
-            // Otherwise, restore the previous scroll position
-            scrollContainer.scrollTop = scrollPosition;
-          }
-        }
-      }, 0);
-    } else {
-      // Standard behavior without scroll position preservation
-      setLogs(prevLogs => {
-        // If replacing logs of a specific type, filter out that type first
-        const filteredLogs = replace 
-          ? prevLogs.filter(log => log.type !== uniqueLogs[0]?.type) // Filter by type directly
-          : prevLogs;
-        
-        // Log what's happening for debugging
-        if (replace) {
-          console.log(`Replacing ${prevLogs.filter(log => log.type === uniqueLogs[0]?.type).length} ${uniqueLogs[0]?.type} logs with ${uniqueLogs.length} new logs`);
-        }
-        
-        // Combine existing and new logs
-        const combinedLogs = [...filteredLogs, ...uniqueLogs];
-        
-        // Trim to maximum size if needed
-        return combinedLogs.length > MAX_LOG_ENTRIES 
-          ? combinedLogs.slice(combinedLogs.length - MAX_LOG_ENTRIES) 
-          : combinedLogs;
-      });
-    }
+      // Combine existing and new logs
+      const combinedLogs = [...filteredLogs, ...uniqueLogs];
+      
+      // Trim to maximum size if needed
+      return combinedLogs.length > MAX_LOG_ENTRIES 
+        ? combinedLogs.slice(combinedLogs.length - MAX_LOG_ENTRIES) 
+        : combinedLogs;
+    });
   };
 
   // Toggle packet type selection
@@ -399,9 +358,6 @@ const UnifiedLog = () => {
             ? newLogs.slice(newLogs.length - MAX_LOG_ENTRIES) 
             : newLogs;
         });
-        
-        // Scroll to bottom to show the new entry
-        scrollToBottom(); 
       }
     });
 
@@ -461,8 +417,11 @@ const UnifiedLog = () => {
           : newLogs;
       });
       
-      // Scroll to bottom to show the new entry
-      scrollToBottom();
+      // Always scroll to bottom when new logs are added
+      console.log(autoScroll)
+      if (autoScroll) {
+        scrollToBottom();
+      }
     };
 
     window.addEventListener('outgoingMessage' as any, handleOutgoingMessage);
@@ -473,17 +432,12 @@ const UnifiedLog = () => {
   }, [definedPacketTypes]);
 
   const scrollToBottom = () => {
-    // Only scroll if auto-scroll is enabled
-    if (autoScroll) {
-      // console.log("Auto-scroll is enabled, scrolling to bottom");
-      setTimeout(() => {
-        if (logContentRef.current) {
-          logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
-        }
-      }, 100);
-    } else {
-      // console.log("Auto-scroll is disabled, not scrolling to bottom");
-    }
+    // Always scroll to bottom when called, regardless of autoScroll setting
+    setTimeout(() => {
+      if (logContentRef.current) {
+        logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+      }
+    }, 100);
   };
 
   // Function to request command logs
@@ -649,7 +603,7 @@ const UnifiedLog = () => {
 
     // Skip if we're in a cooldown period after clearing
     if (clearCooldownRef.current) {
-      console.log("Skipping message processing during cooldown period");
+      // console.log("Skipping message processing during cooldown period");
       return;
     }
 
@@ -664,7 +618,7 @@ const UnifiedLog = () => {
     
     // Skip if we've seen this exact message recently
     if (recentMessagesRef.current.has(messageKey)) {
-      console.log("Skipping duplicate message:", messageKey);
+      // console.log("Skipping duplicate message:", messageKey);
       return;
     }
     
@@ -706,7 +660,6 @@ const UnifiedLog = () => {
         };
         
         addLogs([newEntry]);
-        scrollToBottom();
       }
     }
     // Handle bulk command logs
@@ -738,8 +691,7 @@ const UnifiedLog = () => {
             }
           }, 100);
         } else {
-          // Normal scrolling based on auto-scroll setting
-          scrollToBottom(); // This will only scroll if auto-scroll is enabled
+
         }
         
         console.log(`Received ${commandLogs.length} command logs`);
@@ -769,7 +721,6 @@ const UnifiedLog = () => {
         };
         
         addLogs([newEntry]);
-        scrollToBottom(); // This will only scroll if auto-scroll is enabled
       }
     }
     

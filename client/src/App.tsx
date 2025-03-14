@@ -64,7 +64,8 @@ function App() {
       
       // Only handle packets if the packet manager is initialized
       if (PacketManager.isKnownPacketType(packetType)) {
-        console.log(`%c Handler found for packet type: ${packetType}`, "background: #27ae60; color: white; padding: 4px; border-radius: 4px;");
+        // UNCOMMENT THIS TO SEE THE PACKET TYPE
+        // console.log(`%c Handler found for packet type: ${packetType}`, "background: #27ae60; color: white; padding: 4px; border-radius: 4px;");
         
         // Process the packet
         PacketManager.handlePacket(jsonState.lastJsonMessage as any);
