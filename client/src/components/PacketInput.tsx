@@ -17,6 +17,8 @@ const PacketInput = () => {
   const [packetJson, setPacketJson] = useState(EMPTY_TEMPLATE);
   const [error, setError] = useState<string | null>(null);
   const [keepText, setKeepText] = useState(true);
+  const [logsDisabled, setLogsDisabled] = useState(false);
+  
   const [rows, setRows] = useState(0);
   const [showPlaceholder, setShowPlaceholder] = useState(true);
   const sendJson = useSendJSON();
@@ -32,6 +34,25 @@ const PacketInput = () => {
     const lineCount = (packetJson.match(/\n/g) || []).length + 1;
     setRows(Math.max(lineCount, 4)); // Minimum 4 rows
   }, [packetJson]);
+
+  // Function to disable or enable logs
+  const toggleLogs = () => {
+    // Toggle the state
+    setLogsDisabled(!logsDisabled);
+    
+    // Dispatch a custom event to notify log components
+    const event = new CustomEvent('logs-visibility-changed', { 
+      detail: { 
+        commandLogs: logsDisabled, // Will become true if currently false (enabling)
+        responseLogs: logsDisabled,
+      } 
+    });
+    document.dispatchEvent(event);
+    
+    // Also dispatch a logs-cleared event to clear existing logs
+    const clearEvent = new Event('logs-cleared');
+    document.dispatchEvent(clearEvent);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,6 +136,14 @@ const PacketInput = () => {
                 Keep text
               </label>
             </div>
+            <button
+              type="button"
+              onClick={toggleLogs}
+              className="logs-button"
+              title={logsDisabled ? "Enable logs" : "Disable logs"}
+            >
+              {logsDisabled ? "Enable Logs" : "Disable Logs"}
+            </button>
             <button
               type="button"
               onClick={handleReset}
