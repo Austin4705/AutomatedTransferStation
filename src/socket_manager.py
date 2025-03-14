@@ -75,22 +75,8 @@ class Socket_Manager:
                 # Handle different types of messages
                 if isinstance(message, str):
                     # Text message
+                    print(f"Received message: {message}")
                     Socket_Manager.handle_packet(message)
-                elif isinstance(message, bytes):
-                    # Binary message - convert to string if needed
-                    try:
-                        text_message = message.decode('utf-8')
-                        Socket_Manager.handle_packet(text_message)
-                    except UnicodeDecodeError:
-                        print(f"Received binary data that could not be decoded as UTF-8")
-                        error_data = {
-                            "type": "ERROR",
-                            "data": {
-                                "code": 400,
-                                "message": "Binary data not supported"
-                            }
-                        }
-                        await websocket.send(json.dumps(error_data))
                 else:
                     print(f"Received unsupported message type: {type(message)}")
                     error_data = {

@@ -107,9 +107,9 @@ const ResponseLog = () => {
 
   // Function to request response logs
   const requestResponseLogs = () => {
-    sendJson({
-      type: "REQUEST_LOG_RESPONSE",
-    });
+    // sendJson({
+    //   type: "REQUEST_LOG_RESPONSE",
+    // });
   };
 
   // Function to clear logs

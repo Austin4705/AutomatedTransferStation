@@ -187,6 +187,48 @@ class PacketHandlers:
         #    "command": command
         #})
 
+    @packet_handler("REQUEST_LOG_COMMANDS")
+    def handle_request_log_commands(packet_type: str, data: dict):
+        print("Received request for command logs")
+        # Get command history from the transfer station
+        command_history = PacketHandlers.transfer_station.sent_commands()
+        
+        # Format the command history for the client
+        formatted_commands = [
+            {
+                "timestamp": cmd.get("timestamp"),
+                "command": cmd.get("command")
+            }
+            for cmd in command_history
+        ]
+        
+        # Send the command history to the client
+        Socket_Manager.send_all_json({
+            "type": "RESPONSE_LOG_COMMANDS",
+            "commands": formatted_commands
+        })
+
+    @packet_handler("REQUEST_LOG_RESPONSE")
+    def handle_request_log_response(packet_type: str, data: dict):
+        print("Received request for response logs")
+        # Get response history from the transfer station
+        response_history = PacketHandlers.transfer_station.receive_commands()
+        
+        # Format the response history for the client
+        formatted_responses = [
+            {
+                "timestamp": resp.get("timestamp"),
+                "response": resp.get("response")
+            }
+            for resp in response_history
+        ]
+        
+        # Send the response history to the client
+        Socket_Manager.send_all_json({
+            "type": "RESPONSE_LOG_RESPONSE",
+            "responses": formatted_responses
+        })
+
 
 class PacketCommander:
     """Class containing all packet commands"""

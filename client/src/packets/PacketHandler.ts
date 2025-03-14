@@ -6,10 +6,30 @@ type PacketHandler = (data: any) => void;
 // Event system for packet traffic logging
 type PacketTrafficListener = (packet: { type: string; data: any; timestamp: number; size: number; rawData?: string | null }) => void;
 
+// Type for command log entries
+type CommandLogEntry = {
+  message: string;
+  timestamp: number;
+  data?: any;
+};
+
+// Type for response log entries
+type ResponseLogEntry = {
+  message: string;
+  timestamp: number;
+  data?: any;
+};
+
+// Listener types for commands and responses
+type CommandLogListener = (entry: CommandLogEntry) => void;
+type ResponseLogListener = (entry: ResponseLogEntry) => void;
+
 export class PacketManager {
   private static handlers: Map<string, PacketHandler> = new Map();
   private static packetDefs: any;
   private static trafficListeners: PacketTrafficListener[] = [];
+  private static commandLogListeners: CommandLogListener[] = [];
+  private static responseLogListeners: ResponseLogListener[] = [];
   private static lastRawMessage: string | null = null;
 
   // Initialize with packet definitions
@@ -17,22 +37,23 @@ export class PacketManager {
     try {
       console.log("Loading packet definitions...");
       const response = await fetch('/shared/packet_definitions.json');
-      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+      console.log("Response:", response.json);
       this.packetDefs = await response.json();
       console.log("Successfully loaded packet definitions:", this.packetDefs);
       
       return this.packetDefs;
     } catch (error) {
       console.error('Failed to load packet definitions:', error);
-      console.error('Falling back to hardcoded definitions');
-      
-      // Fallback to hardcoded definitions
       return {};
     }
+  }
+
+  // Check if the packet manager is initialized
+  static isInitialized(): boolean {
+    return this.packetDefs !== undefined;
   }
 
   // Set the last raw message
@@ -91,11 +112,6 @@ export class PacketManager {
 
   // Validate packet data against definitions
   private static validatePacket(type: string, packet: any): boolean {
-    // Special case for POSITION packets
-    if (type === "POSITION") {
-      // Only validate that x and y are numbers
-      return typeof packet.x === 'number' && typeof packet.y === 'number';
-    }
     
     const packetDef = this.packetDefs?.packets[type];
     if (!packetDef) return true; // If no definition exists, consider it valid
@@ -158,11 +174,8 @@ export class PacketManager {
     if (this.packetDefs?.packets && type in this.packetDefs.packets) {
       return true;
     }
-    
-    // Special case for common packet types that might not be in definitions
-    const knownTypes = [];
-    
-    return knownTypes.includes(type);
+    return false;
+
   }
 
   // Register a listener for packet traffic
@@ -182,5 +195,63 @@ export class PacketManager {
     for (const listener of this.trafficListeners) {
       listener(packetInfo);
     }
+  }
+
+  // Register a listener for command logs
+  static registerCommandLogListener(listener: CommandLogListener) {
+    this.commandLogListeners.push(listener);
+    return () => {
+      // Return unsubscribe function
+      const index = this.commandLogListeners.indexOf(listener);
+      if (index !== -1) {
+        this.commandLogListeners.splice(index, 1);
+      }
+    };
+  }
+
+  // Register a listener for response logs
+  static registerResponseLogListener(listener: ResponseLogListener) {
+    this.responseLogListeners.push(listener);
+    return () => {
+      // Return unsubscribe function
+      const index = this.responseLogListeners.indexOf(listener);
+      if (index !== -1) {
+        this.responseLogListeners.splice(index, 1);
+      }
+    };
+  }
+
+  // Append a message to command logs
+  static appendToCommands(message: string, data?: any) {
+    const entry: CommandLogEntry = {
+      message,
+      timestamp: Date.now(),
+      data
+    };
+    
+    // Notify all command log listeners
+    for (const listener of this.commandLogListeners) {
+      listener(entry);
+    }
+    
+    // Optionally log to console for debugging
+    console.log(`Command: ${message}`, data ? data : '');
+  }
+
+  // Append a message to response logs
+  static appendToResponses(message: string, data?: any) {
+    const entry: ResponseLogEntry = {
+      message,
+      timestamp: Date.now(),
+      data
+    };
+    
+    // Notify all response log listeners
+    for (const listener of this.responseLogListeners) {
+      listener(entry);
+    }
+    
+    // Optionally log to console for debugging
+    console.log(`Response: ${message}`, data ? data : '');
   }
 } 
