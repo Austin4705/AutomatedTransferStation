@@ -34,17 +34,31 @@ export const useSendJSON = () => {
         // Send the message
         jsonState.sendJsonMessage(data);
       } else {
-        console.error("WebSocket connection not established");
+        console.error("WebSocket connection not established", { 
+          readyState: jsonState.readyState,
+          readyStateDesc: getReadyStateDescription(jsonState.readyState)
+        });
         appendConsole({
           sender: "Error",
-          message: "WebSocket connection not established",
+          message: `WebSocket connection not established (${getReadyStateDescription(jsonState.readyState)})`,
         });
       }
     },
-    [jsonState.sendJsonMessage, appendConsole]
+    [jsonState.sendJsonMessage, jsonState.readyState, appendConsole]
   );
 
   return sendJson;
 };
+
+// Helper function to get a description of the WebSocket ready state
+function getReadyStateDescription(readyState: number): string {
+  switch (readyState) {
+    case 0: return "CONNECTING";
+    case 1: return "OPEN";
+    case 2: return "CLOSING";
+    case 3: return "CLOSED";
+    default: return "UNINSTANTIATED";
+  }
+}
 
 export default useSendJSON;
