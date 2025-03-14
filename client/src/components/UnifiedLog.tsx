@@ -40,12 +40,38 @@ interface ResponseMessage extends BaseMessage {
 }
 
 // Common packet types that might not be in definitions
-const COMMON_PACKET_TYPES: string[] = [];
-// ["COMMAND", "REQUEST_POSITION", "SEND_COMMAND", "TRACE_OVER", "SNAP_SHOT", "REQUEST_LOG_COMMANDS", "REQUEST_LOG_RESPONSE"];
+const COMMON_PACKET_TYPES: string[] = [
+  "POSITION", 
+  "RESPONSE_POSITION", 
+  "COMMAND_RESULT", 
+  "TRACE_OVER_RESULT", 
+  "REFRESH_SNAPSHOT", 
+  "RESPONSE_LOG_COMMANDS", 
+  "RESPONSE_LOG_RESPONSE", 
+  "COMMAND", 
+  "RESPONSE", 
+  "ERROR",
+  "DRAW_FLAKES",
+  "DRAW_FLAKES_RESPONSE",
+  "SCAN_FLAKES_RESULT",
+  "REQUEST_POSITION", 
+  "SEND_COMMAND", 
+  "TRACE_OVER", 
+  "SNAP_SHOT", 
+  "REQUEST_LOG_COMMANDS", 
+  "REQUEST_LOG_RESPONSE"
+];
 
 // Common outgoing message types
-const COMMON_OUTGOING_TYPES: string[] = [];
-// ["COMMAND", "REQUEST_POSITION", "SEND_COMMAND", "TRACE_OVER", "SNAP_SHOT", "REQUEST_LOG_COMMANDS", "REQUEST_LOG_RESPONSE"];
+const COMMON_OUTGOING_TYPES: string[] = [
+  "COMMAND", 
+  "REQUEST_POSITION", 
+  "SEND_COMMAND", 
+  "TRACE_OVER", 
+  "SNAP_SHOT", 
+  "REQUEST_LOG_COMMANDS", 
+  "REQUEST_LOG_RESPONSE"
+];
 
 const UnifiedLog = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -55,6 +81,11 @@ const UnifiedLog = () => {
   const [selectedPacketTypes, setSelectedPacketTypes] = useState<Set<string>>(new Set());
   const [selectedOutgoingTypes, setSelectedOutgoingTypes] = useState<Set<string>>(new Set());
   const [definedPacketTypes, setDefinedPacketTypes] = useState<string[]>([]);
+  const [autoScroll, setAutoScroll] = useState<boolean>(() => {
+    // Try to get the setting from localStorage, default to true
+    const savedSetting = localStorage.getItem('log-auto-scroll');
+    return savedSetting !== null ? savedSetting === 'true' : true;
+  });
   const jsonState = useRecoilValue(jsonStateAtom);
   const sendJson = useSendJSON();
   const logContentRef = useRef<HTMLDivElement>(null);
@@ -63,6 +94,12 @@ const UnifiedLog = () => {
   const lastProcessedMessageRef = useRef<any>(undefined);
   // Add a ref to track if logs were manually cleared
   const logsManuallyCleared = useRef<boolean>(false);
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+
+  // Update localStorage when auto-scroll setting changes
+  useEffect(() => {
+    localStorage.setItem('log-auto-scroll', autoScroll.toString());
+  }, [autoScroll]);
 
   // Load packet definitions from document
   useEffect(() => {
@@ -70,6 +107,12 @@ const UnifiedLog = () => {
       if (packetDefsLoaded.current) return;
       
       try {
+        // Initialize packet manager if needed
+        if (!PacketManager.isInitialized()) {
+          console.log("Initializing packet manager from UnifiedLog...");
+          await PacketManager.initialize();
+        }
+        
         // Load packet definitions from the shared directory
         const response = await fetch('/shared/packet_definitions.json');
         
@@ -144,20 +187,66 @@ const UnifiedLog = () => {
 
   // Helper function to add logs while respecting the maximum limit
   const addLogs = (newLogs: LogEntry[], replace = false) => {
-    setLogs(prevLogs => {
-      // If replacing logs of a specific type, filter out that type first
-      const filteredLogs = replace 
-        ? prevLogs.filter(log => !newLogs.some(newLog => newLog.type === log.type))
-        : prevLogs;
+    if (logContentRef.current && !autoScroll) {
+      // Save current scroll position before updating
+      const scrollContainer = logContentRef.current;
+      const scrollPosition = scrollContainer.scrollTop;
+      const isScrolledToBottom = scrollContainer.scrollHeight - scrollContainer.clientHeight <= scrollContainer.scrollTop + 5;
       
-      // Combine existing and new logs
-      const combinedLogs = [...filteredLogs, ...newLogs];
+      setLogs(prevLogs => {
+        // If replacing logs of a specific type, filter out that type first
+        const filteredLogs = replace 
+          ? prevLogs.filter(log => log.type !== newLogs[0]?.type) // Filter by type directly
+          : prevLogs;
+        
+        // Log what's happening for debugging
+        if (replace) {
+          console.log(`Replacing ${prevLogs.filter(log => log.type === newLogs[0]?.type).length} ${newLogs[0]?.type} logs with ${newLogs.length} new logs`);
+        }
+        
+        // Combine existing and new logs
+        const combinedLogs = [...filteredLogs, ...newLogs];
+        
+        // Trim to maximum size if needed
+        return combinedLogs.length > MAX_LOG_ENTRIES 
+          ? combinedLogs.slice(combinedLogs.length - MAX_LOG_ENTRIES) 
+          : combinedLogs;
+      });
       
-      // Trim to maximum size if needed
-      return combinedLogs.length > MAX_LOG_ENTRIES 
-        ? combinedLogs.slice(combinedLogs.length - MAX_LOG_ENTRIES) 
-        : combinedLogs;
-    });
+      // Restore scroll position after the next render
+      setTimeout(() => {
+        if (scrollContainer) {
+          if (isScrolledToBottom) {
+            // If user was at the bottom, keep them at the bottom
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+          } else {
+            // Otherwise, restore the previous scroll position
+            scrollContainer.scrollTop = scrollPosition;
+          }
+        }
+      }, 0);
+    } else {
+      // Standard behavior without scroll position preservation
+      setLogs(prevLogs => {
+        // If replacing logs of a specific type, filter out that type first
+        const filteredLogs = replace 
+          ? prevLogs.filter(log => log.type !== newLogs[0]?.type) // Filter by type directly
+          : prevLogs;
+        
+        // Log what's happening for debugging
+        if (replace) {
+          console.log(`Replacing ${prevLogs.filter(log => log.type === newLogs[0]?.type).length} ${newLogs[0]?.type} logs with ${newLogs.length} new logs`);
+        }
+        
+        // Combine existing and new logs
+        const combinedLogs = [...filteredLogs, ...newLogs];
+        
+        // Trim to maximum size if needed
+        return combinedLogs.length > MAX_LOG_ENTRIES 
+          ? combinedLogs.slice(combinedLogs.length - MAX_LOG_ENTRIES) 
+          : combinedLogs;
+      });
+    }
   };
 
   // Toggle packet type selection
@@ -290,11 +379,17 @@ const UnifiedLog = () => {
   }, [definedPacketTypes]);
 
   const scrollToBottom = () => {
-    setTimeout(() => {
-      if (logContentRef.current) {
-        logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
-      }
-    }, 100);
+    // Only scroll if auto-scroll is enabled
+    if (autoScroll) {
+      // console.log("Auto-scroll is enabled, scrolling to bottom");
+      setTimeout(() => {
+        if (logContentRef.current) {
+          logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+        }
+      }, 100);
+    } else {
+      // console.log("Auto-scroll is disabled, not scrolling to bottom");
+    }
   };
 
   // Function to request command logs
@@ -302,6 +397,9 @@ const UnifiedLog = () => {
     sendJson({
       type: "REQUEST_LOG_COMMANDS",
     });
+    
+    // Flag to scroll once when the response comes in
+    window.sessionStorage.setItem('log_scroll_on_next_command_response', 'true');
   };
 
   // Function to request response logs
@@ -309,6 +407,9 @@ const UnifiedLog = () => {
     sendJson({
       type: "REQUEST_LOG_RESPONSE",
     });
+    
+    // Flag to scroll once when the response comes in
+    window.sessionStorage.setItem('log_scroll_on_next_response_response', 'true');
   };
 
   // Toggle log type visibility
@@ -383,12 +484,6 @@ const UnifiedLog = () => {
       detail: { timestamp: new Date().getTime() }
     });
     document.dispatchEvent(event);
-    
-    // Add a small delay before processing new messages
-    // This helps prevent the last message from being immediately re-added
-    setTimeout(() => {
-      logsManuallyCleared.current = false;
-    }, 100);
   };
 
   // Add click handler to close dropdowns when clicking outside
@@ -444,8 +539,14 @@ const UnifiedLog = () => {
     // If logs were manually cleared, we need to reset the flag
     // but only process new messages after clearing
     if (logsManuallyCleared.current) {
-      // Skip this message as it might be the one that was showing before clearing
-      return;
+      // Only reset the flag, don't skip all messages
+      logsManuallyCleared.current = false;
+      
+      // If this is a response to a log request, we should process it even after clearing
+      if (message.type !== "RESPONSE_LOG_COMMANDS" && message.type !== "RESPONSE_LOG_RESPONSE") {
+        // Skip regular messages that might be from before clearing
+        return;
+      }
     }
     
     // Handle command messages
@@ -475,16 +576,40 @@ const UnifiedLog = () => {
     // Handle bulk command logs
     else if (message.type === "RESPONSE_LOG_COMMANDS" && Array.isArray((message as CommandMessage).commands)) {
       const commandMessage = message as CommandMessage;
-      const commandLogs: LogEntry[] = commandMessage.commands!.map((cmd: any) => ({
-        timestamp: new Date(cmd.timestamp || Date.now()).toLocaleString(),
-        message: cmd.command || JSON.stringify(cmd),
-        type: "command",
-        rawData: cmd,
-        packetType: "COMMAND"
-      }));
-      
-      addLogs(commandLogs, true);
-      scrollToBottom();
+      // Only process if there are actual commands in the response
+      if (commandMessage.commands!.length > 0) {
+        const commandLogs: LogEntry[] = commandMessage.commands!.map((cmd: any) => ({
+          timestamp: new Date(cmd.timestamp || Date.now()).toLocaleString(),
+          message: cmd.command || JSON.stringify(cmd),
+          type: "command",
+          rawData: cmd,
+          packetType: "COMMAND"
+        }));
+        
+        // Always replace all command logs with the new ones
+        addLogs(commandLogs, true);
+        
+        // Check if we should scroll for this response
+        const shouldScrollForThisResponse = window.sessionStorage.getItem('log_scroll_on_next_command_response') === 'true';
+        if (shouldScrollForThisResponse) {
+          console.log("Performing one-time scroll for command response");
+          window.sessionStorage.removeItem('log_scroll_on_next_command_response');
+          
+          // Manually scroll without using auto-scroll
+          setTimeout(() => {
+            if (logContentRef.current) {
+              logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+            }
+          }, 100);
+        } else {
+          // Normal scrolling based on auto-scroll setting
+          scrollToBottom(); // This will only scroll if auto-scroll is enabled
+        }
+        
+        console.log(`Received ${commandLogs.length} command logs`);
+      } else {
+        console.log("Received empty command logs response");
+      }
     }
     
     // Handle response messages
@@ -508,23 +633,47 @@ const UnifiedLog = () => {
         };
         
         addLogs([newEntry]);
-        scrollToBottom();
+        scrollToBottom(); // This will only scroll if auto-scroll is enabled
       }
     }
     
     // Handle bulk response logs
     else if (message.type === "RESPONSE_LOG_RESPONSE" && Array.isArray((message as ResponseMessage).responses)) {
       const responseMessage = message as ResponseMessage;
-      const responseLogs: LogEntry[] = responseMessage.responses!.map((resp: any) => ({
-        timestamp: new Date(resp.timestamp || Date.now()).toLocaleString(),
-        message: resp.response || JSON.stringify(resp),
-        type: "response",
-        rawData: resp,
-        packetType: "RESPONSE"
-      }));
-      
-      addLogs(responseLogs, true);
-      scrollToBottom();
+      // Only process if there are actual responses in the response
+      if (responseMessage.responses!.length > 0) {
+        const responseLogs: LogEntry[] = responseMessage.responses!.map((resp: any) => ({
+          timestamp: new Date(resp.timestamp || Date.now()).toLocaleString(),
+          message: resp.response || JSON.stringify(resp),
+          type: "response",
+          rawData: resp,
+          packetType: "RESPONSE"
+        }));
+        
+        // Always replace all response logs with the new ones
+        addLogs(responseLogs, true);
+        
+        // Check if we should scroll for this response
+        const shouldScrollForThisResponse = window.sessionStorage.getItem('log_scroll_on_next_response_response') === 'true';
+        if (shouldScrollForThisResponse) {
+          console.log("Performing one-time scroll for response response");
+          window.sessionStorage.removeItem('log_scroll_on_next_response_response');
+          
+          // Manually scroll without using auto-scroll
+          setTimeout(() => {
+            if (logContentRef.current) {
+              logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+            }
+          }, 100);
+        } else {
+          // Normal scrolling based on auto-scroll setting
+          scrollToBottom(); // This will only scroll if auto-scroll is enabled
+        }
+        
+        console.log(`Received ${responseLogs.length} response logs`);
+      } else {
+        console.log("Received empty response logs response");
+      }
     }
     
     // ... existing code for other message types ...
@@ -806,8 +955,37 @@ const UnifiedLog = () => {
             </button>
           </div>
           
-          <div>
-            Showing {filteredLogs.length} of {logs.length} logs (max: {MAX_LOG_ENTRIES})
+          <div className="flex items-center gap-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="auto-scroll"
+                checked={autoScroll}
+                onChange={() => setAutoScroll(!autoScroll)}
+                className="mr-2"
+              />
+              <label htmlFor="auto-scroll" className="text-sm cursor-pointer">
+                Auto-scroll
+              </label>
+              
+              {/* Manual scroll button when auto-scroll is disabled */}
+              {!autoScroll && (
+                <button 
+                  onClick={() => {
+                    if (logContentRef.current) {
+                      logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+                    }
+                  }}
+                  className="ml-2 text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+                >
+                  Scroll to Bottom
+                </button>
+              )}
+            </div>
+            
+            <div>
+              Showing {filteredLogs.length} of {logs.length} logs (max: {MAX_LOG_ENTRIES})
+            </div>
           </div>
         </div>
       </div>

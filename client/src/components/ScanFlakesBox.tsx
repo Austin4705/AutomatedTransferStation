@@ -2,6 +2,7 @@ import { useSendJSON } from "../hooks/useSendJSON";
 import { useState, useRef, useEffect } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
+import { usePositionContext } from "../state/positionContext";
 
 // Extend the HTMLInputElement interface to include webkitdirectory
 declare global {
@@ -36,6 +37,7 @@ const ScanFlakesBox = () => {
     imageNumber: ""
   });
   const [keepInputs, setKeepInputs] = useState<boolean>(false);
+  const { autoUpdate, pollRate } = usePositionContext();
 
   // Listen for position responses from the server
   useEffect(() => {
@@ -61,16 +63,29 @@ const ScanFlakesBox = () => {
     });
   };
 
-  // Initialize by requesting the current position
+  // Initialize position polling based on autoUpdate setting
   useEffect(() => {
+    // Always request position once when the component mounts
     requestCurrentPosition();
     
-    // Set up a timer to periodically request the position
-    const intervalId = setInterval(requestCurrentPosition, 5000);
+    let intervalId: number | null = null;
     
-    // Clean up the interval when the component unmounts
-    return () => clearInterval(intervalId);
-  }, []);
+    // Only set up polling if autoUpdate is enabled
+    if (autoUpdate) {
+      // Calculate interval in milliseconds based on poll rate
+      const interval = Math.round(1000 / Math.max(0.1, Math.min(50, pollRate)));
+      
+      // Set up a timer to periodically request the position
+      intervalId = window.setInterval(requestCurrentPosition, interval);
+    }
+    
+    // Clean up the interval when the component unmounts or autoUpdate changes
+    return () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [autoUpdate, pollRate]); // Re-run effect when autoUpdate or pollRate changes
 
   // Trigger directory input click
   const handleDirectorySelectClick = () => {

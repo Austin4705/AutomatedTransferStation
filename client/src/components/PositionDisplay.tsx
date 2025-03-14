@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
 import { useSendJSON } from "../hooks/useSendJSON";
+import { usePositionContext } from "../state/positionContext";
 
 interface Position {
   x: number;
@@ -13,8 +14,7 @@ interface Position {
 const PositionDisplay = () => {
   const [position, setPosition] = useState<Position | null>(null);
   const [loading, setLoading] = useState(false);
-  const [autoUpdate, setAutoUpdate] = useState(true);
-  const [pollRate, setPollRate] = useState(.3); // Default 5.0 times per second (200ms)
+  const { autoUpdate, setAutoUpdate, pollRate, setPollRate } = usePositionContext();
   const [requestError, setRequestError] = useState(false); // Track position request errors
   const timerRef = useRef<number | null>(null);
   const initializedRef = useRef(false); // Track if polling has been initialized

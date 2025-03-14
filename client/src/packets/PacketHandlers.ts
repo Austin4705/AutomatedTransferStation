@@ -134,19 +134,31 @@ export class PacketHandlers {
   @PacketManager.registerHandler("COMMAND")
   static handleCommand(data: any) {
     console.log("Received command:", data);
-    // Commands are already handled by the CommandLog component through the jsonState
-    // No need to dispatch a custom event as it creates duplicate entries
-    
-    // Add timestamp if not present to help with log clearing logic
+    // Instead of modifying the original data object, which might be non-extensible,
+    // we'll create a new object with timestamp if needed
     if (!data.timestamp) {
-      data.timestamp = new Date().getTime();
+      // Create a copy of the data with the timestamp added
+      const dataWithTimestamp = {
+        ...data,
+        timestamp: new Date().getTime()
+      };
+      PacketManager.appendToCommands(`Received command: ${data.command}`, dataWithTimestamp);      
     }
   }
 
   @PacketManager.registerHandler("RESPONSE")
   static handleResponse(data: any) {
     console.log("Received response:", data);
-    // Responses will be handled by the ResponseLog component
+    // Instead of modifying the original data object, which might be non-extensible,
+    // we'll create a new object with timestamp if needed
+    if (!data.timestamp) {
+      // Create a copy of the data with the timestamp added
+      const dataWithTimestamp = {
+        ...data,
+        timestamp: new Date().getTime()
+      };
+      PacketManager.appendToResponses(`Received response: ${data.response}`, dataWithTimestamp);      
+    }
   }
 
   @PacketManager.registerHandler("ERROR")

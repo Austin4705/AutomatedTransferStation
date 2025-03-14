@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
 import useAppendConsole from "./useAppendConsole";
+import { PacketManager } from "../packets/PacketHandler";
 
 export const useSendJSON = () => {
   const jsonState = useRecoilValue(jsonStateAtom);
@@ -10,6 +11,14 @@ export const useSendJSON = () => {
   const sendJson = useCallback(
     (data: any) => {
       if (jsonState.sendJsonMessage) {
+        // Check if packet definitions have been loaded
+        if (PacketManager.isInitialized && !PacketManager.isInitialized()) {
+          console.warn("Packet manager not initialized yet. Initializing now...");
+          PacketManager.initialize().then(() => {
+            console.log("Packet manager initialized from useSendJSON");
+          });
+        }
+
         // Log the outgoing message to the console
         appendConsole({
           sender: "Client",

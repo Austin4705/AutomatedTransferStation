@@ -3,6 +3,7 @@ import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
 import { useSendJSON } from "../hooks/useSendJSON";
 import { ReadyState } from "react-use-websocket";
+import { usePositionContext } from "../state/positionContext";
 
 interface Position {
   x: number;
@@ -13,8 +14,7 @@ interface Position {
 const HeaderPositionDisplay = () => {
   const [position, setPosition] = useState<Position | null>(null);
   const [loading, setLoading] = useState(false);
-  const [autoUpdate, setAutoUpdate] = useState(true);
-  const [pollRate, setPollRate] = useState(1); // Default 1.0 times per second (1000ms)
+  const { autoUpdate, setAutoUpdate, pollRate, setPollRate } = usePositionContext();
   const timerRef = useRef<number | null>(null);
   const retryRef = useRef<number | null>(null);
   const [connectionError, setConnectionError] = useState(false);

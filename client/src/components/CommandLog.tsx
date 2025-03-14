@@ -102,9 +102,9 @@ const CommandLog = () => {
 
   // Function to request command logs
   const requestCommandLogs = () => {
-    sendJson({
-      type: "REQUEST_LOG_COMMANDS",
-    });
+    // sendJson({
+    //   type: "REQUEST_LOG_COMMANDS",
+    // });
   };
 
   // Function to clear logs
