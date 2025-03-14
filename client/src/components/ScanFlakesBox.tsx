@@ -20,6 +20,8 @@ interface Position {
 // Interface for flake coordinates
 interface FlakeCoordinates {
   bottomLeft: { x: string; y: string };
+  waferNumber: string;
+  imageNumber: string;
 }
 
 const ScanFlakesBox = () => {
@@ -29,8 +31,11 @@ const ScanFlakesBox = () => {
   const directoryInputRef = useRef<HTMLInputElement>(null);
   const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
   const [flakeCoordinates, setFlakeCoordinates] = useState<FlakeCoordinates>({
-    bottomLeft: { x: "", y: "" }
+    bottomLeft: { x: "0", y: "0" },
+    waferNumber: "",
+    imageNumber: ""
   });
+  const [keepInputs, setKeepInputs] = useState<boolean>(false);
 
   // Listen for position responses from the server
   useEffect(() => {
@@ -109,6 +114,19 @@ const ScanFlakesBox = () => {
     }));
   };
 
+  // Handle wafer and image number changes
+  const handleNumberChange = (field: "waferNumber" | "imageNumber", value: string) => {
+    // Only allow positive integers
+    if (value !== "" && !/^\d*$/.test(value)) {
+      return;
+    }
+
+    setFlakeCoordinates(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   // Copy current position to bottom left coordinates
   const copyCurrentPosition = () => {
     // Format the current position values
@@ -123,6 +141,41 @@ const ScanFlakesBox = () => {
         y: yValue
       }
     }));
+  };
+
+  // Handle goto flake button click
+  const handleGotoFlake = () => {
+    // Validate required fields
+    if (!flakeCoordinates.waferNumber || !flakeCoordinates.imageNumber) {
+      alert("Please enter both wafer number and image number");
+      return;
+    }
+    
+    if (!selectedDirectory) {
+      alert("Please select a directory first");
+      return;
+    }
+    
+    // Send the goto wafer image packet with the coordinates and numbers
+    const payload = {
+      type: "GOTO_WAFER_IMAGE",
+      directory: selectedDirectory,
+      bottomLeftXOffset: parseFloat(flakeCoordinates.bottomLeft.x),
+      bottomLeftYOffset: parseFloat(flakeCoordinates.bottomLeft.y),
+      waferNumber: parseInt(flakeCoordinates.waferNumber),
+      imageNumber: parseInt(flakeCoordinates.imageNumber)
+    };
+    
+    sendJson(payload);
+    
+    // Clear only wafer and image numbers if keepInputs is false
+    if (!keepInputs) {
+      setFlakeCoordinates(prev => ({
+        ...prev,
+        waferNumber: "",
+        imageNumber: ""
+      }));
+    }
   };
 
   // Handle scan flakes button click
@@ -145,8 +198,27 @@ const ScanFlakesBox = () => {
         y: parseFloat(flakeCoordinates.bottomLeft.y)
       };
     }
+
+    // Add wafer number if provided
+    if (flakeCoordinates.waferNumber) {
+      payload.waferNumber = parseInt(flakeCoordinates.waferNumber);
+    }
+
+    // Add image number if provided
+    if (flakeCoordinates.imageNumber) {
+      payload.imageNumber = parseInt(flakeCoordinates.imageNumber);
+    }
     
     sendJson(payload);
+    
+    // Clear inputs if keepInputs is false
+    if (!keepInputs) {
+      setFlakeCoordinates(prev => ({
+        ...prev,
+        waferNumber: "",
+        imageNumber: ""
+      }));
+    }
   };
 
   // Handle draw flakes button click
@@ -214,6 +286,17 @@ const ScanFlakesBox = () => {
           >
             Draw Flakes
           </button>
+          <button
+            onClick={handleGotoFlake}
+            disabled={!selectedDirectory || !flakeCoordinates.waferNumber || !flakeCoordinates.imageNumber}
+            className={`${
+              selectedDirectory && flakeCoordinates.waferNumber && flakeCoordinates.imageNumber
+                ? "bg-purple-500 hover:bg-purple-600" 
+                : "bg-gray-300 cursor-not-allowed"
+            } text-white px-3 py-1 rounded`}
+          >
+            Goto Flake
+          </button>
         </div>        
 
         {/* Flake Coordinates */}
@@ -242,6 +325,41 @@ const ScanFlakesBox = () => {
               BL
             </button>
           </div>
+        </div>
+
+        {/* Wafer and Image Numbers */}
+        <div className="wafer-image-numbers mb-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">Wafer Number:</span>
+            <input
+              type="text"
+              value={flakeCoordinates.waferNumber}
+              onChange={(e) => handleNumberChange("waferNumber", e.target.value)}
+              className="p-1 border rounded w-20 text-xs"
+              placeholder="Wafer #"
+            />
+            <span className="text-sm font-medium ml-2">Image Number:</span>
+            <input
+              type="text"
+              value={flakeCoordinates.imageNumber}
+              onChange={(e) => handleNumberChange("imageNumber", e.target.value)}
+              className="p-1 border rounded w-20 text-xs"
+              placeholder="Image #"
+            />
+          </div>
+        </div>
+        
+        {/* Keep Inputs Checkbox */}
+        <div className="keep-inputs-option mb-2">
+          <label className="flex items-center space-x-2 text-sm">
+            <input
+              type="checkbox"
+              checked={keepInputs}
+              onChange={(e) => setKeepInputs(e.target.checked)}
+              className="form-checkbox h-4 w-4 text-blue-500"
+            />
+            <span>Keep inputs after submission</span>
+          </label>
         </div>
  
       </div>

@@ -89,6 +89,16 @@
         "response": "string"
       }
     },
+    "GOTO_WAFER_IMAGE": {
+      "fields": {
+        "bottomLeftXOffset": "float",
+        "bottomLeftYOffset": "float",
+        "waferNumber": "int",
+        "imageNumber": "int",
+        "directory": "string"
+      }
+    },
+    
 
     "MESSAGE":{
       "fields":{
