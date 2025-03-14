@@ -179,58 +179,6 @@ const ActionButtons = () => {
       </div>
 
       <div className="button-section">
-        <h3 className="text-sm font-medium mb-2">Scan Flakes</h3>
-        <div className="flex flex-col space-y-2">
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleDirectorySelectClick}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded"
-            >
-              Select Directory
-            </button>
-            <span className="text-sm text-gray-600 truncate max-w-xs">
-              {selectedDirectory ? selectedDirectory : "No directory selected"}
-            </span>
-            {/* Hidden directory input */}
-            <input
-              type="file"
-              ref={directoryInputRef}
-              onChange={handleDirectoryChange}
-              // Use data attributes to avoid TypeScript errors
-              // @ts-ignore
-              webkitdirectory=""
-              directory=""
-              className="hidden"
-            />
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={handleScanFlakes}
-              disabled={!selectedDirectory}
-              className={`${
-                selectedDirectory 
-                  ? "bg-green-500 hover:bg-green-600" 
-                  : "bg-gray-300 cursor-not-allowed"
-              } text-white px-3 py-1 rounded`}
-            >
-              Scan Flakes
-            </button>
-            <button
-              onClick={handleDrawFlakes}
-              disabled={!selectedDirectory}
-              className={`${
-                selectedDirectory 
-                  ? "bg-orange-500 hover:bg-orange-600" 
-                  : "bg-gray-300 cursor-not-allowed"
-              } text-white px-3 py-1 rounded`}
-            >
-              Draw Flakes
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="button-section">
         {/* <h3 className="text-sm font-medium mb-2">Refresh Streams</h3>
         <div className="button-group flex flex-wrap gap-2">
           <button 

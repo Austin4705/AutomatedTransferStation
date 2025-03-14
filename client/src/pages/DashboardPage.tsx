@@ -4,6 +4,7 @@ import CommandInput from '../components/CommandInput';
 import PacketInput from '../components/PacketInput';
 import ActionButtons from '../components/ActionButtons';
 import TraceOverBox from '../components/TraceOverBox';
+import ScanFlakesBox from '../components/ScanFlakesBox';
 import TransferStationCommandInput from '../components/TransferStationCommandInput';
 
 const DashboardPage = () => {
@@ -21,8 +22,14 @@ const DashboardPage = () => {
       </div>
       
       <div className="dashboard-lower-section">
-        <div className="trace-over-container">
-          <TraceOverBox />
+        <div className="dashboard-boxes">
+          <div className="trace-over-container">
+            <TraceOverBox />
+          </div>
+          
+          <div className="scan-flakes-container">
+            <ScanFlakesBox />
+          </div>
         </div>
         
         <div className="dashboard-controls-and-logs">
