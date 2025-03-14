@@ -100,16 +100,15 @@ For questions or contributions, please contact the Yasuda Lab at Cornell.
 [Add your license information here]
 
 ## TODO and BUGS
-    -Get the program controlling the other transfer station
+    -Get the program controlling the other transfer station (get upstairs transfer station working)
     -Get the flake hunting algorithm working
+    -Far away: get theta detection and outlining for flakes
     
-    -flake hunting poll without button
-    -Get position to auto initalize 
-    
-    -button to auto scan and draw
-    -log is broken
-    -get re-localization feature working
-    -get upstairs transfer station working
 ## Done:
     - Fix bug with commands and such not sending properly from the queue (seems to be working?)
+    Get position to auto initalize 
+    -button to auto scan and draw
+    -log is broken
+    -flake hunting poll without button
+    -get re-localization feature working
 
