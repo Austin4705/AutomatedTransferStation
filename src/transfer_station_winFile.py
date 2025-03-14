@@ -36,7 +36,7 @@ class TransferStationWinFile(Transfer_Station):
             self.command_server = DummyCommandServer()
 
     def _send_command(self, command):
-        print(f"Sending command: {command}")
+        # print(f"Sending command: {command}")
         return self.command_server.send(command)
 
     def moveX(self, X):
@@ -149,7 +149,7 @@ class CommandServer:
             return ""
 
     def get_first_double(my_string):
-        print(f"Getting first double: {my_string}")
+        # print(f"Getting first double: {my_string}")
         if my_string is None or my_string.strip() == "OK":
             return 0
         numeric_const_pattern = r'[-+]?(?:(?:\d*\.\d+)|(?:\d+\.?)(?:[Ee][+-]?\d+)?)'
