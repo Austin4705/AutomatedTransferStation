@@ -33,12 +33,6 @@ class TransferFunctions:
             else:
                 break
         packet_handlers.PacketCommander.send_message("Trace over complete")
-
-        if data.get("auto_scan_draw", True):
-            packet_handlers.PacketCommander.send_message("Auto scan and draw enabled. Scanning for flakes...")
-            image_container.search_and_save_wafer()
-            packet_handlers.PacketCommander.send_message("Flake scanning and drawing complete")
-
         del TransferFunctions.executing_threads[current_thread]
 
     def generate_script(data, image_container):
@@ -77,8 +71,8 @@ class TransferFunctions:
                 top_x = float(top_right.get("x"))
                 top_y = float(top_right.get("y"))
             
-                # packet_handlers.PacketCommander.send_message(f"Bottom coordinates: ({bottom_x}, {bottom_y})")
-                # packet_handlers.PacketCommander.send_message(f"Top coordinates: ({top_x}, {top_y})")           
+                packet_handlers.PacketCommander.send_message(f"Bottom coordinates: ({bottom_x}, {bottom_y})")
+                packet_handlers.PacketCommander.send_message(f"Top coordinates: ({top_x}, {top_y})")           
                 # Validate magnification
                 if magnification not in TransferFunctions.MAGNIFICATION_TRAVEL:
                     packet_handlers.PacketCommander.send_error(f"Invalid magnification: {magnification}. Must be one of: {', '.join(map(str, MAGNIFICATION_TRAVEL.keys()))}")
