@@ -98,20 +98,16 @@ For questions or contributions, please contact the Yasuda Lab at Cornell.
 [Add your license information here]
 
 ## TODO and BUGS
-    -Get the program controlling the transfer station
-    -Get image container
+    -Get the program controlling the other transfer station
     -Get the flake hunting algorithm working
     
     -flake hunting poll without button
-    -Get position to auto initilize
-    -Kill all tasks program
+    -Get position to auto initalize 
     
-    -button to auto scan and draw
     -log is broken
-    -get image containers fully working
     -get re-localization feature working
     -get upstairs transfer station working
 ## Done:
-    -Parse the json on the server side, start up a extraneous thread that runs the transfer program and then closes
     - Fix bug with commands and such not sending properly from the queue (seems to be working?)
+    - Add button to auto scan and draw flakes
 

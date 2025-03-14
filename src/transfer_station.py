@@ -48,11 +48,11 @@ class Transfer_Station():
         self.moveY(y)
 
     def posX(self):
-        print("Get X Position-V")
+        # print("Get X Position-V")
         return 0
 
     def posY(self):
-        print("Get Y Position-V")
+        # print("Get Y Position-V")
         return 0
 
     def autoFocus(self):
