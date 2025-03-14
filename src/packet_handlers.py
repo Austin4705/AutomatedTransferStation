@@ -135,6 +135,22 @@ class PacketHandlers:
             "response": "Wafers drawn",
         })
 
+    @packet_handler("GOTO_WAFER_IMAGE")
+    def handle_goto_wafer_image(packet_type: str, data: dict):
+        directory = data.get("directory")
+        bottomLeftXOffset = data.get("bottomLeftXOffset")
+        bottomLeftYOffset = data.get("bottomLeftYOffset")
+        waferNumber = data.get("waferNumber")
+        imageNumber = data.get("imageNumber")
+        image_container = Image_Container(PacketHandlers.transfer_station, directory)
+
+        image_data = image_container.metadata[waferNumber][imageNumber]
+        x = image_data["x"]
+        y = image_data["y"]
+        PacketCommander.send_message(f"Goto wafer {waferNumber} image {imageNumber} at {x}, {y}")
+        PacketHandlers.transfer_station.move_to(x + bottomLeftXOffset, y + bottomLeftYOffset)
+        
+
     @packet_handler("ACK")
     def handle_ack(packet_type: str, data: dict):
         print("ACK received")
