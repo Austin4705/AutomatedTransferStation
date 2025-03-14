@@ -8,11 +8,11 @@ class Transfer_Station():
 
     MAGNIFICATION_TRAVEL = {
         5: {"x": 1, "y": 1, "wait_time": 1},
-        10: {"x": 0.45, "y": 0.33, "wait_time": 1},
-        20: {"x": 0.2, "y": 0.15, "wait_time": 0.75}, #Only calibrated for 20x
-        40: {"x": 0.2, "y": 0.15, "wait_time": 0.75},
-        50: {"x": 0.2, "y": 0.15, "wait_time": 0.75},
-        100: {"x": 0.2, "y": 0.15, "wait_time": 0.75},
+        10: {"x": 1, "y": 1, "wait_time": 1},
+        20: {"x": 1, "y": 1, "wait_time": 1},
+        40: {"x": 1, "y": 1, "wait_time": 1},
+        50: {"x": 1, "y": 1, "wait_time": 1},
+        100: {"x": 1, "y": 1, "wait_time": 1},
     }
 
     def __init__(self):

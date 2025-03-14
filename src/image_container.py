@@ -43,12 +43,15 @@ class Image_Container:
             self.metadata["metametadata"] = []
 
         self.wafer_counter = 0
+        self.image_counter = 0
+        self.scanned_counter = 0
 
     def load_sent_data(self, data: dict):
         self.metadata["metametadata"].append(data)
         self.save_metadata()
 
     def add_image(self, camera_id: int):
+        self.image_counter += 1
         camera = Camera.global_list[camera_id]
         frame = camera.snap_image()
         image_name = f"{camera_id}-{datetime.now().strftime('%d-%m-%Y-%H-%M-%S')}.jpg"
@@ -59,6 +62,7 @@ class Image_Container:
             "wafer_id": self.wafer_counter,
             "name": image_name,
             "camera_id": camera_id,
+            "image_id": self.image_counter,
             "x": self.transfer_station.posX(),
             "y": self.transfer_station.posY(),
             "flakes": []
@@ -96,25 +100,27 @@ class Image_Container:
         self.wafer_counter += 1
         self.metadata["wafers"].append([])
         os.makedirs(os.path.join(self.directory_images, f"wafer_{self.wafer_counter}"), exist_ok=True)
+        # self.image_counter = 0
 
     def search_and_save_wafer(self):
         self.search_images()
         self.generate_image_output()
 
     def search_images(self):
-        wafer_counter = 0
+        self.wafer_counter = 0
         for wafer in self.metadata["wafers"]:
-            wafer_counter += 1
+            self.scanned_counter = 0
+            self.wafer_counter += 1
             # Running multithreaded pool to search images
-            packet_handlers.PacketCommander.send_message(f"Searching in wafer {wafer_counter}")
+            packet_handlers.PacketCommander.send_message(f"Searching in wafer {self.wafer_counter}")
             with Pool(5) as pool:
-                results = pool.map(self.search_image, wafer["images"])
-            packet_handlers.PacketCommander.send_message(f"Finished Hunting wafer {wafer_counter}")
+                results = pool.map(self.search_image, wafer)
+            packet_handlers.PacketCommander.send_message(f"Finished Hunting wafer {self.wafer_counter}")
             # Add flake data to each image in metadata
             for image, flake_data in zip(wafer, results):
                 counter = 0
                 for flake in flake_data:
-                    mask_name = f"Wafer_{wafer_counter}-Image_{image['name']}-Flake_{counter}.png"
+                    mask_name = f"Wafer_{self.wafer_counter}-Image_{image['name']}-Flake_{counter}.png"
                     counter += 1
                     cv2.imwrite(os.path.join(self.directory_flake_masks, mask_name), flake.mask)
                     image["flakes"].append(
@@ -129,18 +135,23 @@ class Image_Container:
                             "mask": mask_name
                         })
                 if flake_data.any():
-                    print(f"flake data is {flake_data}")
+                    # print(f"flake data is {flake_data}")
                     self.metadata["searched"].append(image)
-            self.save_metadata()
+                self.save_metadata()
 
     def search_image(self, data):
         image_name = data["name"]
 
         image_data = self.load_image(image_name, data["wafer_id"])
         # Run CV search
-        print(data)
         flake_data = CVFunctions.run_searching(image_data)
+        self.update_scanned_counter(data["image_id"])
         return flake_data
+
+    def update_scanned_counter(self, image_id):
+        if image_id > self.scanned_counter:
+            self.scanned_counter = image_id
+            print(f"Scanned counter is {self.scanned_counter} out of {len(self.metadata['wafers'][self.wafer_counter-1])}")
 
     def generate_image_output(self):
         for image_metadata in self.metadata.get("searched"):
@@ -163,7 +174,16 @@ class Image_Container:
             cv2.putText(
                 image_data,
                 f"Wafer: {image_metadata['wafer_id']}", 
-                (image_data.shape[1] - 200, 30),
+                (image_data.shape[1] - 300, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 255),
+                2
+            )
+            cv2.putText(
+                image_data,
+                f"Image Number: {image_metadata['image_id']}", 
+                (image_data.shape[1] - 300, 60),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
                 (255, 255, 255),
@@ -172,7 +192,7 @@ class Image_Container:
             cv2.putText(
                 image_data,
                 f"x: {image_metadata['x']} y: {image_metadata['y']}", 
-                (image_data.shape[1] - 200, 60),
+                (image_data.shape[1] - 300, 90),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
                 (255, 255, 255),

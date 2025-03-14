@@ -107,6 +107,7 @@ For questions or contributions, please contact the Yasuda Lab at Cornell.
     -Kill all tasks program
     
     -button to auto scan and draw
+    -log is broken
     -get image containers fully working
     -get re-localization feature working
     -get upstairs transfer station working

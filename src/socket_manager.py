@@ -121,7 +121,7 @@ class Socket_Manager:
     @classmethod
     def send_all(cls, msg: str):
         """Send message to all connected clients"""
-        print(f"Sending message {msg} to {len(cls.CONNECTIONS)} connections")
+        # print(f"Sending message {msg} to {len(cls.CONNECTIONS)} connections")
         websockets.broadcast(cls.CONNECTIONS, msg)
 
     @classmethod

@@ -33,17 +33,6 @@ class TransferFunctions:
             else:
                 break
         packet_handlers.PacketCommander.send_message("Trace over complete")
-        
-        # Send trace over result with wafer count
-        wafer_count = len(data.get("wafers", []))
-        from socket_manager import Socket_Manager
-        Socket_Manager.send_all_json({
-            "type": "TRACE_OVER_RESULT",
-            "success": True,
-            "message": "Trace over completed successfully",
-            "waferCount": wafer_count
-        })
-        
         del TransferFunctions.executing_threads[current_thread]
 
     def generate_script(data, image_container):
@@ -93,7 +82,7 @@ class TransferFunctions:
                 # Calculate number of steps in each direction
                 x_steps = int(abs(top_x - bottom_x) / travel["x"])
                 y_steps = int(abs(top_y - bottom_y) / travel["y"])
-            
+
                 packet_handlers.PacketCommander.send_message(f"Generating {x_steps+1}x{y_steps+1} = {(x_steps+1)*(y_steps+1)} points")
             
                 # Generate snake-like pattern coordinates
