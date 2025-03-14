@@ -50,6 +50,7 @@ const TraceOverBox = () => {
   const [focusWaitTime, setFocusWaitTime] = useState<number>(8); // Default focus wait time
   const [cameraIndex, setCameraIndex] = useState<number>(0); // Default camera index
   const [saveImages, setSaveImages] = useState<boolean>(true); // Default save images value
+  const [autoScanDraw, setAutoScanDraw] = useState<boolean>(true); // Auto scan and draw flakes
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
 
@@ -98,11 +99,12 @@ const TraceOverBox = () => {
       initial_wait_time: initialWaitTime,
       focus_wait_time: focusWaitTime,
       camera_index: cameraIndex,
-      save_images: saveImages
+      save_images: saveImages,
+      auto_scan_draw: autoScanDraw
     };
 
     setJsonOutput(JSON.stringify(output, null, 2));
-  }, [waferCoordinates, magnification, picsUntilFocus, initialWaitTime, focusWaitTime, cameraIndex, saveImages]);
+  }, [waferCoordinates, magnification, picsUntilFocus, initialWaitTime, focusWaitTime, cameraIndex, saveImages, autoScanDraw]);
 
   // Listen for position responses and trace over results from the server
   useEffect(() => {
@@ -185,7 +187,8 @@ const TraceOverBox = () => {
       initial_wait_time: initialWaitTime,
       focus_wait_time: focusWaitTime,
       camera_index: cameraIndex,
-      save_images: saveImages
+      save_images: saveImages,
+      auto_scan_draw: autoScanDraw
     };
 
     sendJson(data);
@@ -416,58 +419,61 @@ const TraceOverBox = () => {
   // Update form fields from JSON
   const updateFormFromJson = (jsonString: string) => {
     try {
-      const parsedJson = JSON.parse(jsonString);
+      const parsedData = JSON.parse(jsonString);
       
-      // Validate the JSON structure
-      if (parsedJson.type !== "TRACE_OVER") {
-        throw new Error("Invalid JSON: not a TRACE_OVER command");
+      // Validate that this is a trace over configuration
+      if (parsedData.type !== "TRACE_OVER") {
+        throw new Error("Not a valid trace over configuration");
       }
       
-      if (parsedJson.wafers && Array.isArray(parsedJson.wafers)) {
-        const newWafers = parsedJson.wafers.map((wafer: any, index: number) => ({
-          id: index + 1,
+      // Update wafers
+      if (Array.isArray(parsedData.wafers)) {
+        setWaferCount(parsedData.wafers.length);
+        setWaferCoordinates(parsedData.wafers.map((wafer: any) => ({
+          id: wafer.id || 1,
           topRight: {
-            x: wafer.topRight?.x?.toString() || "",
-            y: wafer.topRight?.y?.toString() || ""
+            x: wafer.topRight?.x !== null ? String(wafer.topRight?.x) : "",
+            y: wafer.topRight?.y !== null ? String(wafer.topRight?.y) : ""
           },
           bottomLeft: {
-            x: wafer.bottomLeft?.x?.toString() || "",
-            y: wafer.bottomLeft?.y?.toString() || ""
+            x: wafer.bottomLeft?.x !== null ? String(wafer.bottomLeft?.x) : "",
+            y: wafer.bottomLeft?.y !== null ? String(wafer.bottomLeft?.y) : ""
           }
-        }));
-        
-        setWaferCount(newWafers.length);
-        setWaferCoordinates(newWafers);
+        })));
       }
       
       // Update other parameters if they exist
-      if (typeof parsedJson.magnification === 'number') {
-        setMagnification(parsedJson.magnification);
+      if (typeof parsedData.magnification === 'number') {
+        setMagnification(parsedData.magnification);
       }
       
-      if (typeof parsedJson.pics_until_focus === 'number') {
-        setPicsUntilFocus(parsedJson.pics_until_focus);
+      if (typeof parsedData.pics_until_focus === 'number') {
+        setPicsUntilFocus(parsedData.pics_until_focus);
       }
       
-      if (typeof parsedJson.initial_wait_time === 'number') {
-        setInitialWaitTime(parsedJson.initial_wait_time);
+      if (typeof parsedData.initial_wait_time === 'number') {
+        setInitialWaitTime(parsedData.initial_wait_time);
       }
       
-      if (typeof parsedJson.focus_wait_time === 'number') {
-        setFocusWaitTime(parsedJson.focus_wait_time);
+      if (typeof parsedData.focus_wait_time === 'number') {
+        setFocusWaitTime(parsedData.focus_wait_time);
       }
       
-      if (typeof parsedJson.camera_index === 'number') {
-        setCameraIndex(parsedJson.camera_index);
+      if (typeof parsedData.camera_index === 'number') {
+        setCameraIndex(parsedData.camera_index);
       }
       
-      if (typeof parsedJson.save_images === 'boolean') {
-        setSaveImages(parsedJson.save_images);
+      if (typeof parsedData.save_images === 'boolean') {
+        setSaveImages(parsedData.save_images);
+      }
+      
+      if (typeof parsedData.auto_scan_draw === 'boolean') {
+        setAutoScanDraw(parsedData.auto_scan_draw);
       }
       
     } catch (error) {
       console.error("Error parsing JSON:", error);
-      alert("Invalid JSON format. Please check your input.");
+      throw error;
     }
   };
 
@@ -645,6 +651,19 @@ const TraceOverBox = () => {
             />
             <label htmlFor="save-images" className="text-sm font-medium cursor-pointer">
               Save Images
+            </label>
+          </div>
+          
+          <div className="setting-control flex items-center">
+            <input
+              type="checkbox"
+              id="auto-scan-draw"
+              checked={autoScanDraw}
+              onChange={(e) => setAutoScanDraw(e.target.checked)}
+              className="mr-1"
+            />
+            <label htmlFor="auto-scan-draw" className="text-sm font-medium cursor-pointer">
+              Auto Scan & Draw Flakes
             </label>
           </div>
         </div>

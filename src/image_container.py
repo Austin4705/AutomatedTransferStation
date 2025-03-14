@@ -100,7 +100,7 @@ class Image_Container:
         self.wafer_counter += 1
         self.metadata["wafers"].append([])
         os.makedirs(os.path.join(self.directory_images, f"wafer_{self.wafer_counter}"), exist_ok=True)
-        # self.image_counter = 0
+        self.image_counter = 0
 
     def search_and_save_wafer(self):
         self.search_images()
