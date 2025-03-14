@@ -3,7 +3,6 @@ import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
 import { useSendJSON } from "../hooks/useSendJSON";
 import { PacketManager } from "../packets/PacketHandler";
-import { estimatePacketSize } from "../state/packetTrafficState";
 
 // Maximum number of log entries to keep
 const MAX_LOG_ENTRIES = 1000;
@@ -418,7 +417,6 @@ const UnifiedLog = () => {
       });
       
       // Always scroll to bottom when new logs are added
-      console.log(autoScroll)
       if (autoScroll) {
         scrollToBottom();
       }
@@ -429,7 +427,7 @@ const UnifiedLog = () => {
     return () => {
       window.removeEventListener('outgoingMessage' as any, handleOutgoingMessage);
     };
-  }, [definedPacketTypes]);
+  }, [definedPacketTypes, autoScroll]);
 
   const scrollToBottom = () => {
     // Always scroll to bottom when called, regardless of autoScroll setting
@@ -660,6 +658,11 @@ const UnifiedLog = () => {
         };
         
         addLogs([newEntry]);
+        
+        // Check if we should auto-scroll after adding logs
+        if (autoScroll) {
+          scrollToBottom();
+        }
       }
     }
     // Handle bulk command logs
@@ -690,8 +693,9 @@ const UnifiedLog = () => {
               logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
             }
           }, 100);
-        } else {
-
+        } else if (autoScroll) {
+          // Also respect auto-scroll setting for command logs
+          scrollToBottom();
         }
         
         console.log(`Received ${commandLogs.length} command logs`);
@@ -721,12 +725,17 @@ const UnifiedLog = () => {
         };
         
         addLogs([newEntry]);
+        
+        // Check if we should auto-scroll after adding response logs
+        if (autoScroll) {
+          scrollToBottom();
+        }
       }
     }
     
 
     // ... existing code for other message types ...
-  }, [jsonState.lastJsonMessage, addLogs, scrollToBottom, logs]);
+  }, [jsonState.lastJsonMessage, addLogs, scrollToBottom, logs, autoScroll]);
 
   return (
     <div className="unified-log h-full flex flex-col">
