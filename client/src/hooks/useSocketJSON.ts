@@ -13,6 +13,18 @@ export default function useSocketJSON(ws_url: string) {
     {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       shouldReconnect: (_closeEvent) => true,
+      reconnectAttempts: 10,
+      reconnectInterval: 3000,
+      retryOnError: true,
+      onOpen: () => {
+        console.log("WebSocket connection established");
+      },
+      onClose: (event) => {
+        console.warn("WebSocket connection closed", event);
+      },
+      onError: (event) => {
+        console.error("WebSocket error:", event);
+      },
       onMessage: (event) => {
         // Store the raw message string
         const rawMessage = event.data;
