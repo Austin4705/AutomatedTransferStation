@@ -37,55 +37,19 @@ const ScanFlakesBox = () => {
     imageNumber: ""
   });
   const [keepInputs, setKeepInputs] = useState<boolean>(false);
-  const { autoUpdate, pollRate } = usePositionContext();
-
-  // Listen for position responses from the server
-  useEffect(() => {
-    if (!jsonState.lastJsonMessage) return;
-
-    const message = jsonState.lastJsonMessage as any;
-    
-    // Track current position from any position messages
-    if (message.type === "POSITION" || message.type === "RESPONSE_POSITION") {
-      if (typeof message.x === 'number' && typeof message.y === 'number') {
-        setCurrentPosition({
-          x: message.x,
-          y: message.y
-        });
-      }
-    }
-  }, [jsonState.lastJsonMessage]);
-
-  // Request current position from the server
-  const requestCurrentPosition = () => {
-    sendJson({
-      type: "REQUEST_POSITION"
-    });
-  };
+  const { autoUpdate, pollRate, position } = usePositionContext();
 
   // Initialize position polling based on autoUpdate setting
   useEffect(() => {
-    // Always request position once when the component mounts
-    requestCurrentPosition();
-    
-    let intervalId: number | null = null;
-    
-    // Only set up polling if autoUpdate is enabled
-    if (autoUpdate) {
-      // Calculate interval in milliseconds based on poll rate
-      const interval = Math.round(1000 / Math.max(0.1, Math.min(50, pollRate)));
-      
-      // Set up a timer to periodically request the position
-      intervalId = window.setInterval(requestCurrentPosition, interval);
+    // Position will be updated automatically through the context
+    // and we can just update our local state from the context
+    if (position) {
+      setCurrentPosition({
+        x: position.x,
+        y: position.y
+      });
     }
-    
-    // Clean up the interval when the component unmounts or autoUpdate changes
-    return () => {
-      if (intervalId !== null) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [autoUpdate, pollRate]); // Re-run effect when autoUpdate or pollRate changes
+  }, [position]);
 
   // Trigger directory input click
   const handleDirectorySelectClick = () => {

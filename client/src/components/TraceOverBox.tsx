@@ -53,7 +53,7 @@ const TraceOverBox = () => {
   const [saveImages, setSaveImages] = useState<boolean>(true); // Default save images value
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
-  const { autoUpdate, pollRate } = usePositionContext();
+  const { autoUpdate, pollRate, position } = usePositionContext();
 
   // Update wafer coordinates when count changes
   useEffect(() => {
@@ -139,36 +139,20 @@ const TraceOverBox = () => {
     }
   }, [jsonState.lastJsonMessage]);
 
-  // Request current position from the server
-  const requestCurrentPosition = () => {
-    sendJson({
-      type: "REQUEST_POSITION"
-    });
-  };
-
   // Initialize position polling based on autoUpdate setting
   useEffect(() => {
-    // Always request position once when the component mounts
-    requestCurrentPosition();
+    // NO NEED TO IMPLEMENT CUSTOM POLLING HERE
+    // Position will be updated automatically through the context
     
-    let intervalId: number | null = null;
-    
-    // Only set up polling if autoUpdate is enabled
-    if (autoUpdate) {
-      // Calculate interval in milliseconds based on poll rate
-      const interval = Math.round(1000 / Math.max(0.1, Math.min(50, pollRate)));
-      
-      // Set up a timer to periodically request the position
-      intervalId = window.setInterval(requestCurrentPosition, interval);
+    // We can listen for position changes through the context
+    // and update the current position state
+    if (position) {
+      setCurrentPosition({
+        x: position.x,
+        y: position.y
+      });
     }
-    
-    // Clean up the interval when the component unmounts or autoUpdate changes
-    return () => {
-      if (intervalId !== null) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [autoUpdate, pollRate]); // Re-run effect when autoUpdate or pollRate changes
+  }, [position]);
 
   const handleTraceOver = () => {
     // Validate that all coordinates are filled
