@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
-import { useSendJSON } from "../hooks/useSendJSON";
+import { PacketManager } from "../packets/PacketHandler";
 
 interface ResponseLogEntry {
   timestamp: string;
@@ -13,72 +13,69 @@ interface ResponseMessage {
   type: string;
   message?: string;
   response?: string;
-  responses?: Array<{timestamp?: number; response?: string}>;
+  _loggedByManager?: boolean;
   [key: string]: any;
 }
 
 const ResponseLog = () => {
   const [responseLogs, setResponseLogs] = useState<ResponseLogEntry[]>([]);
   const jsonState = useRecoilValue(jsonStateAtom);
-  const sendJson = useSendJSON();
   const logContentRef = useRef<HTMLDivElement>(null);
-  // Add a ref to track the last processed message to avoid duplicates
-  const lastProcessedMessageRef = useRef<any>(null);
   // Add a ref to track if logs were manually cleared
   const logsManuallyCleared = useRef<boolean>(false);
 
-  // Process incoming messages
+  // Set up the listener for response logs from PacketManager
+  useEffect(() => {
+    // Register a listener for response logs
+    const unsubscribe = PacketManager.registerResponseLogListener((entry) => {
+      if (logsManuallyCleared.current) {
+        // If logs were manually cleared, wait a bit before adding new entries
+        return;
+      }
+
+      const newEntry: ResponseLogEntry = {
+        timestamp: new Date(entry.timestamp).toLocaleString(),
+        response: entry.message
+      };
+      
+      setResponseLogs(prev => [...prev, newEntry]);
+      scrollToBottom();
+    });
+    
+    // Clean up on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Process incoming response messages from websocket as a backup
   useEffect(() => {
     if (!jsonState.lastJsonMessage) return;
-
-    // Skip if this is the same message we already processed
-    if (lastProcessedMessageRef.current === jsonState.lastJsonMessage) {
-      return;
-    }
-
-    // Update the last processed message
-    lastProcessedMessageRef.current = jsonState.lastJsonMessage;
     
     const message = jsonState.lastJsonMessage as ResponseMessage;
     
     // If logs were manually cleared, we need to reset the flag
     // but only process new messages after clearing
     if (logsManuallyCleared.current) {
-      logsManuallyCleared.current = false;
-      // Only process this message if it's new (arrived after clearing)
-      const currentTime = new Date().getTime();
-      const messageTime = message.timestamp ? new Date(message.timestamp).getTime() : currentTime;
-      // If the message is older than when we cleared, skip it
-      if (messageTime < currentTime - 1000) { // 1 second buffer
-        return;
-      }
+      return;
     }
     
-    // Handle bulk response logs
-    if (message.type === "RESPONSE_LOG_RESPONSE" && Array.isArray(message.responses)) {
-      const formattedLogs = message.responses.map((resp: any) => ({
-        timestamp: new Date(resp.timestamp || Date.now()).toLocaleString(),
-        response: resp.response || JSON.stringify(resp)
-      }));
-      
-      setResponseLogs(formattedLogs);
-      
-      scrollToBottom();
-    }
-    
-    // Handle individual responses
-    else if (
-      message.type === "RESPONSE" || 
-      message.type === "COMMAND_RESULT" || 
-      message.type === "ERROR"
-    ) {
+    // Only handle response-type messages here as a backup
+    // Most responses should be handled by the PacketManager listener
+    if ((message.type === "RESPONSE" || 
+         message.type === "COMMAND_RESULT" || 
+         message.type === "ERROR") && 
+        !message._loggedByManager) {
+        
       const newEntry: ResponseLogEntry = {
         timestamp: new Date().toLocaleString(),
         response: message.message || message.response || JSON.stringify(message)
       };
       
-      setResponseLogs(prev => [...prev, newEntry]);
+      // Mark as logged to prevent duplicates
+      message._loggedByManager = true;
       
+      setResponseLogs(prev => [...prev, newEntry]);
       scrollToBottom();
     }
   }, [jsonState.lastJsonMessage]);
@@ -105,24 +102,13 @@ const ResponseLog = () => {
     }
   };
 
-  // Function to request response logs
-  const requestResponseLogs = () => {
-    // sendJson({
-    //   type: "REQUEST_LOG_RESPONSE",
-    // });
-  };
-
   // Function to clear logs
   const clearLogs = () => {
     setResponseLogs([]);
     // Mark that logs were manually cleared to prevent immediate re-adding
     logsManuallyCleared.current = true;
-    // Reset the last processed message to allow new messages to come in
-    // Setting to null isn't enough - we need to completely reset the reference
-    lastProcessedMessageRef.current = undefined;
     
     // Add a small delay before allowing new messages to be processed
-    // This helps prevent the last message from being immediately re-added
     setTimeout(() => {
       logsManuallyCleared.current = false;
     }, 100);
@@ -149,14 +135,8 @@ const ResponseLog = () => {
       </div>
       <div className="log-actions mt-2">
         <button 
-          onClick={requestResponseLogs}
-          className="refresh-button text-sm"
-        >
-          Refresh
-        </button>
-        <button 
           onClick={clearLogs}
-          className="clear-button text-sm ml-2"
+          className="clear-button text-sm"
         >
           Clear
         </button>

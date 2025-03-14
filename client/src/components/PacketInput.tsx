@@ -16,7 +16,7 @@ const PLACEHOLDER_TEMPLATE = `{
 const PacketInput = () => {
   const [packetJson, setPacketJson] = useState(EMPTY_TEMPLATE);
   const [error, setError] = useState<string | null>(null);
-  const [keepText, setKeepText] = useState(false);
+  const [keepText, setKeepText] = useState(true);
   const [rows, setRows] = useState(0);
   const [showPlaceholder, setShowPlaceholder] = useState(true);
   const sendJson = useSendJSON();

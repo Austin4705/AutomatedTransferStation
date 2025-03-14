@@ -3,7 +3,7 @@ import { useSendJSON } from "../hooks/useSendJSON";
 
 const CommandInput = () => {
   const [command, setCommand] = useState("");
-  const [keepText, setKeepText] = useState(false);
+  const [keepText, setKeepText] = useState(true);
   const sendJson = useSendJSON();
 
   const handleSubmit = (e: React.FormEvent) => {
