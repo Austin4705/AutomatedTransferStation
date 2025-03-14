@@ -12,6 +12,7 @@ Cargo.lock
 *.pdb
 
 
+src/config.json
 
 images/*
 images_backup/*
