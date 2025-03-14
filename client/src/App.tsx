@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { useRecoilValue } from "recoil";
+import { useEffect, useRef, useState } from "react";
+import { useRecoilValue, useSetRecoilState } from "recoil";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 
@@ -8,6 +8,7 @@ import { jsonStateAtom } from "./state/jsonState";
 import { PacketManager } from "./packets/PacketHandler";
 import { PacketHandlers } from "./packets/PacketHandlers";
 import { PositionProvider } from "./state/positionContext";
+import { ReadyState } from "react-use-websocket";
 
 // Layout and Pages
 import MainLayout from "./components/MainLayout";
@@ -19,10 +20,34 @@ import DashboardPage from "./pages/DashboardPage";
 
 function App() {
   const WS_URL = "ws://127.0.0.1:8765";
-  useSocketJSON(WS_URL);
+  // Use a state to force re-initialization of the WebSocket
+  const [wsKey, setWsKey] = useState(0);
+  
+  // Use the key to force the hook to reinitialize
+  useSocketJSON(`${WS_URL}?key=${wsKey}`);
+  
   const jsonState = useRecoilValue(jsonStateAtom);
+  const setJsonState = useSetRecoilState(jsonStateAtom);
   // Add a ref to track the last processed message
   const lastProcessedMessageRef = useRef<string | null>(null);
+
+  // Add event listener for manual reconnection
+  useEffect(() => {
+    const handleReconnect = () => {
+      console.log("Manual reconnection requested");
+      
+      // Force the WebSocket to reconnect by incrementing the key
+      setWsKey(prev => prev + 1);
+    };
+    
+    // Add event listener
+    window.addEventListener('wsReconnect', handleReconnect);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('wsReconnect', handleReconnect);
+    };
+  }, []);
 
   useEffect(() => {
     // Initialize packet system

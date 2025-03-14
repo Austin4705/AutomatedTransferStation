@@ -8,7 +8,7 @@ export default function useSocketJSON(ws_url: string) {
   const setJsonState = useSetRecoilState(jsonStateAtom);
   const lastRawMessageRef = useRef<string | null>(null);
   
-  const { lastJsonMessage, lastMessage, readyState, sendJsonMessage } = useWebSocket(
+  const { lastJsonMessage, lastMessage, readyState, sendJsonMessage, getWebSocket } = useWebSocket(
     ws_url,
     {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -46,7 +46,8 @@ export default function useSocketJSON(ws_url: string) {
       lastJsonMessage: lastJsonMessage,
       lastRawMessage: lastRawMessageRef.current,
       readyState: readyState,
-      sendJsonMessage: sendJsonMessage
+      sendJsonMessage: sendJsonMessage,
+      getWebSocket: getWebSocket
     });
-  }, [lastJsonMessage, readyState, sendJsonMessage, setJsonState, lastRawMessageRef.current]);
+  }, [lastJsonMessage, readyState, sendJsonMessage, getWebSocket, setJsonState, lastRawMessageRef.current]);
 }
