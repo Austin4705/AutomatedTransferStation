@@ -61,6 +61,10 @@ const UnifiedLog = () => {
   const lastProcessedMessageRef = useRef<any>(undefined);
   // Add a ref to track if logs were manually cleared
   const logsManuallyCleared = useRef<boolean>(false);
+  // Add a cooldown period after clearing logs
+  const clearCooldownRef = useRef<boolean>(false);
+  // Add a message deduplication cache
+  const recentMessagesRef = useRef<Set<string>>(new Set());
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   // Add state to track if certain log types should be hidden completely
   const [hiddenLogTypes, setHiddenLogTypes] = useState<Set<LogType>>(new Set());
@@ -196,6 +200,40 @@ const UnifiedLog = () => {
 
   // Helper function to add logs while respecting the maximum limit
   const addLogs = (newLogs: LogEntry[], replace = false) => {
+    // Skip if we're in a cooldown period after clearing
+    if (clearCooldownRef.current) {
+      console.log("Skipping log addition during cooldown period");
+      return;
+    }
+    
+    // Deduplicate logs before adding them
+    const uniqueLogs = newLogs.filter(newLog => {
+      // Create a unique key for this log
+      const logKey = `${newLog.type}-${newLog.packetType}-${newLog.message}`;
+      
+      // Check if we've seen this message recently
+      if (recentMessagesRef.current.has(logKey)) {
+        console.log("Preventing duplicate log:", logKey);
+        return false;
+      }
+      
+      // Add to recent messages cache
+      recentMessagesRef.current.add(logKey);
+      
+      // Limit the size of the cache to prevent memory leaks
+      if (recentMessagesRef.current.size > 1000) {
+        const oldestKey = Array.from(recentMessagesRef.current)[0];
+        recentMessagesRef.current.delete(oldestKey);
+      }
+      
+      return true;
+    });
+    
+    // Only proceed if there are unique logs to add
+    if (uniqueLogs.length === 0) {
+      return;
+    }
+    
     if (logContentRef.current && !autoScroll) {
       // Save current scroll position before updating
       const scrollContainer = logContentRef.current;
@@ -205,16 +243,16 @@ const UnifiedLog = () => {
       setLogs(prevLogs => {
         // If replacing logs of a specific type, filter out that type first
         const filteredLogs = replace 
-          ? prevLogs.filter(log => log.type !== newLogs[0]?.type) // Filter by type directly
+          ? prevLogs.filter(log => log.type !== uniqueLogs[0]?.type) // Filter by type directly
           : prevLogs;
         
         // Log what's happening for debugging
         if (replace) {
-          console.log(`Replacing ${prevLogs.filter(log => log.type === newLogs[0]?.type).length} ${newLogs[0]?.type} logs with ${newLogs.length} new logs`);
+          console.log(`Replacing ${prevLogs.filter(log => log.type === uniqueLogs[0]?.type).length} ${uniqueLogs[0]?.type} logs with ${uniqueLogs.length} new logs`);
         }
         
         // Combine existing and new logs
-        const combinedLogs = [...filteredLogs, ...newLogs];
+        const combinedLogs = [...filteredLogs, ...uniqueLogs];
         
         // Trim to maximum size if needed
         return combinedLogs.length > MAX_LOG_ENTRIES 
@@ -239,16 +277,16 @@ const UnifiedLog = () => {
       setLogs(prevLogs => {
         // If replacing logs of a specific type, filter out that type first
         const filteredLogs = replace 
-          ? prevLogs.filter(log => log.type !== newLogs[0]?.type) // Filter by type directly
+          ? prevLogs.filter(log => log.type !== uniqueLogs[0]?.type) // Filter by type directly
           : prevLogs;
         
         // Log what's happening for debugging
         if (replace) {
-          console.log(`Replacing ${prevLogs.filter(log => log.type === newLogs[0]?.type).length} ${newLogs[0]?.type} logs with ${newLogs.length} new logs`);
+          console.log(`Replacing ${prevLogs.filter(log => log.type === uniqueLogs[0]?.type).length} ${uniqueLogs[0]?.type} logs with ${uniqueLogs.length} new logs`);
         }
         
         // Combine existing and new logs
-        const combinedLogs = [...filteredLogs, ...newLogs];
+        const combinedLogs = [...filteredLogs, ...uniqueLogs];
         
         // Trim to maximum size if needed
         return combinedLogs.length > MAX_LOG_ENTRIES 
@@ -537,6 +575,11 @@ const UnifiedLog = () => {
 
   // Add a dedicated clear function
   const clearLogs = () => {
+    console.log("Clearing logs and setting cooldown period");
+    
+    // Set the cooldown flag to prevent immediate additions
+    clearCooldownRef.current = true;
+    
     setLogs([]); // Directly set logs to an empty array
     
     // Mark that logs were manually cleared to prevent immediate re-adding
@@ -544,6 +587,9 @@ const UnifiedLog = () => {
     
     // Reset the last processed message reference
     lastProcessedMessageRef.current = undefined;
+    
+    // Clear the message deduplication cache
+    recentMessagesRef.current.clear();
     
     // Reset any tracking variables that might cause issues
     // This helps prevent the last message from reappearing
@@ -556,8 +602,9 @@ const UnifiedLog = () => {
     // before new log messages can be processed
     setTimeout(() => {
       // After a brief delay, we can allow processing messages again
+      clearCooldownRef.current = false;
       console.log("Log clearing complete - ready for new messages");
-    }, 100);
+    }, 1000); // Use a longer cooldown period of 1 second
   };
 
   // Add click handler to close dropdowns when clicking outside
@@ -600,15 +647,32 @@ const UnifiedLog = () => {
   useEffect(() => {
     if (!jsonState.lastJsonMessage) return;
 
+    // Skip if we're in a cooldown period after clearing
+    if (clearCooldownRef.current) {
+      console.log("Skipping message processing during cooldown period");
+      return;
+    }
+
     // Skip if this is the same message we already processed
     if (lastProcessedMessageRef.current === jsonState.lastJsonMessage) {
       return;
     }
 
+    // Create a message key for deduplication
+    const message = jsonState.lastJsonMessage as BaseMessage;
+    const messageKey = `${message.type}-${JSON.stringify(message)}`;
+    
+    // Skip if we've seen this exact message recently
+    if (recentMessagesRef.current.has(messageKey)) {
+      console.log("Skipping duplicate message:", messageKey);
+      return;
+    }
+    
+    // Add to recent messages cache
+    recentMessagesRef.current.add(messageKey);
+
     // Update the last processed message
     lastProcessedMessageRef.current = jsonState.lastJsonMessage;
-
-    const message = jsonState.lastJsonMessage as BaseMessage;
     
     // If logs were manually cleared, we need to reset the flag
     // but only process new messages after clearing
