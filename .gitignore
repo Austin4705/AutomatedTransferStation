@@ -12,6 +12,7 @@ Cargo.lock
 *.pdb
 
 
+# Track config.json in src directory to prevent accidental commits of sensitive data
 src/config.json
 
 images/*
