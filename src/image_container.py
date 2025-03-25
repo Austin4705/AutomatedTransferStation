@@ -52,8 +52,7 @@ class Image_Container:
 
     def add_image(self, camera_id: int):
         self.image_counter += 1
-        camera = camera.Camera.global_list[camera_id]
-        frame = camera.snap_image()
+        frame = camera.Camera.global_list[camera_id].snap_image()
         image_name = f"{camera_id}-{datetime.now().strftime('%d-%m-%Y-%H-%M-%S')}.png"
         wafer_path = os.path.join(self.directory_images, f"wafer_{self.wafer_counter}")
         image_path = os.path.join(wafer_path, image_name)
