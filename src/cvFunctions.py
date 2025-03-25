@@ -131,23 +131,8 @@ class CVFunctions:
 
         return image
 
-
-    def remove_vignette(
-        image,
-        flatfield,
-        max_background_value: int = 241,
-    ):
-        """Removes the Vignette from the Image
-
-        Args:
-            image (NxMx3 Array): The Image with the Vignette
-            flatfield (NxMx3 Array): the Flat Field in RGB
-            max_background_value (int): the maximum value of the background
-
-        Returns:
-            (NxMx3 Array): The Image without the Vignette
-        """
-        image_no_vigentte = image / flatfield * cv2.mean(flatfield)[:-1]
-        image_no_vigentte[image_no_vigentte > max_background_value] = max_background_value
-        return np.asarray(image_no_vigentte, dtype=np.uint8)
-
+    def calculate_focus_score(image):
+        image_filtered = cv2.GaussianBlur(image, (9, 9), 0)
+        laplacian = cv2.Laplacian(image_filtered, cv2.CV_64F)
+        focus_score = laplacian.var()
+        return focus_score
