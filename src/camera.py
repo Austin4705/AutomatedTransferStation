@@ -43,36 +43,14 @@ class Camera:
                     cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
                 else:
                     cap = cv2.VideoCapture(i)
-                
-                # if transfer_functions.Transfer_Functions.TRANSFER_STATION.type == "hqGrapheneServer":
-                #     ic = ImageControl()
-                #     grabber = ic.create_grabber()
-                #     ic.load_device_from_file(grabber, "../camera_settings/cam_settings.ic_cam")
-                #     if(ic.is_dev_valid(grabber)):
-                #         ic.start_live(grabber)
-                #         ic.msg_box("Camera initialized", "Camera initialized successfully")
-                #         ic.stop_live(grabber)
-                #     else:
-                #         ic.msg_box("Camera initialization failed", "Camera initialization failed")
-                #     ic.release_grabber(grabber)
-                    # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-                    # cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
 
-                # Try to read a test frame to verify the camera works
+                # Set the resolution to the transfer station's resolution
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
                 ret, test_frame = cap.read()
-                # Save the test frame to a file
-                # timestamp = datetime.now().strftime(f"camera_{i}_test_%Y%m%d_%H%M%S.txt")
-                # np.save(timestamp, test_frame)
-                print("Setting resolution and format")
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
-                print(f"Frame shape: {test_frame.shape}")
-                # fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
-                # print(f"FourCC: {fourcc}")
-                # fourcc_str = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
-                # print(f"FourCC: {fourcc_str}")
+             
 
                 if not ret or test_frame is None:
                     print(f"  Camera {i} opened but could not read frame, skipping")
@@ -173,10 +151,6 @@ class Camera:
         """Background thread to continuously capture frames"""
         last_error_time = 0
         error_count = 0
-        print("Setting resolution and format")
-        # self.video.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
-        # self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
-        # print(f"Frame shape: {self.video.shape}")
 
         while self.is_active:
             try:
@@ -186,8 +160,7 @@ class Camera:
                 
                 # Capture frame
                 ret, frame = self.video.read()
-                # frame = frame.reshape(frame.shape[0], frame.shape[1], 2)
-                # bgr = cv2.cvtColor(frame, cv2.COLOR_YUV2BGR_YUYV)
+
                 if not ret:
                     # Limit error logging to avoid flooding
                     current_time = time.time()
