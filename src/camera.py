@@ -56,19 +56,19 @@ class Camera:
                 #         ic.msg_box("Camera initialization failed", "Camera initialization failed")
                 #     ic.release_grabber(grabber)
                     # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
-                time.sleep(3)
                     # cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
 
                 # Try to read a test frame to verify the camera works
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
                 ret, test_frame = cap.read()
                 # Save the test frame to a file
                 # timestamp = datetime.now().strftime(f"camera_{i}_test_%Y%m%d_%H%M%S.txt")
                 # np.save(timestamp, test_frame)
-
-
-                # print(f"Frame shape: {test_frame.shape}")
+                print("Setting resolution and format")
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
+                print(f"Frame shape: {test_frame.shape}")
                 # fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
                 # print(f"FourCC: {fourcc}")
                 # fourcc_str = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
@@ -173,7 +173,11 @@ class Camera:
         """Background thread to continuously capture frames"""
         last_error_time = 0
         error_count = 0
-        
+        print("Setting resolution and format")
+        # self.video.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
+        # self.video.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
+        # print(f"Frame shape: {self.video.shape}")
+
         while self.is_active:
             try:
                 if not hasattr(self, 'video') or self.video is None or not self.video.isOpened():
