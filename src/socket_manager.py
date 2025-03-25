@@ -206,9 +206,26 @@ class Socket_Manager:
         """Send JSON data to all connected clients"""
         try:
             msg = json.dumps(json_data)
-            cls.send_all(msg)
+            # Get the current event loop or create a new one if none exists
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            # Create and run the coroutine in the event loop
+            loop.call_soon_threadsafe(lambda: asyncio.create_task(cls._send_all_async(msg)))
         except Exception as e:
             print(f"Error serializing JSON: {e}")
+
+    @classmethod
+    async def _send_all_async(cls, msg: str):
+        """Asynchronous helper method to send message to all clients"""
+        for websocket in cls.CONNECTIONS:
+            try:
+                await cls._safe_send(websocket, msg)
+            except Exception as e:
+                print(f"Error in _send_all_async: {e}")
 
     # Socket stuff
     # Queue of incoming messages from web browser 
