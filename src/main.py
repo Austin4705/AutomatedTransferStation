@@ -24,8 +24,9 @@ if __name__ == "__main__":
     print("Detecting and initializing cameras...")
     cameras = Camera.initialize_all_cameras()
     
+    # We get issues with initalization if we dont run this command first 
     print("Loading Model")
-    CVFunctions()
+    cv_functions = CVFunctions()
     print("Model Loaded")
     
     print("Initializing Flask server")
@@ -66,12 +67,12 @@ if __name__ == "__main__":
     input()
 
     #Fake response
-    while True:
-        input()
-        for i in range(10):
-            TRANSFER_STATION.add_fake_command(f"Fake Command {i}")
-            TRANSFER_STATION.add_fake_response(f"Fake Response {i}")
-        print("Done")
+    # while True:
+    #     input()
+    #     for i in range(10):
+    #         TRANSFER_STATION.add_fake_command(f"Fake Command {i}")
+    #         TRANSFER_STATION.add_fake_response(f"Fake Response {i}")
+    #     print("Done")
 
     for thread in threading.enumerate():
         if thread.daemon:

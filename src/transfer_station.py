@@ -64,7 +64,20 @@ class Transfer_Station():
         # print("Get Z Position-V")
         return 0
 
+    def led_off(self):
+        print("Turn LED off-V")
+
+    def led_off(self):
+        print("Turn LED off-V")
+
+
     #Functions NOT TO REIMPLEMENT
+    def setLED(self, status):
+        if status:
+            self.led_on()
+        else:
+            self.led_off()
+
     def autoFocus(self, camera_index=0):
         print("Auto Focus-V")
         originalposZ = self.posZ()
@@ -110,7 +123,7 @@ class Transfer_Station():
         highest_z = max(nonzero_scores, key=lambda x: x[0])[0]
         lowest_z = min(nonzero_scores, key=lambda x: x[0])[0]
 
-        print(edge_counts)
+        # print(edge_counts)
         self.wait(4)
 
         # Sweep from highest to lowest with finer resolution
@@ -120,13 +133,13 @@ class Transfer_Station():
         current_z = highest_z
         while current_z >= lowest_z:
             self.moveZ(current_z)
-            self.wait(0.1)
+            self.wait(0.04)
             frame = Camera.global_list[camera_index].get_frame()
             edge_count = CVFunctions.get_edge_count(frame)
             fine_edge_counts.append((current_z, edge_count))
             current_z -= fine_z_step
 
-        print(fine_edge_counts)
+        # print(fine_edge_counts)
             
         # Find z position with highest focus score
         best_z = max(fine_edge_counts, key=lambda x: x[1])[0]

@@ -97,6 +97,24 @@ class TransferStationWinFile(Transfer_Station):
         # print(f"Getting Z position")
         res = self.send_command(cmd)
         return CommandServer.get_first_double(res)
+    
+    def led_on(self):
+        """Turn LED on
+        Status: Working
+        """
+        cmd = "LEDON"
+        print(f"Turning LED on")
+        res = self.send_command(cmd)
+        return res
+    
+    def led_off(self):
+        """Turn LED off
+        Status: Working
+        """
+        cmd = "LEDOFF"
+        print(f"Turning LED off")
+        res = self.send_command(cmd)
+        return res
 
     def ts_autoFocus(self):
         """Auto Focus
