@@ -4,17 +4,17 @@ import numpy as np
 import matplotlib.cm as cm
 import json
 
-class CVFunctions:
+class CV_Functions:
 
     contrast_dict = json.load(open("../contrastDictDir/Graphene_GMM.json", "r"))
 
     def __init__(self) -> None:
         self.mockImage = np.zeros((512, 512, 3), dtype=np.uint8)
-        CVFunctions.matGMM2DTransform(self.mockImage)
+        CV_Functions.matGMM2DTransform(self.mockImage)
 
     def run_searching(img):
         model = MaterialDetector(
-            contrast_dict=CVFunctions.contrast_dict,
+            contrast_dict=CV_Functions.contrast_dict,
             size_threshold=500,
             standard_deviation_threshold=5,
             used_channels="BGR",
@@ -24,10 +24,10 @@ class CVFunctions:
         return flakes
 
     def matGMM2DTransform(img):
-        flakes = CVFunctions.run_searching(img)
+        flakes = CV_Functions.run_searching(img)
 
         CONFIDENCE_THRESHOLD = 0.5
-        image = CVFunctions.visualise_flakes(
+        image = CV_Functions.visualise_flakes(
             flakes,
             img,
             confidence_threshold=CONFIDENCE_THRESHOLD,
@@ -155,5 +155,5 @@ class CVFunctions:
         return color_ratio
     
     def exist_color_features(image, ratio_threshold=0.01):
-        color_ratio = CVFunctions.get_color_features(image)
+        color_ratio = CV_Functions.get_color_features(image)
         return color_ratio >= ratio_threshold

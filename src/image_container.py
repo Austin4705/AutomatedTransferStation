@@ -4,9 +4,9 @@ import os
 from datetime import datetime
 from multiprocessing import Pool
 import cv2
-from camera import Camera
+import camera
 from transfer_station import Transfer_Station
-from cvFunctions import CVFunctions
+from cv_functions import CV_Functions
 import packet_handlers
 from GMMDetector.structures import Flake
 
@@ -52,7 +52,7 @@ class Image_Container:
 
     def add_image(self, camera_id: int):
         self.image_counter += 1
-        camera = Camera.global_list[camera_id]
+        camera = camera.Camera.global_list[camera_id]
         frame = camera.snap_image()
         image_name = f"{camera_id}-{datetime.now().strftime('%d-%m-%Y-%H-%M-%S')}.jpg"
         wafer_path = os.path.join(self.directory_images, f"wafer_{self.wafer_counter}")
@@ -144,7 +144,7 @@ class Image_Container:
 
         image_data = self.load_image(image_name, data["wafer_id"])
         # Run CV search
-        flake_data = CVFunctions.run_searching(image_data)
+        flake_data = CV_Functions.run_searching(image_data)
         if flake_data.any():
             print(f"Found {len(flake_data)} flakes in image {image_name}")
         else:
@@ -173,7 +173,7 @@ class Image_Container:
                 )
                 for flake in image_metadata.get("flakes", [])
             ]
-            image_data = CVFunctions.visualise_flakes(flakes, image, 0.5)
+            image_data = CV_Functions.visualise_flakes(flakes, image, 0.5)
             # Add wafer and position text
             cv2.putText(
                 image_data,
