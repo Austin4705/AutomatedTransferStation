@@ -169,31 +169,6 @@ class Camera:
                 
                 # Update current frame with thread safety
                 with self.frame_lock:
-                    focus_score = CVFunctions.calculate_focus_score(frame)
-                    has_enough_edges = CVFunctions.has_enough_edges(frame)
-                    color_ratio = CVFunctions.has_color_features(frame)
-
-                    # Add focus score text to the frame
-                    cv2.putText(
-                        frame,
-                        f"Focus Score: {focus_score:.2f} {has_enough_edges}",
-                        (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1,
-                        (255, 255, 255),  # White text
-                        2  # Thickness
-                    )
-
-                    cv2.putText(
-                        frame,
-                        f"Color Ratio: {color_ratio:.2f}",
-                        (10, 60),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1,
-                        (255, 255, 255),  # White text
-                        2  # Thickness
-                    )
-
                     self.current_frame = frame
                 
                 # Don't capture too fast
@@ -247,9 +222,32 @@ class Camera:
     def snap_image(self):
         """Take a snapshot and store it"""
         frame = self.get_frame()
+        focus_score = CVFunctions.calculate_focus_score(frame)
+        has_enough_edges = CVFunctions.get_edge_count(frame)
+        color_ratio = CVFunctions.get_color_features(frame)
 
-        with self.frame_lock:
-            self.snapshot_image = frame
+        # Add focus score text to the frame
+        cv2.putText(
+            frame,
+            f"Focus Score: {focus_score:.2f} {has_enough_edges}",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),  # White text
+            2  # Thickness
+        )
+
+        cv2.putText(
+            frame,
+            f"Color Ratio: {color_ratio:.2f}",
+            (10, 60),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),  # White text
+            2  # Thickness
+        )
+
+        self.snapshot_image = frame
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
         return self.snapshot_image
 
