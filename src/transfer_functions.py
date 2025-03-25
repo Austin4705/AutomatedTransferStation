@@ -48,6 +48,7 @@ class TransferFunctions:
             # Optional parameters with defaults
             magnification = int(data.get("magnification", 20))
             pics_until_focus = int(data.get("pics_until_focus", 300))
+            pics_until_led = int(data.get("pics_until_led", 100))
             initial_wait_time = float(data.get("initial_wait_time", 8))
             focus_wait_time = float(data.get("focus_wait_time", 8))
             camera_index = int(data.get("camera_index", 0))
@@ -112,7 +113,7 @@ class TransferFunctions:
                     going_right = not going_right
             
                 # Generate commands from points
-                pic_counter = 1
+                counter = 1
                 command_list.append([image_container.new_wafer])
                 command_list.append([TransferFunctions.TRANSFER_STATION.moveXY, bottom_x, bottom_y]) # Add initial setup commands
                 command_list.append([TransferFunctions.TRANSFER_STATION.wait, initial_wait_time]) # Initial wait
@@ -122,17 +123,18 @@ class TransferFunctions:
                 for x, y in points:
                     # Move to position
                     command_list.append([TransferFunctions.TRANSFER_STATION.moveXY, x, y])
-                    # Perform autofocus if needed
-                    if pic_counter % pics_until_focus == 0:
+                    # Perform autofocus or led on if needed
+                    if counter % pics_until_led == 0:
+                        command_list.append([TransferFunctions.TRANSFER_STATION.led_on])
+                    if counter % pics_until_focus == 0:
                         command_list.append([TransferFunctions.TRANSFER_STATION.autoFocus, camera_index])
-                        # command_list.append([TransferFunctions.TRANSFER_STATION.wait, focus_wait_time])
                     # Take picture
                     command_list.append([TransferFunctions.TRANSFER_STATION.wait, wait_time])
                     if save_images:
                         command_list.append([image_container.add_image, camera_index])
                     else:
                         command_list.append([camera.Camera.global_list[camera_index].snap_image])
-                    pic_counter += 1
+                    counter += 1
             packet_handlers.PacketCommander.send_message(f"Generated {len(points)} points and {len(command_list)} commands")
         except Exception as e:
             packet_handlers.PacketCommander.send_error(f"Error generating script: {str(e)}")

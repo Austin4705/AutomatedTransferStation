@@ -54,6 +54,11 @@
         "state": "boolean"
       }
     },
+    "LED_STATUS":{
+      "fields":{
+        "status": "boolean"
+      }
+    },
     "SNAP_SHOT":{
       "fields":{
         "camera": "int"
