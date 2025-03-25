@@ -43,10 +43,15 @@ class Camera:
                 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
-                cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
+                # cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
 
                 # Try to read a test frame to verify the camera works
                 ret, test_frame = cap.read()
+                # Save the test frame to a file
+                timestamp = datetime.now().strftime(f"camera_{i}_test_%Y%m%d_%H%M%S.txt")
+                np.save(timestamp, test_frame)
+
+
                 print(f"Frame shape: {test_frame.shape}")
                 fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
                 print(f"FourCC: {fourcc}")
@@ -161,6 +166,8 @@ class Camera:
                 
                 # Capture frame
                 ret, frame = self.video.read()
+                # frame = frame.reshape(frame.shape[0], frame.shape[1], 2)
+                # bgr = cv2.cvtColor(frame, cv2.COLOR_YUV2BGR_YUYV)
                 if not ret:
                     # Limit error logging to avoid flooding
                     current_time = time.time()
