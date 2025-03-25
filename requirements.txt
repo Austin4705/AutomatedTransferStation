@@ -6,3 +6,4 @@ python-dotenv
 dotenv
 matplotlib
 asyncio
+py-tisgrabber

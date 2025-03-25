@@ -19,6 +19,7 @@ class Transfer_Station():
 
     def __init__(self):
         print("Initializing Transfer Station")
+        self.type = "base"
         self.command_queue = []
         # Add self to the static list if this is a subclass instance
         if self.__class__ != Transfer_Station:

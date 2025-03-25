@@ -30,6 +30,7 @@ class TransferStationWinFile(Transfer_Station):
 
     def __init__(self):
         super().__init__()
+        self.type = "hqGrapheneServer"
         if platform.system() == 'Windows':
             self.command_server = CommandServer()
         else:

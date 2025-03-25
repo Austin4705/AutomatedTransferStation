@@ -26,11 +26,11 @@ pip install -r requirements.txt
 ```
 
 ### 2. Install 2DMatGMM
-The project requires the [2DMatGMM](https://github.com/Jaluus/2DMatGMM) library as a submodule. Either use the submoudle recurisve or git clone it
+The project requires the [2DMatGMM](https://github.com/Austin4705/2DMatGMM) library as a submodule. Either use the submoudle recurisve or git clone it. Note please use my forked version.
 ```bash
 # From the project root directory
 git submodule update --init --recursive
-git clone https://github.com/Jaluss/2DMatGMM
+git clone https://github.com/Austin4705/2DMatGMM
 
 pip install -e 2DMatGMM
 ```
@@ -41,13 +41,16 @@ cd client
 npm install
 ```
 
-### 4. Configure Environment Variables
+### 4. Configure Specifci Environment 
 Create a `config.json` file in the project root directory with the following content:
 ```plaintext
 {
     "transfer_station": "hqGrapheneServer"
 }
 ```
+Now if you are using a hq graphene transfer station, do a couple things. Ensure the software is updated to the latest version, it should have the latest version of the command server. Ensure that (the imaging source drivers)[https://www.theimagingsource.com/en-us/support/download/icwdmuvccamtis33u-5.3.0.2793/] are properly installed
+
+
 (Or "base" if you want to do the virtual ones). Adjust the port values according to your setup.
 
 ## Running the Application
