@@ -59,6 +59,16 @@ class TransferStationWinFile(Transfer_Station):
         res = self.send_command(cmd)
         return res
 
+    def moveZ(self, Z):
+        """Move to Z coordinate
+        Z: Z position
+        Status: Working
+        """
+        cmd = f"SETPOSZ{Z}"  # Z is 0 for Z-only movement
+        print(f"Moving to Z position: {Z}")
+        res = self.send_command(cmd)
+        return res
+
     def posX(self):
         """Get X position
         Status: Working
@@ -78,12 +88,21 @@ class TransferStationWinFile(Transfer_Station):
         res = self.send_command(cmd)
         # print(f"Y position: {res} and {type(res)}")
         return CommandServer.get_first_double(res)
+    
+    def posZ(self):
+        """Get Z position
+        Status: Working
+        """
+        cmd = "GETPOSZ"
+        # print(f"Getting Z position")
+        res = self.send_command(cmd)
+        return CommandServer.get_first_double(res)
 
-    def autoFocus(self):
+    def ts_autoFocus(self):
         """Auto Focus
         Status: Working
         """
-        cmd = "AUTOFOCUS"
+        cmd = "AUTFOC"
         print(f"Auto Focusing")
         res = self.send_command(cmd)
         return res

@@ -49,6 +49,11 @@
         "JSON": "string"
       }
     }, 
+    "EXECUTE_TRACE_OVER":{
+      "fields":{
+        "state": "boolean"
+      }
+    },
     "SNAP_SHOT":{
       "fields":{
         "camera": "int"

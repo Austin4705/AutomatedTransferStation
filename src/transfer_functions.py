@@ -2,7 +2,7 @@ import math
 import packet_handlers
 import camera
 import threading
-
+import time
 from image_container import Image_Container
 # Dictionary containing travel distances for different magnifications (in micrometers)
 
@@ -15,6 +15,7 @@ class TransferFunctions:
     def __init__(self, transfer_station) -> None:
         TransferFunctions.TRANSFER_STATION = transfer_station
         TransferFunctions.MAGNIFICATION_TRAVEL = TransferFunctions.TRANSFER_STATION.MAGNIFICATION_TRAVEL
+        TransferFunctions.EXECUTE_TRACE_OVER = True 
         pass
 
     def run_trace_over(data):
@@ -29,6 +30,10 @@ class TransferFunctions:
         current_thread = threading.current_thread()
         for command in command_list:
             if TransferFunctions.executing_threads[current_thread]:
+                while not TransferFunctions.EXECUTE_TRACE_OVER:
+                    if not TransferFunctions.executing_threads[current_thread]:
+                        break
+                    time.sleep(0.1)
                 command[0](*(command[1:]))
             else:
                 break
@@ -111,16 +116,16 @@ class TransferFunctions:
                 command_list.append([image_container.new_wafer])
                 command_list.append([TransferFunctions.TRANSFER_STATION.moveXY, bottom_x, bottom_y]) # Add initial setup commands
                 command_list.append([TransferFunctions.TRANSFER_STATION.wait, initial_wait_time]) # Initial wait
-                command_list.append([TransferFunctions.TRANSFER_STATION.autoFocus]) # Initial autofocus
-                command_list.append([TransferFunctions.TRANSFER_STATION.wait, focus_wait_time]) # Wait after autofocus
+                # command_list.append([TransferFunctions.TRANSFER_STATION.autoFocus]) # Initial autofocus
+                # command_list.append([TransferFunctions.TRANSFER_STATION.wait, focus_wait_time]) # Wait after autofocus
                 # Visit each point in the pattern
                 for x, y in points:
                     # Move to position
                     command_list.append([TransferFunctions.TRANSFER_STATION.moveXY, x, y])
                     # Perform autofocus if needed
                     if pic_counter % pics_until_focus == 0:
-                        command_list.append([TransferFunctions.TRANSFER_STATION.autoFocus])
-                        command_list.append([TransferFunctions.TRANSFER_STATION.wait, focus_wait_time])
+                        command_list.append([TransferFunctions.TRANSFER_STATION.autoFocus, camera_index])
+                        # command_list.append([TransferFunctions.TRANSFER_STATION.wait, focus_wait_time])
                     # Take picture
                     command_list.append([TransferFunctions.TRANSFER_STATION.wait, wait_time])
                     if save_images:

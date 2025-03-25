@@ -1,5 +1,7 @@
 import time 
 from datetime import datetime
+from camera import Camera
+from cvFunctions import CVFunctions
 
 # The abstract class for a transfer station instance
 class Transfer_Station():
@@ -42,6 +44,9 @@ class Transfer_Station():
     def moveY(self, Y):
         print("Move Y-V")
 
+    def moveZ(self, Z):
+        print("Move Z-V")
+
     def moveXY(self, x, y):
         print(f"Move XY to {x}, {y}-V")
         self.moveX(x)
@@ -55,10 +60,71 @@ class Transfer_Station():
         # print("Get Y Position-V")
         return 0
 
-    def autoFocus(self):
-        print("Auto Focus-V")
+    def posZ(self):
+        # print("Get Z Position-V")
+        return 0
 
     #Functions NOT TO REIMPLEMENT
+    def autoFocus(self, camera_index=0):
+        print("Auto Focus-V")
+        originalposZ = self.posZ()
+        current_frame = Camera.global_list[camera_index].get_frame()
+
+        if CVFunctions.exist_color_features(current_frame):
+            print("Not enough edges to auto focus")
+            return
+        # Sample points on either side of current Z position
+        n_samples = 10
+        z_range = 0.5
+        z_step = z_range / n_samples
+        
+        edge_counts = []
+        # Sample points above current position
+        def initial_scan():
+            for i in range(n_samples):
+                z = originalposZ + (i * z_step)
+                self.moveZ(z)
+                self.wait(0.05)
+                frame = Camera.global_list[camera_index].get_frame()
+                edge_count = CVFunctions.calculate_focus_score(frame)
+                edge_counts.append((z, edge_count))
+        
+        #Go above and below current position
+        initial_scan()
+        z_step = -z_step
+        initial_scan()
+        initial_scan()
+        z_step = -z_step
+        initial_scan()
+        z_step = -z_step
+
+        # Find highest and lowest nonzero focus positions
+        nonzero_scores = [(z, score) for z, score in edge_counts if score > 0]
+        if not nonzero_scores:
+            print("No good focus scores found")
+            return
+        highest_z = max(nonzero_scores, key=lambda x: x[0])[0]
+        lowest_z = min(nonzero_scores, key=lambda x: x[0])[0]
+
+        # Sweep from highest to lowest with finer resolution
+        fine_z_step = 0.001  # 0.001 mm resolution
+        fine_edge_counts = []
+        
+        current_z = highest_z
+        while current_z >= lowest_z:
+            self.moveZ(current_z)
+            self.wait(0.01)
+            frame = Camera.global_list[camera_index].get_frame()
+            edge_count = CVFunctions.calculate_focus_score(frame)
+            fine_edge_counts.append((current_z, edge_count))
+            current_z -= fine_z_step
+            
+        # Find z position with highest focus score
+        best_z = max(fine_edge_counts, key=lambda x: x[1])[0]
+         
+        # Move to position with best focus
+        self.moveZ(best_z)
+        self.wait(0.1)
 
     #Takes Seconds
     def time_stamp():
