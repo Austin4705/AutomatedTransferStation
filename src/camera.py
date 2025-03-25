@@ -218,9 +218,21 @@ class Camera:
         except Exception as e:
             print(f"Error saving image: {e}")
 
+
     def snap_image(self):
         """Take a snapshot and store it"""
         frame = self.get_frame()
+        focus_score = CVFunctions.calculate_focus_score(frame)
+        # Add focus score text to the frame
+        cv2.putText(
+            frame,
+            f"Focus Score: {focus_score:.2f}",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),  # White text
+            2  # Thickness
+        )
         with self.frame_lock:
             self.snapshot_image = frame
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
