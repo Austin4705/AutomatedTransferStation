@@ -75,7 +75,10 @@ class PacketHandlers:
 
             def execute_command():
                 try:
-                    result = getattr(PacketHandlers.transfer_station, command)(*params)
+                    if not params:
+                        result = getattr(PacketHandlers.transfer_station, command)()
+                    else:
+                        result = getattr(PacketHandlers.transfer_station, command)(*params)
                     if(result is not None):
                         PacketCommander.send_message(f"TS Command executed: {result}")
                     else:
@@ -104,6 +107,11 @@ class PacketHandlers:
         thread.daemon = True
         TransferFunctions.executing_threads[thread] = True
         thread.start()
+
+    @packet_handler("EXECUTE_TRACE_OVER")
+    def handle_execute_trace_over(packet_type: str, data: dict):
+        PacketCommander.send_message(f"Executing trace over: {data['state']}")
+        TransferFunctions.EXECUTE_TRACE_OVER = data["state"]   
 
     @packet_handler("CANCEL_EXECUTION")
     def handle_cancel_execution(packet_type: str, data: dict):

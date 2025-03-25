@@ -145,6 +145,10 @@ class Image_Container:
         image_data = self.load_image(image_name, data["wafer_id"])
         # Run CV search
         flake_data = CVFunctions.run_searching(image_data)
+        if flake_data.any():
+            print(f"Found {len(flake_data)} flakes in image {image_name}")
+        else:
+            print(f"No flakes found in image {image_name}")
         self.update_scanned_counter(data["image_id"])
         return flake_data
 

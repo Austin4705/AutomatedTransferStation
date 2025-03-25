@@ -554,6 +554,42 @@ const TraceOverBox = () => {
     }, 3000);
   };
 
+  // Handle enabling trace over execution
+  const handleEnableTraceOverExecution = () => {
+    sendJson({
+      type: "EXECUTE_TRACE_OVER",
+      state: true
+    });
+    
+    setTraceOverStatus({
+      success: true,
+      message: "Trace over execution enabled"
+    });
+    
+    // Clear status after 3 seconds
+    setTimeout(() => {
+      setTraceOverStatus(null);
+    }, 3000);
+  };
+
+  // Handle disabling trace over execution
+  const handleDisableTraceOverExecution = () => {
+    sendJson({
+      type: "EXECUTE_TRACE_OVER",
+      state: false
+    });
+    
+    setTraceOverStatus({
+      success: true,
+      message: "Trace over execution paused"
+    });
+    
+    // Clear status after 3 seconds
+    setTimeout(() => {
+      setTraceOverStatus(null);
+    }, 3000);
+  };
+
   return (
     <div className="trace-over-box">
       <h2>Trace Over</h2>
@@ -826,6 +862,18 @@ const TraceOverBox = () => {
             onClick={handleCancelExecution}
           >
             Cancel Execution
+          </button>
+          <button 
+            className="trace-button px-4 py-2 rounded text-white bg-green-500 hover:bg-green-600"
+            onClick={handleEnableTraceOverExecution}
+          >
+            Enable Trace Over Execution
+          </button>
+          <button 
+            className="trace-button px-4 py-2 rounded text-white bg-orange-500 hover:bg-orange-600"
+            onClick={handleDisableTraceOverExecution}
+          >
+            Disable Trace Over Execution
           </button>
         </div>
       </div>
