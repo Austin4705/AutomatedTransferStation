@@ -97,15 +97,15 @@ class Transfer_Functions:
                 current_x = bottom_x
             
                 for y in range(y_steps + 1):
-                    row_y = bottom_y - (y * travel["y"])
+                    row_y = bottom_y + (y * travel["y"])
                     points.append((current_x, row_y))
                 
                     # Generate points for this row
                     for x in range(1, x_steps + 1):
                         if going_right:
-                            next_x = current_x + travel["x"]
-                        else:
                             next_x = current_x - travel["x"]
+                        else:
+                            next_x = current_x + travel["x"]
                         points.append((next_x, row_y))
                         current_x = next_x
                 
@@ -117,8 +117,7 @@ class Transfer_Functions:
                 command_list.append([image_container.new_wafer])
                 command_list.append([Transfer_Functions.TRANSFER_STATION.moveXY, bottom_x, bottom_y]) # Add initial setup commands
                 command_list.append([Transfer_Functions.TRANSFER_STATION.wait, initial_wait_time]) # Initial wait
-                # command_list.append([Transfer_Functions.TRANSFER_STATION.autoFocus]) # Initial autofocus
-                # command_list.append([Transfer_Functions.TRANSFER_STATION.wait, focus_wait_time]) # Wait after autofocus
+                command_list.append([Transfer_Functions.TRANSFER_STATION.autoFocus]) # Initial autofocus
                 # Visit each point in the pattern
                 for x, y in points:
                     # Move to position
