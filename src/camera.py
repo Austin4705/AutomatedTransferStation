@@ -2,11 +2,12 @@ import cv2
 from datetime import datetime
 import os
 import numpy as np
-from cvFunctions import CVFunctions
+from cv_functions import CV_Functions
 import threading
 import time
 import weakref
 from socket_manager import Socket_Manager
+import transfer_functions
 
 class Camera:
     global_list = dict() #Global list of camera class objects
@@ -38,9 +39,20 @@ class Camera:
                     cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
                 else:
                     cap = cv2.VideoCapture(i)
+                
+                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
+                cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
 
                 # Try to read a test frame to verify the camera works
                 ret, test_frame = cap.read()
+                print(f"Frame shape: {test_frame.shape}")
+                fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
+                print(f"FourCC: {fourcc}")
+                fourcc_str = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
+                print(f"FourCC: {fourcc_str}")
+
                 if not ret or test_frame is None:
                     print(f"  Camera {i} opened but could not read frame, skipping")
                     cap.release()
@@ -222,9 +234,9 @@ class Camera:
     def snap_image(self):
         """Take a snapshot and store it"""
         frame = self.get_frame()
-        focus_score = CVFunctions.calculate_focus_score(frame)
-        has_enough_edges = CVFunctions.get_edge_count(frame)
-        color_ratio = CVFunctions.get_color_features(frame)
+        focus_score = CV_Functions.calculate_focus_score(frame)
+        has_enough_edges = CV_Functions.get_edge_count(frame)
+        color_ratio = CV_Functions.get_color_features(frame)
 
         # Add focus score text to the frame
         cv2.putText(
@@ -259,7 +271,7 @@ class Camera:
             return None
             
         try:
-            processed_frame = CVFunctions.matGMM2DTransform(frame)
+            processed_frame = CV_Functions.matGMM2DTransform(frame)
             with self.frame_lock:
                 self.snapshot_image_flake_hunted = processed_frame
             return self.snapshot_image_flake_hunted

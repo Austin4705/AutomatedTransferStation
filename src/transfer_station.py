@@ -1,7 +1,7 @@
 import time 
 from datetime import datetime
-from camera import Camera
-from cvFunctions import CVFunctions
+from cv_functions import CV_Functions
+import camera
 
 # The abstract class for a transfer station instance
 class Transfer_Station():
@@ -28,6 +28,8 @@ class Transfer_Station():
         self.receive_command_history = []
         self._last_received_index = -1  # Track the last index that was retrieved
         self._last_sent_index = -1  # Track the last sent index that was retrieved
+        self.camera_height = 1536
+        self.camera_width = 2048
 
     # Class method to get all subclass instances
     @classmethod
@@ -81,10 +83,10 @@ class Transfer_Station():
     def autoFocus(self, camera_index=0):
         print("Auto Focus-V")
         originalposZ = self.posZ()
-        current_frame = Camera.global_list[camera_index].get_frame()
-        # print(CVFunctions.get_color_features(current_frame))
-        # print(CVFunctions.exist_color_features(current_frame))
-        if not CVFunctions.exist_color_features(current_frame):
+        current_frame = camera.Camera.global_list[camera_index].get_frame()
+        # print(CV_Functions.get_color_features(current_frame))
+        # print(CV_Functions.exist_color_features(current_frame))
+        if not CV_Functions.exist_color_features(current_frame):
             print("Not enough edges to auto focus")
             return
         # Sample points on either side of current Z position
@@ -101,8 +103,8 @@ class Transfer_Station():
                 self.moveZ(z)
                 self.wait(0.1)
 
-                frame = Camera.global_list[camera_index].get_frame()
-                edge_count = CVFunctions.get_edge_count(frame)
+                frame = camera.Camera.global_list[camera_index].get_frame()
+                edge_count = CV_Functions.get_edge_count(frame)
                 edge_counts.append((z, edge_count))
             self.wait(0.5)
         
@@ -134,8 +136,8 @@ class Transfer_Station():
         while current_z >= lowest_z:
             self.moveZ(current_z)
             self.wait(0.04)
-            frame = Camera.global_list[camera_index].get_frame()
-            edge_count = CVFunctions.get_edge_count(frame)
+            frame = camera.Camera.global_list[camera_index].get_frame()
+            edge_count = CV_Functions.get_edge_count(frame)
             fine_edge_counts.append((current_z, edge_count))
             current_z -= fine_z_step
 

@@ -1,12 +1,12 @@
 from typing import Any, Dict, Callable
 import json
-from socket_manager import Socket_Manager
-from camera import Camera
 from transfer_station import Transfer_Station 
+import camera
 import threading
-from transfer_functions import TransferFunctions
+import transfer_functions
 from threading import Thread
 from image_container import Image_Container
+from socket_manager import Socket_Manager
 # Dictionary to store packet handlers
 _handlers: Dict[str, Callable] = {}
 def packet_handler(packet_type: str):
@@ -103,22 +103,22 @@ class PacketHandlers:
     def handle_trace_over(packet_type: str, data: dict):
         PacketCommander.send_message("Trace over request received. Creating a thread to run execution")
 
-        thread = threading.Thread(target=TransferFunctions.run_trace_over, args=(data,))
+        thread = threading.Thread(target=transfer_functions.Transfer_Functions.run_trace_over, args=(data,))
         thread.daemon = True
-        TransferFunctions.executing_threads[thread] = True
+        transfer_functions.Transfer_Functions.executing_threads[thread] = True
         thread.start()
 
     @packet_handler("EXECUTE_TRACE_OVER")
     def handle_execute_trace_over(packet_type: str, data: dict):
         PacketCommander.send_message(f"Executing trace over: {data['state']}")
-        TransferFunctions.EXECUTE_TRACE_OVER = data["state"]   
+        transfer_functions.Transfer_Functions.EXECUTE_TRACE_OVER = data["state"]   
 
     @packet_handler("CANCEL_EXECUTION")
     def handle_cancel_execution(packet_type: str, data: dict):
         PacketCommander.send_message(f"Cancelling execution of running operations")
         # Set the cancellation flag to stop running threads
-        for thread in TransferFunctions.executing_threads:
-            TransferFunctions.executing_threads[thread] = False
+        for thread in transfer_functions.Transfer_Functions.executing_threads:
+            transfer_functions.Transfer_Functions.executing_threads[thread] = False
             print(f"Thread {thread} signaled to stop")
         PacketCommander.send_message("All operations cancelled")
 
@@ -173,7 +173,7 @@ class PacketHandlers:
 
     @packet_handler("SNAP_SHOT")
     def handle_snap_shot(packet_type: str, data: dict):
-        Camera.global_list[data["camera"]].snap_image()
+        camera.Camera.global_list[data["camera"]].snap_image()
         print("Took Screenshot")
         Socket_Manager.send_all_json({
             "type": "REFRESH_SNAPSHOT",
@@ -182,7 +182,7 @@ class PacketHandlers:
 
     @packet_handler("SNAP_SHOT_FLAKE_HUNTED")
     def handle_snap_shot_flake_hunted(packet_type: str, data: dict):
-        Camera.global_list[data["camera"]].snap_image_flake_hunted()
+        camera.Camera.global_list[data["camera"]].snap_image_flake_hunted()
         print("Took Screenshot")
         Socket_Manager.send_all_json({
             "type": "REFRESH_SNAPSHOT_FLAKE_HUNTED",
