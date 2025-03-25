@@ -8,6 +8,10 @@ import time
 import weakref
 from socket_manager import Socket_Manager
 import transfer_functions
+import platform
+
+# if platform.system() == 'Windows':
+    # from tisgrabber.wrapper import ImageControl
 
 class Camera:
     global_list = dict() #Global list of camera class objects
@@ -40,23 +44,35 @@ class Camera:
                 else:
                     cap = cv2.VideoCapture(i)
                 
-                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+                # if transfer_functions.Transfer_Functions.TRANSFER_STATION.type == "hqGrapheneServer":
+                #     ic = ImageControl()
+                #     grabber = ic.create_grabber()
+                #     ic.load_device_from_file(grabber, "../camera_settings/cam_settings.ic_cam")
+                #     if(ic.is_dev_valid(grabber)):
+                #         ic.start_live(grabber)
+                #         ic.msg_box("Camera initialized", "Camera initialized successfully")
+                #         ic.stop_live(grabber)
+                #     else:
+                #         ic.msg_box("Camera initialization failed", "Camera initialization failed")
+                #     ic.release_grabber(grabber)
+                    # cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
-                # cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
+                time.sleep(3)
+                    # cap.set(cv2.CAP_PROP_CONVERT_RGB, 1)
 
                 # Try to read a test frame to verify the camera works
                 ret, test_frame = cap.read()
                 # Save the test frame to a file
-                timestamp = datetime.now().strftime(f"camera_{i}_test_%Y%m%d_%H%M%S.txt")
-                np.save(timestamp, test_frame)
+                # timestamp = datetime.now().strftime(f"camera_{i}_test_%Y%m%d_%H%M%S.txt")
+                # np.save(timestamp, test_frame)
 
 
-                print(f"Frame shape: {test_frame.shape}")
-                fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
-                print(f"FourCC: {fourcc}")
-                fourcc_str = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
-                print(f"FourCC: {fourcc_str}")
+                # print(f"Frame shape: {test_frame.shape}")
+                # fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
+                # print(f"FourCC: {fourcc}")
+                # fourcc_str = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
+                # print(f"FourCC: {fourcc_str}")
 
                 if not ret or test_frame is None:
                     print(f"  Camera {i} opened but could not read frame, skipping")
