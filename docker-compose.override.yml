@@ -1,0 +1,5 @@
+services:
+  omeroserver:
+    platform: linux/amd64
+  omeroweb:
+    platform: linux/amd64

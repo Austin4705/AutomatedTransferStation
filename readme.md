@@ -24,8 +24,12 @@ conda activate automatedTransfer
 cd /path/to/project
 pip install -r requirements.txt
 ```
+Omero-py has to be installed via conda as well
+```bash
+conda install -n automatedTransfer -c conda-forge omero-py --no-update-deps
+```
 
-### 2. Install 2DMatGMM
+### 2. Install Software
 The project requires the [2DMatGMM](https://github.com/Austin4705/2DMatGMM) library as a submodule. Either use the submoudle recurisve or git clone it. Note please use my forked version.
 ```bash
 # From the project root directory
@@ -34,6 +38,14 @@ git clone https://github.com/Austin4705/2DMatGMM
 
 pip install -e 2DMatGMM
 ```
+
+This project also uses OMERO for storing microscope data. You can get a running server by installing docker and docker compose and then running in this directory.
+```bash
+docker compose pull
+docker compose up -d
+```
+If you want to view data, login at `http://localhost:4080/` with usrname:password `root:omero`
+
 
 ### 3. Set up the Client
 ```bash

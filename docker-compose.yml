@@ -1,72 +1,53 @@
-version: '3.8'
-
 services:
-  automated-transfer-station:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      # Enable BuildKit for faster builds
-      args:
-        BUILDKIT_INLINE_CACHE: 1
-    image: automated-transfer-station:latest
-    container_name: transfer-station
-    
-    # Fast restart policy
-    restart: unless-stopped
-    
-    # Resource limits for consistent performance
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '1'
-          memory: 1G
-    
-    # Network ports
-    ports:
-      - "5000:5000"  # Flask server
-      - "8765:8765"  # WebSocket
-    
-    # Volume mounts for persistence and configuration
-    volumes:
-      - ./src/config.json:/app/src/config.json:ro
-      - ./contrastDictDir:/app/contrastDictDir:ro
-      - ./shared:/app/shared:ro
-      # Uncomment if you need camera access (Linux only)
-      # - /dev:/dev
-    
-    # Environment variables
+
+  database:
+    image: "postgres:16"
     environment:
-      - PYTHONUNBUFFERED=1
-      - FLASK_ENV=production
-      - FLASK_HOST=0.0.0.0
-    
-    # Privileged mode for hardware access (uncomment if needed)
-    # privileged: true
-    
-    # Device access for cameras (Linux only, uncomment if needed)
-    # devices:
-    #   - /dev/bus/usb:/dev/bus/usb
-    
-    # Health check
-    healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 5000)); s.close()"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-    
-    # Logging configuration for better debugging
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      POSTGRES_USER: omero
+      POSTGRES_DB: omero
+      POSTGRES_PASSWORD: omero
+      POSTGRES_HOST_AUTH_METHOD: trust
+    networks:
+      - omero
+    volumes:
+      - "database:/var/lib/postgresql/data"
 
-# Optional: Add a network for better isolation
+  omeroserver:
+    # This container uses the tag for the latest server release of OMERO 5
+    # To upgrade to the next major release, increment the major version number
+    image: "openmicroscopy/omero-server:5"
+    environment:
+      CONFIG_omero_db_host: database
+      CONFIG_omero_db_user: omero
+      CONFIG_omero_db_pass: omero
+      CONFIG_omero_db_name: omero
+      ROOTPASS: omero
+    networks:
+      - omero
+    ports:
+      - "4063:4063"
+      - "4064:4064"
+    volumes:
+      - "omero:/OMERO"
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 65536
+
+  omeroweb:
+    # This container uses the tag for the latest web release of OMERO 5
+    # To upgrade to the next major release, increment the major version number
+    image: "openmicroscopy/omero-web-standalone:5"
+    environment:
+      OMEROHOST: omeroserver
+    networks:
+      - omero
+    ports:
+      - "4080:4080"
+
 networks:
-  default:
-    name: transfer-station-network
+  omero:
 
+volumes:
+  database:
+  omero:
