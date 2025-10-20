@@ -1,0 +1,94 @@
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+CVTestingEnv/
+conda/
+.conda/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Testing and development
+*.ipynb
+*.ipynb_checkpoints/
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+test/
+
+# Documentation and images (unless needed)
+*.md
+README*
+LICENSE
+doc/
+docs/
+*.svg
+*.png
+*.jpg
+*.jpeg
+*.gif
+etc/
+
+# Node modules and client (if not needed in backend container)
+node_modules/
+client/
+package*.json
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs and data
+*.log
+logs/
+*.db
+*.sqlite
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Development files
+demo/
+plots/
+New folder/
+thorcam-master/
+thorlabs_tsi_sdk-0.0.8/
+
+# Batch and shell scripts
+*.bat
+*.sh
+
+# Jupyter and notebooks
+*.ipynb
+Interactive_*.ipynb
+
+# Temporary files
+*.tmp
+*.temp
+lextab.py
+yacctab.py
+
