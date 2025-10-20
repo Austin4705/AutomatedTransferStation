@@ -6,6 +6,7 @@ import atexit
 import gc
 import time
 import datetime
+import os
 
 app = Flask(__name__)
 # Track active streams to ensure proper cleanup
@@ -30,9 +31,10 @@ def startup_flask_app():
 
     # Start the Flask app - use processes=1 to avoid multiprocessing issues
     # Use 0.0.0.0 for Docker compatibility, 127.0.0.1 for local development
-    import os
+    port = os.environ.get('FLASK_PORT', '5000')
     host = os.environ.get('FLASK_HOST', '127.0.0.1')
-    app.run(host=host, port="5000", debug=False, use_reloader=False, threaded=True)
+    print(f"Starting Flask app on {host}:{port}")
+    app.run(host=host, port=port, debug=False, use_reloader=False, threaded=True)
 
 def cleanup_resources():
     """Clean up any resources when the application exits"""

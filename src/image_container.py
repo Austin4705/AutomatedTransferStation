@@ -6,10 +6,10 @@ from multiprocessing import Pool
 import cv2
 import camera
 from transfer_station import Transfer_Station
-from cv_functions import CV_Functions
+# from cv_functions import CV_Functions
+# from GMMDetector.structures import Flake
 import packet_handlers
-from GMMDetector.structures import Flake
-
+# 
 class Image_Container:
     """
     This class is used to store images.
@@ -143,7 +143,8 @@ class Image_Container:
 
         image_data = self.load_image(image_name, data["wafer_id"])
         # Run CV search
-        flake_data = CV_Functions.run_searching(image_data)
+        # flake_data = CV_Functions.run_searching(image_data)
+        flake_data = []
         if flake_data.any():
             print(f"Found {len(flake_data)} flakes in image {image_name}")
         else:
@@ -157,51 +158,53 @@ class Image_Container:
             print(f"Scanned counter is {self.scanned_counter} out of {len(self.metadata['wafers'][self.wafer_counter-1])}")
 
     def generate_image_output(self):
-        for image_metadata in self.metadata.get("searched"):
-            image = self.load_image(image_metadata["name"], image_metadata["wafer_id"])
-            flakes = [
-                Flake(
-                    thickness=flake.get("thickness"),
-                    size=flake.get("size"), 
-                    false_positive_probability=flake.get("false_positive_probability"),
-                    center=flake.get("center"),
-                    mask=cv2.imread(os.path.join(self.directory_flake_masks, flake.get("mask")), cv2.IMREAD_GRAYSCALE),
-                    max_sidelength=flake.get("max_sidelength"),  # Default values for required parameters
-                    min_sidelength=flake.get("min_sidelength"),  # Default values for required parameters
-                    mean_contrast=flake.get("mean_contrast")  #
-                )
-                for flake in image_metadata.get("flakes", [])
-            ]
-            image_data = CV_Functions.visualise_flakes(flakes, image, 0.5)
-            # Add wafer and position text
-            cv2.putText(
-                image_data,
-                f"Wafer: {image_metadata['wafer_id']}", 
-                (image_data.shape[1] - 300, 30),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (255, 255, 255),
-                2
-            )
-            cv2.putText(
-                image_data,
-                f"Image Number: {image_metadata['image_id']}", 
-                (image_data.shape[1] - 300, 60),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (255, 255, 255),
-                2
-            )
-            cv2.putText(
-                image_data,
-                f"x: {image_metadata['x']} y: {image_metadata['y']}", 
-                (image_data.shape[1] - 300, 90),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (255, 255, 255),
-                2
-            )
-            cv2.imwrite(os.path.join(self.directory_searched, image_metadata["name"]), image_data)
+        pass
+        # for image_metadata in self.metadata.get("searched"):
+        #     image = self.load_image(image_metadata["name"], image_metadata["wafer_id"])
+        #     flakes = [
+        #         Flake(
+        #             thickness=flake.get("thickness"),
+        #             size=flake.get("size"), 
+        #             false_positive_probability=flake.get("false_positive_probability"),
+        #             center=flake.get("center"),
+        #             mask=cv2.imread(os.path.join(self.directory_flake_masks, flake.get("mask")), cv2.IMREAD_GRAYSCALE),
+        #             max_sidelength=flake.get("max_sidelength"),  # Default values for required parameters
+        #             min_sidelength=flake.get("min_sidelength"),  # Default values for required parameters
+        #             mean_contrast=flake.get("mean_contrast")  #
+        #         )
+        #         for flake in image_metadata.get("flakes", [])
+        #     ]
+        #     # image_data = CV_Functions.visualise_flakes(flakes, image, 0.5)
+        #     image_data = image
+        #     # Add wafer and position text
+        #     cv2.putText(
+        #         image_data,
+        #         f"Wafer: {image_metadata['wafer_id']}", 
+        #         (image_data.shape[1] - 300, 30),
+        #         cv2.FONT_HERSHEY_SIMPLEX,
+        #         1,
+        #         (255, 255, 255),
+        #         2
+        #     )
+        #     cv2.putText(
+        #         image_data,
+        #         f"Image Number: {image_metadata['image_id']}", 
+        #         (image_data.shape[1] - 300, 60),
+        #         cv2.FONT_HERSHEY_SIMPLEX,
+        #         1,
+        #         (255, 255, 255),
+        #         2
+        #     )
+        #     cv2.putText(
+        #         image_data,
+        #         f"x: {image_metadata['x']} y: {image_metadata['y']}", 
+        #         (image_data.shape[1] - 300, 90),
+        #         cv2.FONT_HERSHEY_SIMPLEX,
+        #         1,
+        #         (255, 255, 255),
+        #         2
+        #     )
+        #     cv2.imwrite(os.path.join(self.directory_searched, image_metadata["name"]), image_data)
 
     def show_images(self):
         for image in self.metadata["searched"]:
