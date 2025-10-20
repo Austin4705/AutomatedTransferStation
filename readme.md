@@ -26,11 +26,11 @@ pip install -r requirements.txt
 ```
 
 ### 2. Install 2DMatGMM
-The project requires the [2DMatGMM](https://github.com/Jaluus/2DMatGMM) library as a submodule. Either use the submoudle recurisve or git clone it
+The project requires the [2DMatGMM](https://github.com/Austin4705/2DMatGMM) library as a submodule. Either use the submoudle recurisve or git clone it. Note please use my forked version.
 ```bash
 # From the project root directory
 git submodule update --init --recursive
-git clone https://github.com/Jaluss/2DMatGMM
+git clone https://github.com/Austin4705/2DMatGMM
 
 pip install -e 2DMatGMM
 ```
@@ -41,13 +41,16 @@ cd client
 npm install
 ```
 
-### 4. Configure Environment Variables
+### 4. Configure Specifci Environment 
 Create a `config.json` file in the project root directory with the following content:
 ```plaintext
 {
     "transfer_station": "hqGrapheneServer"
 }
 ```
+Now if you are using a hq graphene transfer station, do a couple things. Ensure the software is updated to the latest version, it should have the latest version of the command server. Ensure that (the imaging source drivers)[https://www.theimagingsource.com/en-us/support/download/icwdmuvccamtis33u-5.3.0.2793/] are properly installed
+
+
 (Or "base" if you want to do the virtual ones). Adjust the port values according to your setup.
 
 Well also need to install PYVisa. You can do this at the ni website it is free you just have to make an account
@@ -55,6 +58,8 @@ Well also need to install PYVisa. You can do this at the ni website it is free y
 ## Running the Application
 
 ### Start the Backend Server
+If on a hq graphene system ensure that the software is started and then goto file -> run command server 
+
 ```bash
 # From the project root
 cd src
@@ -100,14 +105,15 @@ For questions or contributions, please contact the Yasuda Lab at Cornell.
 [Add your license information here]
 
 ## TODO and BUGS
-    -Get the program controlling the transfer station
-    -Get image container
+    -Get the program controlling the other transfer station (get upstairs transfer station working)
     -Get the flake hunting algorithm working
+    -Far away: get theta detection and outlining for flakes
     
-    -flake hunting poll without button
-    -Get position to auto initilize
-    -Kill all tasks program
 ## Done:
-    -Parse the json on the server side, start up a extraneous thread that runs the transfer program and then closes
     - Fix bug with commands and such not sending properly from the queue (seems to be working?)
+    Get position to auto initalize 
+    -button to auto scan and draw
+    -log is broken
+    -flake hunting poll without button
+    -get re-localization feature working
 

@@ -2,11 +2,16 @@ import cv2
 from datetime import datetime
 import os
 import numpy as np
-from cvFunctions import CVFunctions
+from cv_functions import CV_Functions
 import threading
 import time
 import weakref
 from socket_manager import Socket_Manager
+import transfer_functions
+import platform
+
+# if platform.system() == 'Windows':
+    # from tisgrabber.wrapper import ImageControl
 
 class Camera:
     global_list = dict() #Global list of camera class objects
@@ -39,8 +44,14 @@ class Camera:
                 else:
                     cap = cv2.VideoCapture(i)
 
-                # Try to read a test frame to verify the camera works
+                # Set the resolution to the transfer station's resolution
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
                 ret, test_frame = cap.read()
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
+             
+
                 if not ret or test_frame is None:
                     print(f"  Camera {i} opened but could not read frame, skipping")
                     cap.release()
@@ -140,7 +151,7 @@ class Camera:
         """Background thread to continuously capture frames"""
         last_error_time = 0
         error_count = 0
-        
+
         while self.is_active:
             try:
                 if not hasattr(self, 'video') or self.video is None or not self.video.isOpened():
@@ -149,6 +160,7 @@ class Camera:
                 
                 # Capture frame
                 ret, frame = self.video.read()
+
                 if not ret:
                     # Limit error logging to avoid flooding
                     current_time = time.time()
@@ -218,11 +230,13 @@ class Camera:
         except Exception as e:
             print(f"Error saving image: {e}")
 
+
     def snap_image(self):
         """Take a snapshot and store it"""
         frame = self.get_frame()
-        with self.frame_lock:
-            self.snapshot_image = frame
+
+
+        self.snapshot_image = frame
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
         return self.snapshot_image
 
@@ -234,7 +248,7 @@ class Camera:
             return None
             
         try:
-            processed_frame = CVFunctions.matGMM2DTransform(frame)
+            processed_frame = CV_Functions.matGMM2DTransform(frame)
             with self.frame_lock:
                 self.snapshot_image_flake_hunted = processed_frame
             return self.snapshot_image_flake_hunted
@@ -257,6 +271,30 @@ class Camera:
             blank_image = np.zeros((480, 640, 3), np.uint8)
             ret, png = cv2.imencode(".jpg", blank_image)
         else:
+            focus_score = CV_Functions.calculate_focus_score(frame)
+            has_enough_edges = CV_Functions.get_edge_count(frame)
+            color_ratio = CV_Functions.get_color_features(frame)
+
+            # Add focus score text to the frame
+            cv2.putText(
+                frame,
+                f"Focus Score: {focus_score:.2f} {has_enough_edges}",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 255),  # White text
+                2  # Thickness
+            )
+
+            cv2.putText(
+                frame,
+                f"Color Ratio: {color_ratio:.2f}",
+                (10, 60),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (255, 255, 255),  # White text
+                2  # Thickness
+            )
             ret, png = cv2.imencode(".jpg", frame)
             
         return (

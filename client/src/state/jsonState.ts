@@ -10,6 +10,7 @@ export interface jsonWS {
   lastRawMessage: string | null;
   readyState: ReadyState;
   sendJsonMessage: SendJsonMessage | null;
+  getWebSocket?: () => WebSocket | null;
 }
 
 export const jsonStateAtom = atom<jsonWS>({
@@ -18,6 +19,7 @@ export const jsonStateAtom = atom<jsonWS>({
     lastJsonMessage: null,
     lastRawMessage: null,
     readyState: ReadyState.CLOSED,
-    sendJsonMessage: null
+    sendJsonMessage: null,
+    getWebSocket: null
   },
 });

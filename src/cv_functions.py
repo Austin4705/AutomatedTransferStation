@@ -4,26 +4,30 @@ import numpy as np
 import matplotlib.cm as cm
 import json
 
-class CVFunctions:
+class CV_Functions:
 
     contrast_dict = json.load(open("../contrastDictDir/Graphene_GMM.json", "r"))
 
     def __init__(self) -> None:
-        self.mockImage = cv2.imread("mockImage.png")
-        CVFunctions.matGMM2DTransform(self.mockImage)
+        self.mockImage = np.zeros((512, 512, 3), dtype=np.uint8)
+        CV_Functions.matGMM2DTransform(self.mockImage)
 
-    def matGMM2DTransform(img):
-        CONFIDENCE_THRESHOLD = 0.5
-
+    def run_searching(img):
         model = MaterialDetector(
-            contrast_dict=CVFunctions.contrast_dict,
+            contrast_dict=CV_Functions.contrast_dict,
             size_threshold=500,
             standard_deviation_threshold=5,
             used_channels="BGR",
         )
 
         flakes = model.detect_flakes(img)
-        image = CVFunctions.visualise_flakes(
+        return flakes
+
+    def matGMM2DTransform(img):
+        flakes = CV_Functions.run_searching(img)
+
+        CONFIDENCE_THRESHOLD = 0.5
+        image = CV_Functions.visualise_flakes(
             flakes,
             img,
             confidence_threshold=CONFIDENCE_THRESHOLD,
@@ -76,7 +80,8 @@ class CVFunctions:
             cv2.line(result, maxY, minX, [0, 255, 0], 10)
             # print(f"{minX}, {minY}, {maxX}, {maxY}")
             return minX, minY, maxX, maxY
-    def visualise_flakes(flakes, image: np.ndarray,confidence_threshold: float = 0.5,) -> np.ndarray:
+            
+    def visualise_flakes(flakes, image: np.ndarray, confidence_threshold: float = 0.5,) -> np.ndarray:
         """Visualise the flakes on the image.
 
         Args:
@@ -126,23 +131,29 @@ class CVFunctions:
 
         return image
 
+    def calculate_focus_score(image):
+        image_filtered = cv2.GaussianBlur(image, (9, 9), 0)
+        laplacian = cv2.Laplacian(image_filtered, cv2.CV_64F)
+        focus_score = laplacian.var()
+        return focus_score
 
-    def remove_vignette(
-        image,
-        flatfield,
-        max_background_value: int = 241,
-    ):
-        """Removes the Vignette from the Image
 
-        Args:
-            image (NxMx3 Array): The Image with the Vignette
-            flatfield (NxMx3 Array): the Flat Field in RGB
-            max_background_value (int): the maximum value of the background
+    def get_edge_count(image):
+        edges = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(edges, 100, 200) 
+        return np.sum(edges > 30)
 
-        Returns:
-            (NxMx3 Array): The Image without the Vignette
-        """
-        image_no_vigentte = image / flatfield * cv2.mean(flatfield)[:-1]
-        image_no_vigentte[image_no_vigentte > max_background_value] = max_background_value
-        return np.asarray(image_no_vigentte, dtype=np.uint8)
 
+    def get_color_features(image, saturation_threshold=40):
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        sat = hsv[:, :, 1]
+        color_mask  = sat > saturation_threshold
+        colorful_pixels = np.count_nonzero(color_mask)
+        total_pixels = image.shape[0] * image.shape[1]
+
+        color_ratio = colorful_pixels / total_pixels
+        return color_ratio
+    
+    def exist_color_features(image, ratio_threshold=0.01):
+        color_ratio = CV_Functions.get_color_features(image)
+        return color_ratio >= ratio_threshold

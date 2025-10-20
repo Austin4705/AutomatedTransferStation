@@ -1,0 +1,3 @@
+[submodule "2DMatGMM"]
+	path = 2DMatGMM
+	url = https://github.com/Austin4705/2DMatGMM

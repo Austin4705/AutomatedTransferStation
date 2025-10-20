@@ -49,6 +49,16 @@
         "JSON": "string"
       }
     }, 
+    "EXECUTE_TRACE_OVER":{
+      "fields":{
+        "state": "boolean"
+      }
+    },
+    "LED_STATUS":{
+      "fields":{
+        "status": "boolean"
+      }
+    },
     "SNAP_SHOT":{
       "fields":{
         "camera": "int"
@@ -69,6 +79,38 @@
         "camera": "int"
       }
     },
+    "SCAN_FLAKES": {
+      "fields": {
+        "directory": "string"
+      }
+    },
+    "DRAW_FLAKES": {
+      "fields": {
+        "directory": "string"
+      }
+    },
+    "DRAW_FLAKES_RESPONSE": {
+      "fields": {
+        "response": "string"
+      }
+    },
+    "SCAN_FLAKES_RESPONSE": {
+      "fields": {
+        "response": "string"
+      }
+    },
+    "GOTO_WAFER_IMAGE": {
+      "fields": {
+        "bottomLeftXOffset": "float",
+        "bottomLeftYOffset": "float",
+        "topRightXOffset": "float",
+        "topRightYOffset": "float",
+        "waferNumber": "int",
+        "imageNumber": "int",
+        "directory": "string"
+      }
+    },
+    
 
     "MESSAGE":{
       "fields":{
