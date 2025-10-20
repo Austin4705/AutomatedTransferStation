@@ -1,5 +1,6 @@
 opencv-python
 aiortc
+aiohttp
 flask
 websockets
 pyserial
