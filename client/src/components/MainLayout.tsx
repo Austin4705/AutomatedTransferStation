@@ -8,7 +8,14 @@ const MainLayout = () => {
     <div className="app-container">
       <header className="app-header">
         <div className="flex items-center">
-          <h1>Automated Transfer Station</h1>
+          <div className="flex items-center">
+            <h1>Automated Transfer Station</h1>
+            <span className="mx-2 text-gray-300">|</span>
+            <div className="flex flex-col" style={{ textAlign: 'left' }}>
+              <span className="text-sm text-gray-300">Yasuda Lab - Cornell University</span>
+              <span className="text-sm text-gray-300">by Austin Wu</span>
+            </div>
+          </div>
           <HeaderPositionDisplay />
         </div>
         <ConnectionStatus />

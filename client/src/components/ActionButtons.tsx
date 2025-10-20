@@ -1,5 +1,5 @@
 import { useSendJSON } from "../hooks/useSendJSON";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 // Create a global event for refreshing streams
 // This allows components to communicate without direct props
@@ -16,9 +16,19 @@ const refreshAllStreams = () => {
   window.dispatchEvent(event);
 };
 
+// Extend the HTMLInputElement interface to include webkitdirectory
+declare global {
+  interface HTMLInputElement {
+    webkitdirectory: boolean;
+    directory: string;
+  }
+}
+
 const ActionButtons = () => {
   const sendJson = useSendJSON();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedDirectory, setSelectedDirectory] = useState<string>("");
+  const directoryInputRef = useRef<HTMLInputElement>(null);
 
   const handleSnap = (snapNumber: number) => {
     sendJson({
@@ -62,6 +72,56 @@ const ActionButtons = () => {
     setTimeout(() => {
       setIsRefreshing(false);
     }, 2000);
+  };
+
+  // Trigger directory input click
+  const handleDirectorySelectClick = () => {
+    if (directoryInputRef.current) {
+      directoryInputRef.current.click();
+    }
+  };
+
+  // Handle directory selection
+  const handleDirectoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    // Get the directory path
+    // Note: Due to security restrictions, we can only get the file name, not the full path
+    // We'll use webkitRelativePath to get the directory structure
+    const directory = files[0].webkitRelativePath.split('/')[0];
+    setSelectedDirectory(directory);
+    
+    // Reset the file input so the same directory can be selected again
+    event.target.value = '';
+  };
+
+  // Handle scan flakes button click
+  const handleScanFlakes = () => {
+    if (!selectedDirectory) {
+      alert("Please select a directory first");
+      return;
+    }
+    
+    // Send the scan flakes packet with the selected directory
+    sendJson({
+      type: "SCAN_FLAKES",
+      directory: selectedDirectory
+    });
+  };
+
+  // Handle draw flakes button click
+  const handleDrawFlakes = () => {
+    if (!selectedDirectory) {
+      alert("Please select a directory first");
+      return;
+    }
+    
+    // Send the draw flakes packet with the selected directory
+    sendJson({
+      type: "DRAW_FLAKES",
+      directory: selectedDirectory
+    });
   };
 
   return (
@@ -119,7 +179,7 @@ const ActionButtons = () => {
       </div>
 
       <div className="button-section">
-        <h3 className="text-sm font-medium mb-2">Refresh Streams</h3>
+        {/* <h3 className="text-sm font-medium mb-2">Refresh Streams</h3>
         <div className="button-group flex flex-wrap gap-2">
           <button 
             onClick={handleRefreshAll}
@@ -206,7 +266,7 @@ const ActionButtons = () => {
             </svg>
             Refresh Flake Hunted
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

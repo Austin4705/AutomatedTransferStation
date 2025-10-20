@@ -24,6 +24,10 @@ def startup_flask_app():
     # Register cleanup function to run at exit
     atexit.register(cleanup_resources)
     
+    for camera in Camera.global_list.values():
+        camera.snap_image()
+        camera.snap_image_flake_hunted()
+
     # Start the Flask app - use processes=1 to avoid multiprocessing issues
     # Use 0.0.0.0 for Docker compatibility, 127.0.0.1 for local development
     import os
@@ -94,7 +98,7 @@ def create_video_feed_route(camera_id):
             for sid in list(active_streams.keys()):
                 if sid.startswith(f"video_{camera_id}_") and sid != stream_id:
                     active_streams[sid]['active'] = False
-                    print(f"Closing previous stream {sid} for camera {camera_id}")
+                    # print(f"Closing previous stream {sid} for camera {camera_id}")
         
         # Register this stream with additional information
         with stream_lock:
@@ -107,7 +111,7 @@ def create_video_feed_route(camera_id):
         def generate():
             try:
                 # Log when stream opens
-                print(f"Video stream {stream_id} opened for camera {camera_id}")
+                # print(f"Video stream {stream_id} opened for camera {camera_id}")
                 
                 # Get the camera
                 camera = Camera.global_list.get(camera_id)
@@ -148,7 +152,7 @@ def create_video_feed_route(camera_id):
                 with stream_lock:
                     if stream_id in active_streams:
                         del active_streams[stream_id]
-                print(f"Video feed {stream_id} closed")
+                # print(f"Video feed {stream_id} closed")
         
         return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
     

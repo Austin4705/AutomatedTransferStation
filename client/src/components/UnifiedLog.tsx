@@ -3,7 +3,6 @@ import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
 import { useSendJSON } from "../hooks/useSendJSON";
 import { PacketManager } from "../packets/PacketHandler";
-import { estimatePacketSize } from "../state/packetTrafficState";
 
 // Maximum number of log entries to keep
 const MAX_LOG_ENTRIES = 1000;
@@ -39,13 +38,6 @@ interface ResponseMessage extends BaseMessage {
   responses?: Array<{timestamp?: number; response?: string}>;
 }
 
-// Common packet types that might not be in definitions
-const COMMON_PACKET_TYPES: string[] = [];
-// ["COMMAND", "REQUEST_POSITION", "SEND_COMMAND", "TRACE_OVER", "SNAP_SHOT", "REQUEST_LOG_COMMANDS", "REQUEST_LOG_RESPONSE"];
-
-// Common outgoing message types
-const COMMON_OUTGOING_TYPES: string[] = [];
-// ["COMMAND", "REQUEST_POSITION", "SEND_COMMAND", "TRACE_OVER", "SNAP_SHOT", "REQUEST_LOG_COMMANDS", "REQUEST_LOG_RESPONSE"];
 
 const UnifiedLog = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -55,6 +47,11 @@ const UnifiedLog = () => {
   const [selectedPacketTypes, setSelectedPacketTypes] = useState<Set<string>>(new Set());
   const [selectedOutgoingTypes, setSelectedOutgoingTypes] = useState<Set<string>>(new Set());
   const [definedPacketTypes, setDefinedPacketTypes] = useState<string[]>([]);
+  const [autoScroll, setAutoScroll] = useState<boolean>(() => {
+    // Try to get the setting from localStorage, default to true
+    const savedSetting = localStorage.getItem('log-auto-scroll');
+    return savedSetting !== null ? savedSetting === 'true' : true;
+  });
   const jsonState = useRecoilValue(jsonStateAtom);
   const sendJson = useSendJSON();
   const logContentRef = useRef<HTMLDivElement>(null);
@@ -63,6 +60,67 @@ const UnifiedLog = () => {
   const lastProcessedMessageRef = useRef<any>(undefined);
   // Add a ref to track if logs were manually cleared
   const logsManuallyCleared = useRef<boolean>(false);
+  // Add a cooldown period after clearing logs
+  const clearCooldownRef = useRef<boolean>(false);
+  // Add a message deduplication cache
+  const recentMessagesRef = useRef<Set<string>>(new Set());
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  // Add state to track if certain log types should be hidden completely
+  const [hiddenLogTypes, setHiddenLogTypes] = useState<Set<LogType>>(new Set());
+
+  // Update localStorage when auto-scroll setting changes
+  useEffect(() => {
+    localStorage.setItem('log-auto-scroll', autoScroll.toString());
+  }, [autoScroll]);
+
+  // Listen for logs-visibility-changed event
+  useEffect(() => {
+    const handleLogsVisibilityEvent = (event: CustomEvent) => {
+      const newHiddenLogTypes = new Set(hiddenLogTypes);
+      
+      if (event.detail) {
+        // If commandLogs is false, hide command logs
+        if (event.detail.commandLogs === false) {
+          newHiddenLogTypes.add("command");
+        } else if (event.detail.commandLogs === true) {
+          newHiddenLogTypes.delete("command");
+        }
+        
+        // If responseLogs is false, hide response logs
+        if (event.detail.responseLogs === false) {
+          newHiddenLogTypes.add("response");
+        } else if (event.detail.responseLogs === true) {
+          newHiddenLogTypes.delete("response");
+        }
+        
+        setHiddenLogTypes(newHiddenLogTypes);
+        
+        // Update visible log types
+        const newVisibleLogTypes = new Set(visibleLogTypes);
+        if (event.detail.commandLogs === false) {
+          newVisibleLogTypes.delete("command");
+        } else if (event.detail.commandLogs === true) {
+          newVisibleLogTypes.add("command");
+        }
+        
+        if (event.detail.responseLogs === false) {
+          newVisibleLogTypes.delete("response");
+        } else if (event.detail.responseLogs === true) {
+          newVisibleLogTypes.add("response");
+        }
+        
+        setVisibleLogTypes(newVisibleLogTypes);
+      }
+    };
+    
+    // Add event listener
+    document.addEventListener('logs-visibility-changed', handleLogsVisibilityEvent as EventListener);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener('logs-visibility-changed', handleLogsVisibilityEvent as EventListener);
+    };
+  }, [hiddenLogTypes, visibleLogTypes]);
 
   // Load packet definitions from document
   useEffect(() => {
@@ -70,6 +128,12 @@ const UnifiedLog = () => {
       if (packetDefsLoaded.current) return;
       
       try {
+        // Initialize packet manager if needed
+        if (!PacketManager.isInitialized()) {
+          console.log("Initializing packet manager from UnifiedLog...");
+          await PacketManager.initialize();
+        }
+        
         // Load packet definitions from the shared directory
         const response = await fetch('/shared/packet_definitions.json');
         
@@ -82,9 +146,10 @@ const UnifiedLog = () => {
         // Extract packet types from definitions
         const packetTypes = Object.keys(packetDefs.packets || {});
         
-        // Combine with common packet types
-        const allPacketTypes = [...new Set([...packetTypes, ...COMMON_PACKET_TYPES])].sort();
+        // Create the allPacketTypes array for use throughout the component
+        const allPacketTypes = packetTypes;
         
+        // Combine with common packet types
         setDefinedPacketTypes(allPacketTypes);
         
         // Initialize all packet types as selected
@@ -98,16 +163,6 @@ const UnifiedLog = () => {
         console.log("Loaded packet types from definitions:", allPacketTypes);
       } catch (error) {
         console.error('Failed to load packet definitions:', error);
-        // Fallback to common packet types
-        setDefinedPacketTypes(COMMON_PACKET_TYPES);
-        
-        // Initialize all packet types as selected
-        setSelectedPacketTypes(new Set(COMMON_PACKET_TYPES));
-        
-        // Use the same packet types for outgoing messages
-        setSelectedOutgoingTypes(new Set(COMMON_PACKET_TYPES));
-        
-        packetDefsLoaded.current = true;
       }
     };
     
@@ -144,14 +199,53 @@ const UnifiedLog = () => {
 
   // Helper function to add logs while respecting the maximum limit
   const addLogs = (newLogs: LogEntry[], replace = false) => {
+    // Skip if we're in a cooldown period after clearing
+    if (clearCooldownRef.current) {
+      // console.log("Skipping log addition during cooldown period");
+      return;
+    }
+    
+    // Deduplicate logs before adding them
+    const uniqueLogs = newLogs.filter(newLog => {
+      // Create a unique key for this log
+      const logKey = `${newLog.type}-${newLog.packetType}-${newLog.message}`;
+      
+      // Check if we've seen this message recently
+      if (recentMessagesRef.current.has(logKey)) {
+        // console.log("Preventing duplicate log:", logKey);
+        return false;
+      }
+      
+      // Add to recent messages cache
+      recentMessagesRef.current.add(logKey);
+      
+      // Limit the size of the cache to prevent memory leaks
+      if (recentMessagesRef.current.size > 1000) {
+        const oldestKey = Array.from(recentMessagesRef.current)[0];
+        recentMessagesRef.current.delete(oldestKey);
+      }
+      
+      return true;
+    });
+    
+    // Only proceed if there are unique logs to add
+    if (uniqueLogs.length === 0) {
+      return;
+    }
+    
     setLogs(prevLogs => {
       // If replacing logs of a specific type, filter out that type first
       const filteredLogs = replace 
-        ? prevLogs.filter(log => !newLogs.some(newLog => newLog.type === log.type))
+        ? prevLogs.filter(log => log.type !== uniqueLogs[0]?.type) // Filter by type directly
         : prevLogs;
       
+      // Log what's happening for debugging
+      if (replace) {
+        console.log(`Replacing ${prevLogs.filter(log => log.type === uniqueLogs[0]?.type).length} ${uniqueLogs[0]?.type} logs with ${uniqueLogs.length} new logs`);
+      }
+      
       // Combine existing and new logs
-      const combinedLogs = [...filteredLogs, ...newLogs];
+      const combinedLogs = [...filteredLogs, ...uniqueLogs];
       
       // Trim to maximum size if needed
       return combinedLogs.length > MAX_LOG_ENTRIES 
@@ -198,27 +292,72 @@ const UnifiedLog = () => {
       // Determine if this is an unknown packet type
       const isUnknown = !PacketManager.isKnownPacketType(packetInfo.type);
       
+      // Determine the log type based on packet type
+      let logType: "command" | "response" | "packet" = "packet";
+      
+      // Check if this is a command packet
+      if (packetInfo.type === "COMMAND" || 
+          (packetInfo.data && (packetInfo.data.command || 
+          (Array.isArray(packetInfo.data.commands) && packetInfo.data.commands.length > 0)))) {
+        logType = "command";
+      }
+      // Check if this is a response packet
+      else if (packetInfo.type === "RESPONSE" || 
+               packetInfo.type === "COMMAND_RESULT" || 
+               packetInfo.type === "ERROR" ||
+               packetInfo.type === "RESPONSE_LOG_RESPONSE" ||
+               (packetInfo.data && (packetInfo.data.response || packetInfo.data.message ||
+               (Array.isArray(packetInfo.data.responses) && packetInfo.data.responses.length > 0)))) {
+        logType = "response";
+      }
+      
+      // Create a message content based on the log type
+      let messageContent: string;
+      if (logType === "command") {
+        // For commands, show the command content if available
+        messageContent = packetInfo.data && packetInfo.data.command 
+          ? packetInfo.data.command
+          : rawPacket;
+      } else if (logType === "response") {
+        // For responses, show the response content if available
+        messageContent = packetInfo.data && (packetInfo.data.response || packetInfo.data.message)
+          ? (packetInfo.data.response || packetInfo.data.message)
+          : rawPacket;
+      } else {
+        // For regular packets, show the raw packet
+        messageContent = rawPacket;
+      }
+      
       const newEntry: LogEntry = {
         timestamp: new Date(packetInfo.timestamp).toLocaleString(),
-        message: rawPacket,
-        type: "packet",
+        message: messageContent,
+        type: logType, // Use the determined log type
         rawData: packetInfo.data,
         size: packetInfo.size,
         packetType: packetInfo.type,
         isUnknown
       };
       
-      // Add the new entry immediately to the logs
-      setLogs(prevLogs => {
-        const newLogs = [...prevLogs, newEntry];
-        // Trim to maximum size if needed
-        return newLogs.length > MAX_LOG_ENTRIES 
-          ? newLogs.slice(newLogs.length - MAX_LOG_ENTRIES) 
-          : newLogs;
-      });
+      // Create a unique key for this packet to check for duplication
+      const packetKey = `${logType}-${packetInfo.type}-${packetInfo.timestamp}`;
       
-      // Scroll to bottom to show the new entry
-      scrollToBottom();
+      // Check if this entry would be a duplicate
+      const isDuplicate = logs.some(log => 
+        log.type === logType && 
+        log.packetType === packetInfo.type && 
+        log.timestamp === newEntry.timestamp
+      );
+      
+      if (!isDuplicate) {
+        // Add the new entry immediately to the logs
+        setLogs(prevLogs => {
+          const newLogs = [...prevLogs, newEntry];
+          // Trim to maximum size if needed
+          return newLogs.length > MAX_LOG_ENTRIES 
+            ? newLogs.slice(newLogs.length - MAX_LOG_ENTRIES) 
+            : newLogs;
+        });
+      }
     });
 
     return () => {
@@ -240,16 +379,15 @@ const UnifiedLog = () => {
         if (typeof message === 'object' && message.type) {
           messageType = message.type;
           // Check if this is an unknown packet type
-          isUnknown = !COMMON_OUTGOING_TYPES.includes(messageType) && 
-                      !definedPacketTypes.includes(messageType);
+          isUnknown = !definedPacketTypes.includes(messageType);
         } else if (typeof message === 'string') {
           try {
             const parsed = JSON.parse(message);
             if (parsed && parsed.type) {
               messageType = parsed.type;
               // Check if this is an unknown packet type
-              isUnknown = !COMMON_OUTGOING_TYPES.includes(messageType) && 
-                          !definedPacketTypes.includes(messageType);
+              isUnknown =  
+        !definedPacketTypes.includes(messageType);
             }
           } catch {
             // If we can't parse the string, consider it unknown
@@ -278,8 +416,10 @@ const UnifiedLog = () => {
           : newLogs;
       });
       
-      // Scroll to bottom to show the new entry
-      scrollToBottom();
+      // Always scroll to bottom when new logs are added
+      if (autoScroll) {
+        scrollToBottom();
+      }
     };
 
     window.addEventListener('outgoingMessage' as any, handleOutgoingMessage);
@@ -287,9 +427,10 @@ const UnifiedLog = () => {
     return () => {
       window.removeEventListener('outgoingMessage' as any, handleOutgoingMessage);
     };
-  }, [definedPacketTypes]);
+  }, [definedPacketTypes, autoScroll]);
 
   const scrollToBottom = () => {
+    // Always scroll to bottom when called, regardless of autoScroll setting
     setTimeout(() => {
       if (logContentRef.current) {
         logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
@@ -302,6 +443,9 @@ const UnifiedLog = () => {
     sendJson({
       type: "REQUEST_LOG_COMMANDS",
     });
+    
+    // Flag to scroll once when the response comes in
+    window.sessionStorage.setItem('log_scroll_on_next_command_response', 'true');
   };
 
   // Function to request response logs
@@ -309,6 +453,9 @@ const UnifiedLog = () => {
     sendJson({
       type: "REQUEST_LOG_RESPONSE",
     });
+    
+    // Flag to scroll once when the response comes in
+    window.sessionStorage.setItem('log_scroll_on_next_response_response', 'true');
   };
 
   // Toggle log type visibility
@@ -324,32 +471,43 @@ const UnifiedLog = () => {
     });
   };
 
-  // Filter logs based on visible types and filters
-  const filteredLogs = logs.filter(log => {
-    // First filter by log type - if the checkbox is unchecked, don't show any data of that type
-    if (!visibleLogTypes.has(log.type)) return false;
-    
-    // Filter packet logs
-    if (log.type === "packet") {
-      // If it's an unknown packet, check the unknown packets checkbox
-      if (log.isUnknown) return showUnknownPackets;
+  // Filter logs based on visibility settings and hidden log types
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      // Filter by log type visibility
+      if (!visibleLogTypes.has(log.type) || hiddenLogTypes.has(log.type)) {
+        return false;
+      }
       
-      // Otherwise, check if this packet type is selected
-      return log.packetType ? selectedPacketTypes.has(log.packetType) : false;
-    }
-    
-    // Filter outgoing messages
-    if (log.type === "outgoing") {
-      // If it's an unknown outgoing message, check the unknown outgoing checkbox
-      if (log.isUnknown) return showUnknownOutgoing;
+      // Filter by packet type if it's a packet
+      if (log.type === "packet" && log.packetType) {
+        // Filter unknown packets based on setting
+        if (!showUnknownPackets && log.isUnknown) {
+          return false;
+        }
+        
+        // Filter by selected packet types
+        if (selectedPacketTypes.size > 0 && !selectedPacketTypes.has(log.packetType)) {
+          return false;
+        }
+      }
       
-      // Otherwise, check if this outgoing type is selected
-      return log.packetType ? selectedOutgoingTypes.has(log.packetType) : false;
-    }
-    
-    // For command and response logs, just show them if their type is visible
-    return true;
-  });
+      // Filter by outgoing message type
+      if (log.type === "outgoing" && log.packetType) {
+        // Filter unknown outgoing messages based on setting
+        if (!showUnknownOutgoing && log.isUnknown) {
+          return false;
+        }
+        
+        // Filter by selected outgoing types
+        if (selectedOutgoingTypes.size > 0 && !selectedOutgoingTypes.has(log.packetType)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [logs, visibleLogTypes, hiddenLogTypes, showUnknownPackets, showUnknownOutgoing, selectedPacketTypes, selectedOutgoingTypes]);
 
   // Get color for log type
   const getLogTypeColor = (type: "command" | "response" | "outgoing" | "packet") => {
@@ -369,6 +527,11 @@ const UnifiedLog = () => {
 
   // Add a dedicated clear function
   const clearLogs = () => {
+    console.log("Clearing logs and setting cooldown period");
+    
+    // Set the cooldown flag to prevent immediate additions
+    clearCooldownRef.current = true;
+    
     setLogs([]); // Directly set logs to an empty array
     
     // Mark that logs were manually cleared to prevent immediate re-adding
@@ -377,6 +540,9 @@ const UnifiedLog = () => {
     // Reset the last processed message reference
     lastProcessedMessageRef.current = undefined;
     
+    // Clear the message deduplication cache
+    recentMessagesRef.current.clear();
+    
     // Reset any tracking variables that might cause issues
     // This helps prevent the last message from reappearing
     const event = new CustomEvent('logs-cleared', {
@@ -384,11 +550,13 @@ const UnifiedLog = () => {
     });
     document.dispatchEvent(event);
     
-    // Add a small delay before processing new messages
-    // This helps prevent the last message from being immediately re-added
+    // Force stop all pending log requests by adding a small delay
+    // before new log messages can be processed
     setTimeout(() => {
-      logsManuallyCleared.current = false;
-    }, 100);
+      // After a brief delay, we can allow processing messages again
+      clearCooldownRef.current = false;
+      console.log("Log clearing complete - ready for new messages");
+    }, 1000); // Use a longer cooldown period of 1 second
   };
 
   // Add click handler to close dropdowns when clicking outside
@@ -431,20 +599,41 @@ const UnifiedLog = () => {
   useEffect(() => {
     if (!jsonState.lastJsonMessage) return;
 
+    // Skip if we're in a cooldown period after clearing
+    if (clearCooldownRef.current) {
+      // console.log("Skipping message processing during cooldown period");
+      return;
+    }
+
     // Skip if this is the same message we already processed
     if (lastProcessedMessageRef.current === jsonState.lastJsonMessage) {
       return;
     }
 
+    // Create a message key for deduplication
+    const message = jsonState.lastJsonMessage as BaseMessage;
+    const messageKey = `${message.type}-${JSON.stringify(message)}`;
+    
+    // Skip if we've seen this exact message recently
+    if (recentMessagesRef.current.has(messageKey)) {
+      // console.log("Skipping duplicate message:", messageKey);
+      return;
+    }
+    
+    // Add to recent messages cache
+    recentMessagesRef.current.add(messageKey);
+
     // Update the last processed message
     lastProcessedMessageRef.current = jsonState.lastJsonMessage;
-
-    const message = jsonState.lastJsonMessage as BaseMessage;
     
     // If logs were manually cleared, we need to reset the flag
     // but only process new messages after clearing
     if (logsManuallyCleared.current) {
-      // Skip this message as it might be the one that was showing before clearing
+      // Simply reset the flag and skip all message processing until new messages arrive
+      logsManuallyCleared.current = false;
+      
+      // Skip all message processing right after clearing logs
+      // This prevents duplicating commands and responses right after clear
       return;
     }
     
@@ -469,22 +658,50 @@ const UnifiedLog = () => {
         };
         
         addLogs([newEntry]);
-        scrollToBottom();
+        
+        // Check if we should auto-scroll after adding logs
+        if (autoScroll) {
+          scrollToBottom();
+        }
       }
     }
     // Handle bulk command logs
     else if (message.type === "RESPONSE_LOG_COMMANDS" && Array.isArray((message as CommandMessage).commands)) {
       const commandMessage = message as CommandMessage;
-      const commandLogs: LogEntry[] = commandMessage.commands!.map((cmd: any) => ({
-        timestamp: new Date(cmd.timestamp || Date.now()).toLocaleString(),
-        message: cmd.command || JSON.stringify(cmd),
-        type: "command",
-        rawData: cmd,
-        packetType: "COMMAND"
-      }));
-      
-      addLogs(commandLogs, true);
-      scrollToBottom();
+      // Only process if there are actual commands in the response
+      if (commandMessage.commands!.length > 0) {
+        const commandLogs: LogEntry[] = commandMessage.commands!.map((cmd: any) => ({
+          timestamp: new Date(cmd.timestamp || Date.now()).toLocaleString(),
+          message: cmd.command || JSON.stringify(cmd),
+          type: "command",
+          rawData: cmd,
+          packetType: "COMMAND"
+        }));
+        
+        // Always replace all command logs with the new ones
+        addLogs(commandLogs, true);
+        
+        // Check if we should scroll for this response
+        const shouldScrollForThisResponse = window.sessionStorage.getItem('log_scroll_on_next_command_response') === 'true';
+        if (shouldScrollForThisResponse) {
+          console.log("Performing one-time scroll for command response");
+          window.sessionStorage.removeItem('log_scroll_on_next_command_response');
+          
+          // Manually scroll without using auto-scroll
+          setTimeout(() => {
+            if (logContentRef.current) {
+              logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+            }
+          }, 100);
+        } else if (autoScroll) {
+          // Also respect auto-scroll setting for command logs
+          scrollToBottom();
+        }
+        
+        console.log(`Received ${commandLogs.length} command logs`);
+      } else {
+        console.log("Received empty command logs response");
+      }
     }
     
     // Handle response messages
@@ -508,27 +725,17 @@ const UnifiedLog = () => {
         };
         
         addLogs([newEntry]);
-        scrollToBottom();
+        
+        // Check if we should auto-scroll after adding response logs
+        if (autoScroll) {
+          scrollToBottom();
+        }
       }
     }
     
-    // Handle bulk response logs
-    else if (message.type === "RESPONSE_LOG_RESPONSE" && Array.isArray((message as ResponseMessage).responses)) {
-      const responseMessage = message as ResponseMessage;
-      const responseLogs: LogEntry[] = responseMessage.responses!.map((resp: any) => ({
-        timestamp: new Date(resp.timestamp || Date.now()).toLocaleString(),
-        message: resp.response || JSON.stringify(resp),
-        type: "response",
-        rawData: resp,
-        packetType: "RESPONSE"
-      }));
-      
-      addLogs(responseLogs, true);
-      scrollToBottom();
-    }
-    
+
     // ... existing code for other message types ...
-  }, [jsonState.lastJsonMessage, addLogs, scrollToBottom, logs]);
+  }, [jsonState.lastJsonMessage, addLogs, scrollToBottom, logs, autoScroll]);
 
   return (
     <div className="unified-log h-full flex flex-col">
@@ -784,19 +991,6 @@ const UnifiedLog = () => {
         
         <div className="text-xs text-gray-500 p-2 bg-gray-50 border-t border-gray-200 flex-shrink-0 flex justify-between items-center">
           <div className="button-controls flex gap-2">
-            <button 
-              onClick={requestCommandLogs}
-              className="refresh-button text-sm bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
-            >
-              Refresh Commands
-            </button>
-            
-            <button 
-              onClick={requestResponseLogs}
-              className="refresh-button text-sm bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded"
-            >
-              Refresh Responses
-            </button>
             
             <button 
               onClick={clearLogs}
@@ -806,8 +1000,37 @@ const UnifiedLog = () => {
             </button>
           </div>
           
-          <div>
-            Showing {filteredLogs.length} of {logs.length} logs (max: {MAX_LOG_ENTRIES})
+          <div className="flex items-center gap-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="auto-scroll"
+                checked={autoScroll}
+                onChange={() => setAutoScroll(!autoScroll)}
+                className="mr-2"
+              />
+              <label htmlFor="auto-scroll" className="text-sm cursor-pointer">
+                Auto-scroll
+              </label>
+              
+              {/* Manual scroll button when auto-scroll is disabled */}
+              {!autoScroll && (
+                <button 
+                  onClick={() => {
+                    if (logContentRef.current) {
+                      logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+                    }
+                  }}
+                  className="ml-2 text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
+                >
+                  Scroll to Bottom
+                </button>
+              )}
+            </div>
+            
+            <div>
+              Showing {filteredLogs.length} of {logs.length} logs (max: {MAX_LOG_ENTRIES})
+            </div>
           </div>
         </div>
       </div>

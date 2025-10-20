@@ -12,7 +12,7 @@ const PLACEHOLDER_TEMPLATE = '';
 const TransferStationCommandInput = () => {
   const [command, setCommand] = useState("");
   const [parameters, setParameters] = useState(EMPTY_TEMPLATE);
-  const [keepText, setKeepText] = useState(false);
+  const [keepText, setKeepText] = useState(true);
   const [rows, setRows] = useState(0);
   const [showPlaceholder, setShowPlaceholder] = useState(true);
   const sendJson = useSendJSON();

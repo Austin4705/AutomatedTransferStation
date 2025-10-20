@@ -18,15 +18,26 @@ else:
 from transfer_station import Transfer_Station
 
 class TransferStationWinFile(Transfer_Station):
+
+    MAGNIFICATION_TRAVEL = {
+        5: {"x": 0.72, "y": 0.50, "wait_time": 1},
+        10: {"x": 0.45, "y": 0.33, "wait_time": 1},
+        20: {"x": 0.2, "y": 0.15, "wait_time": 0.75}, #Only calibrated for 20x
+        40: {"x": 0.2, "y": 0.15, "wait_time": 0.75},
+        50: {"x": 0.2, "y": 0.15, "wait_time": 0.75},
+        100: {"x": 0.2, "y": 0.15, "wait_time": 0.75},
+    }
+
     def __init__(self):
         super().__init__()
+        self.type = "hqGrapheneServer"
         if platform.system() == 'Windows':
             self.command_server = CommandServer()
         else:
             self.command_server = DummyCommandServer()
 
     def _send_command(self, command):
-        print(f"Sending command: {command}")
+        # print(f"Sending command: {command}")
         return self.command_server.send(command)
 
     def moveX(self, X):
@@ -49,6 +60,16 @@ class TransferStationWinFile(Transfer_Station):
         res = self.send_command(cmd)
         return res
 
+    def moveZ(self, Z):
+        """Move to Z coordinate
+        Z: Z position
+        Status: Working
+        """
+        cmd = f"SETPOSZ{Z}"  # Z is 0 for Z-only movement
+        print(f"Moving to Z position: {Z}")
+        res = self.send_command(cmd)
+        return res
+
     def posX(self):
         """Get X position
         Status: Working
@@ -68,12 +89,39 @@ class TransferStationWinFile(Transfer_Station):
         res = self.send_command(cmd)
         # print(f"Y position: {res} and {type(res)}")
         return CommandServer.get_first_double(res)
+    
+    def posZ(self):
+        """Get Z position
+        Status: Working
+        """
+        cmd = "GETPOSZ"
+        # print(f"Getting Z position")
+        res = self.send_command(cmd)
+        return CommandServer.get_first_double(res)
+    
+    def led_on(self):
+        """Turn LED on
+        Status: Working
+        """
+        cmd = "LEDON"
+        print(f"Turning LED on")
+        res = self.send_command(cmd)
+        return res
+    
+    def led_off(self):
+        """Turn LED off
+        Status: Working
+        """
+        cmd = "LEDOFF"
+        print(f"Turning LED off")
+        res = self.send_command(cmd)
+        return res
 
-    def autoFocus(self):
+    def ts_autoFocus(self):
         """Auto Focus
         Status: Working
         """
-        cmd = "AUTOFOCUS"
+        cmd = "AUTFOC"
         print(f"Auto Focusing")
         res = self.send_command(cmd)
         return res
@@ -139,7 +187,7 @@ class CommandServer:
             return ""
 
     def get_first_double(my_string):
-        print(f"Getting first double: {my_string}")
+        # print(f"Getting first double: {my_string}")
         if my_string is None or my_string.strip() == "OK":
             return 0
         numeric_const_pattern = r'[-+]?(?:(?:\d*\.\d+)|(?:\d+\.?)(?:[Ee][+-]?\d+)?)'
