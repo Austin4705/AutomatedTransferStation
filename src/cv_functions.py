@@ -131,4 +131,24 @@ class CV_Functions:
 
         return image
 
-  
+    def line_rgb_values(image: np.ndarray, start, end):
+        """
+        Given an image (H, W, 3) and start=(x0,y0), end=(x1,y1),
+        return RGB values along the line connecting them.
+        """
+        x0, y0 = start
+        x1, y1 = end
+        num_points = int(np.hypot(x1 - x0, y1 - y0)) + 1
+        x, y = np.linspace(x0, x1, num_points), np.linspace(y0, y1, num_points)
+        x, y = np.round(x).astype(int), np.round(y).astype(int)
+        # Clip to image bounds
+        x = np.clip(x, 0, image.shape[1] - 1)
+        y = np.clip(y, 0, image.shape[0] - 1)
+        rgb = image[y, x]
+        return rgb
+
+    def generate_brightness_line(image: np.ndarray, start, end):
+        rgb = line_rgb_values(image, start, end)
+        # NTSC Coefficients for brightness
+        brightness = 0.299 * rgb[:,0] + 0.587 * rgb[:,1] + 0.114 * rgb[:,2]
+        return brightness

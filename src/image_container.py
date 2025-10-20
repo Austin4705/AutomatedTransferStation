@@ -1,63 +1,186 @@
+import omero
+from omero.gateway import BlitzGateway
+from omero.model import DatasetI, ProjectI, ImageI
+from omero.rtypes import rstring, rlong, rint
+
+from PIL import Image
+from typing import Optional, Dict, List, Tuple
+from pathlib import Path
+from dotenv import load_dotenv
 import json
 import numpy as np
 import os
 from datetime import datetime
 from multiprocessing import Pool
 import cv2
-import camera
-from transfer_station import Transfer_Station
+
+# import camera
+# from transfer_station import Transfer_Station
 # from cv_functions import CV_Functions
 # from GMMDetector.structures import Flake
-import packet_handlers
-# 
+# import packet_handlers
+
 class Image_Container:
     """
     This class is used to store images.
     """
-    IMAGE_REPO_NAME = "../images"
 
-    # Overloading constructors to handle different types of initialization
-    # Other than the directory name all data is stored in the metadata.json file
-    def __init__(self, transfer_station: Transfer_Station, directory: str = None):
-        if directory is None:
-            self.directory = os.path.join(Image_Container.IMAGE_REPO_NAME, datetime.now().strftime('%d-%m-%Y-%H-%M-%S'))
-        else:
-            self.directory = os.path.join(Image_Container.IMAGE_REPO_NAME, directory)
-        os.makedirs(self.directory, exist_ok=True)
+    def __init__(self, transfer_station):
+        self.connect_to_omero(os.getenv('OMERO_HOST'), os.getenv('OMERO_USERNAME'), os.getenv('OMERO_PASSWORD'))
         self.transfer_station = transfer_station
-        self.directory_images = os.path.join(self.directory, "images")
-        self.directory_searched = os.path.join(self.directory, "searched")
-        self.directory_flake_masks = os.path.join(self.directory, "wafer_masks")
-        os.makedirs(self.directory_images, exist_ok=True)
-        os.makedirs(self.directory_searched, exist_ok=True)
-        os.makedirs(self.directory_flake_masks, exist_ok=True)
 
-        metadata_path = os.path.join(self.directory, "metadata.json")
-        if os.path.exists(metadata_path):
-            with open(metadata_path, 'r') as f:
-                self.metadata = dict(json.load(f)) 
-        else:
-            self.metadata = dict()
-            self.metadata["wafers"] = []
-            self.metadata["searched"] = []
-            self.metadata["metametadata"] = []
+    def connect_to_omero(self, host: str, username: str, password: str, port: int = 4064) -> BlitzGateway:
+        self.conn = BlitzGateway(username, password, host=host, port=port, secure=True)
+        if not self.conn.connect():
+            raise ConnectionError("Failed to connect to OMERO server")
+    
+    def disconnect_from_omero(self):
+        if self.conn:
+            self.conn.close()
 
-        self.wafer_counter = 0
-        self.image_counter = 0
-        self.scanned_counter = 0
+    def create_dataset(self, name: str, description: Optional[str] = None, project_id: Optional[int] = None) -> int:
+        dataset = omero.model.DatasetI()
+        dataset.setName(rstring(name))
+        if description:
+            dataset.setDescription(rstring(description))
+        dataset = self.conn.getUpdateService().saveAndReturnObject(dataset)
+        dataset_id = dataset.getId().getValue()
+        
+        if project_id:
+            link = omero.model.ProjectDatasetLinkI()
+            link.setParent(omero.model.ProjectI(project_id, False))
+            link.setChild(omero.model.DatasetI(dataset_id, False))
+            self.conn.getUpdateService().saveObject(link)
+        
+        return dataset_id
 
-    def load_sent_data(self, data: dict):
-        self.metadata["metametadata"].append(data)
-        self.save_metadata()
+    def create_project(self, name: str, description: Optional[str] = None) -> int:
+        project = omero.model.ProjectI()
+        project.setName(rstring(name))
+        if description:
+            project.setDescription(rstring(description))
+        project = self.conn.getUpdateService().saveAndReturnObject(project)
+        return project.getId().getValue()
+
+    def upload_image(self, img_array: np.ndarray, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None) -> int:
+        image_id2 = image_container.upload_image(image)
+        print(image_id)
+        image_container.download_image(image_id)
+        show_image_cv2(image)
+        # Ensure array is in (C, Y, X) format
+        if img_array.shape[-1] == 3:  # (Y, X, 3) format
+            img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
+        size_c, size_y, size_x = img_array.shape
+        # Reshape to OMERO format (Z=1, C=3, T=1, Y, X)
+        img_array = img_array.reshape(1, size_c, 1, size_y, size_x)
+
+        def plane_gen():
+            for c in range(size_c):
+                yield img_array[0, c, 0, :, :].astype(img_array.dtype)
+
+        image = self.conn.createImageFromNumpySeq(
+            plane_gen(), image_name, 1, size_c, 1,
+            description=None, dataset=None
+        )
+        image_id = image.getId()
+
+        if dataset_id:
+            link = omero.model.DatasetImageLinkI()
+            link.setParent(omero.model.DatasetI(dataset_id, False))
+            link.setChild(omero.model.ImageI(image_id, False))
+            self.conn.getUpdateService().saveObject(link)
+
+        if metadata:
+            self.add_metadata(image_id, metadata)
+
+        return image_id
+    
+    def download_image(self, image_id: int) -> np.ndarray:
+        """
+        Returns:
+            numpy array in (Y, X, 3) format (same as cv2.imread - BGR format). Assumes the png on the server is in the correct formatj.
+        """
+        image = self.conn.getObject("Image", image_id)
+        if not image:
+            raise ValueError(f"Image {image_id} not found")
+        size_z = image.getSizeZ()
+        size_c = image.getSizeC()
+        size_t = image.getSizeT()
+        size_y = image.getSizeY()
+        size_x = image.getSizeX()
+        pixels = image.getPrimaryPixels()
+        channels = []
+        for c in range(size_c):
+            plane = pixels.getPlane(0, c, 0)
+            channels.append(plane)
+        img_array = np.stack(channels, axis=-1)
+        return img_array
+    
+    def get_image_metadata(self, image_id: int) -> Dict:
+        image = self.conn.getObject("Image", image_id)
+        if not image:
+            raise ValueError(f"Image {image_id} not found")
+        
+        metadata = {
+            'id': image.getId(),
+            'name': image.getName(),
+            'description': image.getDescription(),
+            'acquisition_date': str(image.getAcquisitionDate()) if image.getAcquisitionDate() else None,
+            'owner': image.getOwnerFullName(),
+            'dimensions': {
+                'x': image.getSizeX(), 'y': image.getSizeY(), 'z': image.getSizeZ(),
+                'c': image.getSizeC(), 't': image.getSizeT(),
+            },
+            'pixel_size': {
+                'x': image.getPixelSizeX(), 'y': image.getPixelSizeY(), 'z': image.getPixelSizeZ(),
+            },
+            'channels': [{'label': ch.getLabel(), 'color': ch.getColor().getHtml() if ch.getColor() else None, 
+                        'wavelength': ch.getEmissionWave()} for ch in image.getChannels()],
+            'key_value_pairs': {},
+            'tags': [],
+            'comments': [],
+        }
+        
+        for ann in image.listAnnotations():
+            if isinstance(ann, omero.gateway.MapAnnotationWrapper):
+                for key, value in ann.getValue():
+                    metadata['key_value_pairs'][key] = value
+            elif isinstance(ann, omero.gateway.TagAnnotationWrapper):
+                metadata['tags'].append(ann.getValue())
+            elif isinstance(ann, omero.gateway.CommentAnnotationWrapper):
+                metadata['comments'].append(ann.getValue())
+        
+        return metadata
+
+    def get_dataset_info(self, dataset_id: int) -> Dict:
+        dataset = self.conn.getObject("Dataset", dataset_id)
+        if not dataset:
+            raise ValueError(f"Dataset {dataset_id} not found")
+        
+        info = {
+            'id': dataset.getId(),
+            'name': dataset.getName(),
+            'description': dataset.getDescription(),
+            'owner': dataset.getOwnerFullName(),
+            'image_count': dataset.countChildren(),
+            'images': [{'id': img.getId(), 'name': img.getName()} for img in dataset.listChildren()],
+            'key_value_pairs': {},
+            'tags': [],
+        }
+        
+        for ann in dataset.listAnnotations():
+            if isinstance(ann, omero.gateway.MapAnnotationWrapper):
+                for key, value in ann.getValue():
+                    info['key_value_pairs'][key] = value
+            elif isinstance(ann, omero.gateway.TagAnnotationWrapper):
+                info['tags'].append(ann.getValue())
+        
+        return info
 
     def add_image(self, camera_id: int):
-        self.image_counter += 1
         frame = camera.Camera.global_list[camera_id].snap_image()
         image_name = f"{camera_id}-{datetime.now().strftime('%d-%m-%Y-%H-%M-%S')}.png"
-        wafer_path = os.path.join(self.directory_images, f"wafer_{self.wafer_counter}")
-        image_path = os.path.join(wafer_path, image_name)
-        cv2.imwrite(image_path, frame)
-        self.metadata["wafers"][-1].append({
+        metadata = {
             "wafer_id": self.wafer_counter,
             "name": image_name,
             "camera_id": camera_id,
@@ -65,78 +188,14 @@ class Image_Container:
             "x": self.transfer_station.posX(),
             "y": self.transfer_station.posY(),
             "flakes": []
-        })
+        }
 
-        self.save_metadata()
-
-    def save_metadata(self):
-        metadata_path = os.path.join(self.directory, "metadata.json")
-        with open(metadata_path, 'w') as f:
-            json.dump(self.metadata, f) 
-    
-    def load_metadata(self, directory: str):
-        with open(f"{directory}/metadata.json", 'r') as f:
-            self.metadata = json.load(f)
-
-    def load_image(self, image_name: str, wafer_id: int):
-        image_path = os.path.join(self.directory_images, f"wafer_{wafer_id}", image_name)
-        try:
-            if os.path.exists(image_path):
-                # Load image using OpenCV
-                image_data = cv2.imread(image_path)
-                if image_data is None:
-                    print(f"Failed to load image {image_name}")
-                    return np.zeros((512, 512, 3), dtype=np.uint8)
-                return image_data
-            else:
-                print(f"Image {image_name} not found")
-                return np.zeros((512, 512, 3), dtype=np.uint8)
-        except Exception as e:
-            print(f"Error checking image path: {e}")
-            return None
 
     def new_wafer(self):
-        self.wafer_counter += 1
-        self.metadata["wafers"].append([])
-        os.makedirs(os.path.join(self.directory_images, f"wafer_{self.wafer_counter}"), exist_ok=True)
-        self.image_counter = 0
+        pass
 
     def search_and_save_wafer(self):
-        self.search_images()
-        self.generate_image_output()
-
-    def search_images(self):
-        self.wafer_counter = 0
-        for wafer in self.metadata["wafers"]:
-            self.scanned_counter = 0
-            self.wafer_counter += 1
-            # Running multithreaded pool to search images
-            packet_handlers.PacketCommander.send_message(f"Searching in wafer {self.wafer_counter}")
-            with Pool(5) as pool:
-                results = pool.map(self.search_image, wafer)
-            packet_handlers.PacketCommander.send_message(f"Finished Hunting wafer {self.wafer_counter}")
-            # Add flake data to each image in metadata
-            for image, flake_data in zip(wafer, results):
-                counter = 0
-                for flake in flake_data:
-                    mask_name = f"Wafer_{self.wafer_counter}-Image_{image['name']}-Flake_{counter}.png"
-                    counter += 1
-                    cv2.imwrite(os.path.join(self.directory_flake_masks, mask_name), flake.mask)
-                    image["flakes"].append(
-                        {
-                            "thickness": flake.thickness,
-                            "size": flake.size,
-                            "false_positive_probability": flake.false_positive_probability,
-                            "center": list(flake.center),
-                            "max_sidelength": flake.max_sidelength,
-                            "min_sidelength": flake.min_sidelength,
-                            "mean_contrast": flake.mean_contrast,
-                            "mask": mask_name
-                        })
-                if flake_data.any():
-                    # print(f"flake data is {flake_data}")
-                    self.metadata["searched"].append(image)
-                self.save_metadata()
+        pass
 
     def search_image(self, data):
         image_name = data["name"]
@@ -205,11 +264,3 @@ class Image_Container:
         #         2
         #     )
         #     cv2.imwrite(os.path.join(self.directory_searched, image_metadata["name"]), image_data)
-
-    def show_images(self):
-        for image in self.metadata["searched"]:
-            image_path = os.path.join(self.directory_images, image["name"])
-            image = self.load_image(image_path)
-            cv2.imshow("Image", image)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
