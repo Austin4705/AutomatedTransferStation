@@ -25,7 +25,10 @@ def startup_flask_app():
     atexit.register(cleanup_resources)
     
     # Start the Flask app - use processes=1 to avoid multiprocessing issues
-    app.run(host='127.0.0.1', port="5000", debug=False, use_reloader=False, threaded=True)
+    # Use 0.0.0.0 for Docker compatibility, 127.0.0.1 for local development
+    import os
+    host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    app.run(host=host, port="5000", debug=False, use_reloader=False, threaded=True)
 
 def cleanup_resources():
     """Clean up any resources when the application exits"""
@@ -214,4 +217,14 @@ def get_active_streams():
         'active_stream_count': len(stream_info),
         'streams': stream_info
     })
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Docker and monitoring"""
+    return jsonify({
+        'status': 'healthy',
+        'cameras': len(Camera.global_list),
+        'active_streams': len(active_streams),
+        'timestamp': datetime.datetime.now().isoformat()
+    }), 200
 

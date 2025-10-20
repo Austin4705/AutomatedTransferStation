@@ -50,6 +50,8 @@ Create a `config.json` file in the project root directory with the following con
 ```
 (Or "base" if you want to do the virtual ones). Adjust the port values according to your setup.
 
+Well also need to install PYVisa. You can do this at the ni website it is free you just have to make an account
+
 ## Running the Application
 
 ### Start the Backend Server
