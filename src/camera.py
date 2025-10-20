@@ -2,7 +2,8 @@ import cv2
 from datetime import datetime
 import os
 import numpy as np
-from cv_functions import CV_Functions
+# from cv_functions import CV_Functions
+from autofocus import Autofocus
 import threading
 import time
 import weakref
@@ -25,7 +26,9 @@ class Camera:
 
     @staticmethod
     # Figures out how many cameras are connected to the system
-    def initialize_all_cameras(sim_test=False):
+    def initialize_all_cameras(type: str = "usb"):
+        sim_test = (type == "virtual") 
+
         max_cameras_to_check = 4
         available_cameras = []
         
@@ -248,7 +251,8 @@ class Camera:
             return None
             
         try:
-            processed_frame = CV_Functions.matGMM2DTransform(frame)
+            # processed_frame = CV_Functions.matGMM2DTransform(frame)
+            processed_frame = frame
             with self.frame_lock:
                 self.snapshot_image_flake_hunted = processed_frame
             return self.snapshot_image_flake_hunted

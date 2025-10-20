@@ -1,6 +1,6 @@
 import time 
 from datetime import datetime
-from cv_functions import CV_Functions
+from autofocus import Autofocus
 import camera
 
 # The abstract class for a transfer station instance
@@ -19,7 +19,6 @@ class Transfer_Station():
 
     def __init__(self):
         print("Initializing Transfer Station")
-        self.type = "base"
         self.command_queue = []
         # Add self to the static list if this is a subclass instance
         if self.__class__ != Transfer_Station:
@@ -31,6 +30,20 @@ class Transfer_Station():
         self._last_sent_index = -1  # Track the last sent index that was retrieved
         self.camera_height = 1536
         self.camera_width = 2048
+
+    @classmethod
+    def create(cls, station_type: str = "virtual"):
+        """Factory method to create transfer station by type"""
+        if station_type == "virtual":
+            return cls()
+        elif station_type == "hqGraphene":
+            from transferStations.transfer_station_winFile import TransferStationWinFile
+            return TransferStationWinFile()
+        elif station_type == "prior":
+            from transferStations.transfer_station_prior import TransferStationPrior
+            return TransferStationPrior()
+        else:
+            raise ValueError(f"Unknown station type: '{station_type}'")
 
     # Class method to get all subclass instances
     @classmethod
@@ -85,9 +98,9 @@ class Transfer_Station():
         print("Auto Focus-V")
         originalposZ = self.posZ()
         current_frame = camera.Camera.global_list[camera_index].get_frame()
-        # print(CV_Functions.get_color_features(current_frame))
-        # print(CV_Functions.exist_color_features(current_frame))
-        if not CV_Functions.exist_color_features(current_frame):
+        # print(Autofocus.get_color_features(current_frame))
+        # print(Autofocus.exist_color_features(current_frame))
+        if not Autofocus.exist_color_features(current_frame):
             print("Not enough edges to auto focus")
             return
         # Sample points on either side of current Z position
@@ -105,7 +118,7 @@ class Transfer_Station():
                 self.wait(0.03)
 
                 frame = camera.Camera.global_list[camera_index].get_frame()
-                edge_count = CV_Functions.get_edge_count(frame)
+                edge_count = Autofocus.get_edge_count(frame)
                 edge_counts.append((z, edge_count))
             self.wait(0.1)
         
@@ -138,7 +151,7 @@ class Transfer_Station():
             self.moveZ(current_z)
             self.wait(0.01)
             frame = camera.Camera.global_list[camera_index].get_frame()
-            edge_count = CV_Functions.get_edge_count(frame)
+            edge_count = Autofocus.get_edge_count(frame)
             fine_edge_counts.append((current_z, edge_count))
             current_z -= fine_z_step
 

@@ -131,29 +131,4 @@ class CV_Functions:
 
         return image
 
-    def calculate_focus_score(image):
-        image_filtered = cv2.GaussianBlur(image, (9, 9), 0)
-        laplacian = cv2.Laplacian(image_filtered, cv2.CV_64F)
-        focus_score = laplacian.var()
-        return focus_score
-
-
-    def get_edge_count(image):
-        edges = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(edges, 100, 200) 
-        return np.sum(edges > 30)
-
-
-    def get_color_features(image, saturation_threshold=40):
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        sat = hsv[:, :, 1]
-        color_mask  = sat > saturation_threshold
-        colorful_pixels = np.count_nonzero(color_mask)
-        total_pixels = image.shape[0] * image.shape[1]
-
-        color_ratio = colorful_pixels / total_pixels
-        return color_ratio
-    
-    def exist_color_features(image, ratio_threshold=0.01):
-        color_ratio = CV_Functions.get_color_features(image)
-        return color_ratio >= ratio_threshold
+  
