@@ -62,24 +62,54 @@ class Image_Container:
         project = self.conn.getUpdateService().saveAndReturnObject(project)
         return project.getId().getValue()
 
-    def upload_image(self, img_array: np.ndarray, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None) -> int:
-        image_id2 = image_container.upload_image(image)
-        print(image_id)
-        image_container.download_image(image_id)
-        show_image_cv2(image)
+
+        
+    def upload_image(self, img_array: np.ndarray | list | tuple, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None) -> int:
+        """Upload an RGB numpy array as an image to OMERO.
+
+        Args:
+            img_array: RGB numpy array with shape (3, Y, X) or (Y, X, 3)
+            dataset_id: Optional dataset ID to link the image to
+            image_name: Name for the uploaded image
+            metadata: Optional metadata dictionary to attach to the image
+
+        Returns:
+            image_id: The ID of the uploaded image
+        """
+        # Convert to proper numpy array if needed
+        if not isinstance(img_array, np.ndarray):
+            img_array = np.array(img_array)
+
+        # Handle object dtype - convert to numeric
+        if img_array.dtype == np.object_:
+            img_array = np.array(img_array, dtype=np.uint8)
         # Ensure array is in (C, Y, X) format
         if img_array.shape[-1] == 3:  # (Y, X, 3) format
             img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
+
+        # Ensure proper dtype (uint8 for 8-bit images, uint16 for 16-bit)
+        if img_array.dtype == np.float32 or img_array.dtype == np.float64:
+            img_array = (img_array * 255).astype(np.uint8)
+        elif img_array.dtype not in [np.uint8, np.uint16, np.int8, np.int16]:
+            img_array = img_array.astype(np.uint8)
+
         size_c, size_y, size_x = img_array.shape
-        # Reshape to OMERO format (Z=1, C=3, T=1, Y, X)
-        img_array = img_array.reshape(1, size_c, 1, size_y, size_x)
+        size_z, size_t = 1, 1
+
+        # Create plane generator - OMERO expects planes in Z, C, T order
+        # Make a copy to avoid any reference issues
+        img_copy = np.ascontiguousarray(img_array)
 
         def plane_gen():
-            for c in range(size_c):
-                yield img_array[0, c, 0, :, :].astype(img_array.dtype)
+            for z in range(size_z):
+                for c in range(size_c):
+                    for t in range(size_t):
+                        # Yield a contiguous copy of each plane
+                        plane = np.ascontiguousarray(img_copy[c, :, :])
+                        yield plane
 
         image = self.conn.createImageFromNumpySeq(
-            plane_gen(), image_name, 1, size_c, 1,
+            plane_gen(), image_name, size_z, size_c, size_t,
             description=None, dataset=None
         )
         image_id = image.getId()
@@ -94,6 +124,7 @@ class Image_Container:
             self.add_metadata(image_id, metadata)
 
         return image_id
+
     
     def download_image(self, image_id: int) -> np.ndarray:
         """
