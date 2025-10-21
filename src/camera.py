@@ -15,6 +15,7 @@ from image_container import Image_Container
 # from cv_functions import CV_Functions
 
 class Camera:
+    image_container: Image_Container = None
     global_list = dict()
     _lock = threading.Lock()
     _instances = weakref.WeakSet()
@@ -32,9 +33,10 @@ class Camera:
             return cls(camera_id)
 
     @staticmethod
-    def initialize_all_cameras(type: str = "usb"):
+    def initialize_all_cameras(image_container: Image_Container, type: str = "usb"):
         """Figures out how many cameras are connected to the system"""
-        max_cameras_to_check = 4
+        Camera.image_container = image_container
+        max_cameras_to_check = 3
         available_cameras = []
         Camera.cleanup_all()
         Camera.global_list.clear()
@@ -48,13 +50,13 @@ class Camera:
                 while not camera.is_active and time.time() - start_time < timeout:
                     time.sleep(0.1)
                 if camera.is_active:
-                    print(f"  Camera {i} successfully initialized")
+                    print(f"Camera {i} successfully initialized")
                     available_cameras.append(i)
                     with Camera._lock:
                         Camera.global_list[i] = camera
                         Camera._instances.add(camera)
                 else:   
-                    print(f"  Camera {i} failed to initialize")
+                    print(f"Camera {i} failed to initialize")
             except Exception as e:
                 print(f"Error checking camera {i}: {e}")
 
@@ -82,6 +84,7 @@ class Camera:
         self.snapshot_image = self.get_black_frame()
         self.snapshot_image_flake_hunted = self.get_black_frame()
         
+
         self.capture_thread = threading.Thread(target=self._capture_frames, daemon=True)
         self.capture_thread.start()
         
@@ -99,6 +102,7 @@ class Camera:
 
     def initialize_camera(self):
         print(f"Trying camera {self.camera_id}...")
+        self.is_active = True
         pass
 
     def read_frame(self):
@@ -126,8 +130,7 @@ class Camera:
             return self.current_frame.copy()
 
     def get_black_frame(self):
-        with self.frame_lock:
-            return np.zeros((480, 640, 3), dtype=np.uint8)
+        return np.zeros((480, 640, 3), dtype=np.uint8)
 
     def save_image(self, frame):
         """Save an image to disk"""
@@ -139,23 +142,24 @@ class Camera:
         except Exception as e:
             print(f"Error saving image: {e}")
 
-
     def snap_image(self):
         """Take a snapshot and store it"""
         frame = self.get_frame()
         self.snapshot_image = frame
+        Camera.image_container.save_snapshot(Camera.image_container.active_chip_id, self.snapshot_image)
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
 
     def snap_image_flake_hunted(self):
         """Take a flake hunted snapshot and store it"""
         frame = self.get_frame()
-        Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT_FLAKE_HUNTED", "camera": self.camera_id})
         try:
-            # processed_frame = CV_Functions.matGMM2DTransform(frame)
-            processed_frame = frame
-            self.snapshot_image_flake_hunted = processed_frame
+            # self.snapshot_image_flake_hunted = CV_Functions.matGMM2DTransform(frame)
+            self.snapshot_image_flake_hunted = frame
         except Exception as e:
             print(f"Error in flake hunting: {e}")
+        Camera.image_container.save_flake_hunted_snapshot(Camera.image_container.active_chip_id, self.snapshot_image_flake_hunted)
+        Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT_FLAKE_HUNTED", "camera": self.camera_id})
+
 
     def get_single_frame_as_response(self):
         """Get a single frame formatted as an HTTP response"""
@@ -174,7 +178,7 @@ class Camera:
 
     def get_snapshot_as_response(self):
         """Get the snapshot as an HTTP response"""
-        frame = self.get_frame()
+        frame = self.snapshot_image
         focus_score = Autofocus.calculate_focus_score(frame)
         has_enough_edges = Autofocus.get_edge_count(frame)
         color_ratio = Autofocus.get_color_features(frame)
@@ -204,7 +208,7 @@ class Camera:
 
     def get_flake_hunted_snapshot_as_response(self):
         """Get the flake hunted snapshot as an HTTP response"""
-        frame = self.get_frame()
+        frame = self.snapshot_image_flake_hunted
         ret, png = cv2.imencode(".jpg", frame)
         return (
             b"--frame\r\n"

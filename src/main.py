@@ -11,11 +11,20 @@ from camera import Camera
 from packet_handlers import PacketHandlers
 from transfer_functions import Transfer_Functions
 from transfer_station import Transfer_Station
+from image_container import Image_Container
 import web_server
 
 if __name__ == "__main__":
     load_dotenv("defualt.env")
     load_dotenv(".env", override=True)
+
+    print("Initializing Image Container")
+    IMAGE_CONTAINER = Image_Container()
+
+    # import cv2
+    # image = cv2.imread("image.png")
+    # IMAGE_CONTAINER.save_snapshot(IMAGE_CONTAINER.active_chip_id, image)
+    # IMAGE_CONTAINER.save_flake_hunted_snapshot(IMAGE_CONTAINER.active_chip_id, image)
 
     print("Starting Transfer Station")
     transfer_station_type = os.getenv('TRANSFER_STATION_TYPE', 'virtual')
@@ -25,8 +34,8 @@ if __name__ == "__main__":
     Transfer_Functions(TRANSFER_STATION)
 
     print("Detecting and initializing cameras...")
-    camera_type = os.getenv('CAMERA_TYPE', 'usb')
-    cameras = Camera.initialize_all_cameras(camera_type)
+    camera_type = os.getenv('CAMERA_TYPE', os.getenv('CAMERA_TYPE', 'usb'))
+    cameras = Camera.initialize_all_cameras(IMAGE_CONTAINER, camera_type)
     
     print("Initializing Flask server")
     flask_server_thread = threading.Thread(target=web_server.startup_flask_app)
