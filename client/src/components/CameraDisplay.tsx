@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../state/jsonState";
 import { isConsoleMessage } from "../state/consoleState";
+import { hostConfigAtom } from "../state/hostState";
 
 const CAMERA_OPTIONS = [
   { id: "video_feed0", label: "Main Camera" },
@@ -22,7 +23,8 @@ const CameraDisplay = () => {
   const imgRef = useRef<HTMLImageElement>(null);
   const imgContainerRef = useRef<HTMLDivElement>(null);
   const jsonState = useRecoilValue(jsonStateAtom);
-  const baseUrl = "http://127.0.0.1:5000/";
+  const hostConfig = useRecoilValue(hostConfigAtom);
+  const baseUrl = `http://${hostConfig.host}:5000/`;
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSelectedCamera, setLastSelectedCamera] = useState(CAMERA_OPTIONS[0].id);
 

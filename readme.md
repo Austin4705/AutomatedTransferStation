@@ -39,14 +39,16 @@ git clone https://github.com/Austin4705/2DMatGMM
 pip install -e 2DMatGMM
 ```
 
-This project also uses OMERO for storing microscope data. You can get a running server by installing docker and docker compose and then running in this directory.
+This project also uses OMERO for storing microscope data. You can get a running server by installing docker and docker compose and then running in this directory. Ensure docker desktop is running in the background before running 
 ```bash
-docker compose pull
-docker compose up -d
+docker compose pull #only needed to install
+docker compose up  -d #to turn on the database
 ```
 If you want to view data, login at `http://localhost:4080/` with usrname:password `root:omero`
 
-
+To install a thorlabs camera you need to `C:\Program Files\Thorlabs\Scientific Imaging\Scientific Camera Support\`. `Micro-Manager-README` should describe the process, but simply extract `Scientific_Camera_Interfaces` somewhere, get the sdk, native toolkit, dlls, 64 bit. Download `https://micro-manager.org/Download_Micro-Manager_Latest_Release` and install into here
+C:\Program Files\Thorlabs\Scientific Imaging\Scientific Camera Support
+`pip install ".\thorlabs_tsi_camera_python_sdk_package.zip"`
 ### 3. Set up the Client
 ```bash
 cd client
@@ -54,12 +56,8 @@ npm install
 ```
 
 ### 4. Configure Specifci Environment 
-Create a `config.json` file in the project root directory with the following content:
-```plaintext
-{
-    "transfer_station": "hqGrapheneServer"
-}
-```
+Create a `.env` file based on `default.env` in the project src directory with the following things:
+
 Now if you are using a hq graphene transfer station, do a couple things. Ensure the software is updated to the latest version, it should have the latest version of the command server. Ensure that (the imaging source drivers)[https://www.theimagingsource.com/en-us/support/download/icwdmuvccamtis33u-5.3.0.2793/] are properly installed
 
 

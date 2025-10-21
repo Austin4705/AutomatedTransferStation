@@ -5,6 +5,7 @@ import "./App.css";
 
 import useSocketJSON from "./hooks/useSocketJSON";
 import { jsonStateAtom } from "./state/jsonState";
+import { hostConfigAtom } from "./state/hostState";
 import { PacketManager } from "./packets/PacketHandler";
 import { PacketHandlers } from "./packets/PacketHandlers";
 import { PositionProvider } from "./state/positionContext";
@@ -19,7 +20,8 @@ import CommandsPage from "./pages/CommandsPage";
 import DashboardPage from "./pages/DashboardPage";
 
 function App() {
-  const WS_URL = "ws://127.0.0.1:8765";
+  const hostConfig = useRecoilValue(hostConfigAtom);
+  const WS_URL = `ws://${hostConfig.host}:8765`;
   // Use a state to force re-initialization of the WebSocket
   const [wsKey, setWsKey] = useState(0);
   

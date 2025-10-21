@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import ConnectionStatus from './ConnectionStatus';
 import HeaderPositionDisplay from './HeaderPositionDisplay';
 import Navigation from './Navigation';
+import HostConfigInput from './HostConfigInput';
 
 const MainLayout = () => {
   return (
@@ -16,6 +17,7 @@ const MainLayout = () => {
               <span className="text-sm text-gray-300">by Austin Wu</span>
             </div>
           </div>
+          <HostConfigInput />
           <HeaderPositionDisplay />
         </div>
         <ConnectionStatus />
