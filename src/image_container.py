@@ -11,6 +11,7 @@ import json
 import numpy as np
 import os
 from datetime import datetime
+import logging
 from multiprocessing import Pool
 import cv2
 
@@ -30,6 +31,10 @@ class Image_Container:
         self.transfer_station = transfer_station
 
     def connect_to_omero(self, host: str, username: str, password: str, port: int = 4064) -> BlitzGateway:
+        logging.getLogger("omero").setLevel(logging.ERROR)
+        logging.getLogger("omero.gateway").setLevel(logging.ERROR)
+        logging.getLogger("omero.sessions").setLevel(logging.ERROR)
+        logging.getLogger("omero.cli").setLevel(logging.ERROR)
         self.conn = BlitzGateway(username, password, host=host, port=port, secure=True)
         if not self.conn.connect():
             raise ConnectionError("Failed to connect to OMERO server")
@@ -65,52 +70,19 @@ class Image_Container:
 
         
     def upload_image(self, img_array: np.ndarray | list | tuple, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None) -> int:
-        """Upload an RGB numpy array as an image to OMERO.
-
-        Args:
-            img_array: RGB numpy array with shape (3, Y, X) or (Y, X, 3)
-            dataset_id: Optional dataset ID to link the image to
-            image_name: Name for the uploaded image
-            metadata: Optional metadata dictionary to attach to the image
-
-        Returns:
-            image_id: The ID of the uploaded image
-        """
-        # Convert to proper numpy array if needed
-        if not isinstance(img_array, np.ndarray):
-            img_array = np.array(img_array)
-
-        # Handle object dtype - convert to numeric
-        if img_array.dtype == np.object_:
-            img_array = np.array(img_array, dtype=np.uint8)
-        # Ensure array is in (C, Y, X) format
-        if img_array.shape[-1] == 3:  # (Y, X, 3) format
-            img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
-
-        # Ensure proper dtype (uint8 for 8-bit images, uint16 for 16-bit)
-        if img_array.dtype == np.float32 or img_array.dtype == np.float64:
-            img_array = (img_array * 255).astype(np.uint8)
-        elif img_array.dtype not in [np.uint8, np.uint16, np.int8, np.int16]:
-            img_array = img_array.astype(np.uint8)
-
+        img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB)
+        img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
         size_c, size_y, size_x = img_array.shape
-        size_z, size_t = 1, 1
 
-        # Create plane generator - OMERO expects planes in Z, C, T order
-        # Make a copy to avoid any reference issues
         img_copy = np.ascontiguousarray(img_array)
-
         def plane_gen():
-            for z in range(size_z):
-                for c in range(size_c):
-                    for t in range(size_t):
-                        # Yield a contiguous copy of each plane
-                        plane = np.ascontiguousarray(img_copy[c, :, :])
-                        yield plane
+            for c in range(size_c):
+                plane = np.ascontiguousarray(img_copy[c, :, :])
+                yield plane
 
         image = self.conn.createImageFromNumpySeq(
-            plane_gen(), image_name, size_z, size_c, size_t,
-            description=None, dataset=None
+            plane_gen(), image_name, 1, size_c, 1,
+            dataset=None
         )
         image_id = image.getId()
 
@@ -131,23 +103,25 @@ class Image_Container:
         Returns:
             numpy array in (Y, X, 3) format (same as cv2.imread - BGR format). Assumes the png on the server is in the correct formatj.
         """
+
         image = self.conn.getObject("Image", image_id)
         if not image:
             raise ValueError(f"Image {image_id} not found")
-        size_z = image.getSizeZ()
-        size_c = image.getSizeC()
-        size_t = image.getSizeT()
-        size_y = image.getSizeY()
-        size_x = image.getSizeX()
         pixels = image.getPrimaryPixels()
-        channels = []
-        for c in range(size_c):
+        sizeZ = image.getSizeZ()
+        sizeC = image.getSizeC()
+        sizeT = image.getSizeT()
+        sizeY = image.getSizeY()
+        sizeX = image.getSizeX()
+        data = np.zeros((sizeX, sizeY, sizeC), dtype=np.uint8)
+        for c in range(sizeC):
             plane = pixels.getPlane(0, c, 0)
-            channels.append(plane)
-        img_array = np.stack(channels, axis=-1)
-        return img_array
+            data[:, :, c] = plane
+
+        return data
+       
     
-    def get_image_metadata(self, image_id: int) -> Dict:
+    def metadata_serialize(self, image_id: int) -> Dict:
         image = self.conn.getObject("Image", image_id)
         if not image:
             raise ValueError(f"Image {image_id} not found")
@@ -183,12 +157,40 @@ class Image_Container:
         
         return metadata
 
-    def get_dataset_info(self, dataset_id: int) -> Dict:
+    def apply_metadata_to_image(self, image_id: int, metadata: Dict):
+        if metadata.get('key_value_pairs'):
+            map_ann = omero.gateway.MapAnnotationWrapper(self.conn)
+            namespace = omero.constants.metadata.NSCLIENTMAPANNOTATION
+            map_ann.setNs(namespace)
+            map_ann.setValue(list(metadata['key_value_pairs'].items()))
+            map_ann.save()
+
+            image = self.conn.getObject("Image", image_id)
+            image.linkAnnotation(map_ann)
+
+        for tag_value in metadata.get('tags', []):
+            tag_ann = omero.gateway.TagAnnotationWrapper(self.conn)
+            tag_ann.setValue(tag_value)
+            tag_ann.save()
+
+            image = self.conn.getObject("Image", image_id)
+            image.linkAnnotation(tag_ann)
+
+        # Add comments
+        for comment_value in metadata.get('comments', []):
+            comment_ann = omero.gateway.CommentAnnotationWrapper(self.conn)
+            comment_ann.setValue(comment_value)
+            comment_ann.save()
+
+            image = self.conn.getObject("Image", image_id)
+            image.linkAnnotation(comment_ann)
+
+    def dataset_serialize(self, dataset_id: int) -> Dict:
         dataset = self.conn.getObject("Dataset", dataset_id)
         if not dataset:
             raise ValueError(f"Dataset {dataset_id} not found")
         
-        info = {
+        metadata = {
             'id': dataset.getId(),
             'name': dataset.getName(),
             'description': dataset.getDescription(),
@@ -202,50 +204,14 @@ class Image_Container:
         for ann in dataset.listAnnotations():
             if isinstance(ann, omero.gateway.MapAnnotationWrapper):
                 for key, value in ann.getValue():
-                    info['key_value_pairs'][key] = value
+                    metadata['key_value_pairs'][key] = value
             elif isinstance(ann, omero.gateway.TagAnnotationWrapper):
-                info['tags'].append(ann.getValue())
+                metadata['tags'].append(ann.getValue())
         
-        return info
+        return metadata
 
-    def add_image(self, camera_id: int):
-        frame = camera.Camera.global_list[camera_id].snap_image()
-        image_name = f"{camera_id}-{datetime.now().strftime('%d-%m-%Y-%H-%M-%S')}.png"
-        metadata = {
-            "wafer_id": self.wafer_counter,
-            "name": image_name,
-            "camera_id": camera_id,
-            "image_id": self.image_counter,
-            "x": self.transfer_station.posX(),
-            "y": self.transfer_station.posY(),
-            "flakes": []
-        }
-
-
-    def new_wafer(self):
+    def apply_metadata_to_dataset(self, dataset_id: int, metadata: Dict):
         pass
-
-    def search_and_save_wafer(self):
-        pass
-
-    def search_image(self, data):
-        image_name = data["name"]
-
-        image_data = self.load_image(image_name, data["wafer_id"])
-        # Run CV search
-        # flake_data = CV_Functions.run_searching(image_data)
-        flake_data = []
-        if flake_data.any():
-            print(f"Found {len(flake_data)} flakes in image {image_name}")
-        else:
-            print(f"No flakes found in image {image_name}")
-        self.update_scanned_counter(data["image_id"])
-        return flake_data
-
-    def update_scanned_counter(self, image_id):
-        if image_id > self.scanned_counter:
-            self.scanned_counter = image_id
-            print(f"Scanned counter is {self.scanned_counter} out of {len(self.metadata['wafers'][self.wafer_counter-1])}")
 
     def generate_image_output(self):
         pass
