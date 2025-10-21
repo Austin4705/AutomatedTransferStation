@@ -137,7 +137,7 @@ class PacketHandlers:
     def handle_draw_flakes(packet_type: str, data: dict):
         directory = data.get("directory")
         image_container = Image_Container(PacketHandlers.transfer_station, directory)
-        image_container.generate_image_output()
+        cv_functions.CV_Functions.generate_image_output()
         Socket_Manager.send_all_json({
             "type": "DRAW_FLAKES_RESPONSE",
             "response": "Wafers drawn",

@@ -19,10 +19,6 @@ def startup_flask_app():
     log = logging.getLogger('werkzeug')
     log.disabled = True
     atexit.register(cleanup_resources)
-    
-    for camera in Camera.global_list.values():
-        camera.snap_image()
-        camera.snap_image_flake_hunted()
 
     # Start the Flask app - use processes=1 to avoid multiprocessing issues
     port = os.environ.get('FLASK_PORT', '5000')
@@ -32,7 +28,6 @@ def startup_flask_app():
 
 def cleanup_resources():
     print("Cleaning up resources...")
-    
     with stream_lock:
         for stream_id in list(active_streams.keys()):
             try:

@@ -2,76 +2,59 @@ import cv2
 from datetime import datetime
 import os
 import numpy as np
-# from cv_functions import CV_Functions
-from autofocus import Autofocus
 import threading
 import time
 import weakref
-from socket_manager import Socket_Manager
-import transfer_functions
-import platform
 
-# if platform.system() == 'Windows':
-    # from tisgrabber.wrapper import ImageControl
+
+from autofocus import Autofocus
+from socket_manager import Socket_Manager
+from image_container import Image_Container
+
+# import transfer_functions
+# from cv_functions import CV_Functions
 
 class Camera:
-    global_list = dict() #Global list of camera class objects
-    IMAGE_REPO_NAME = "images"
-    
-    # Class-level lock for thread safety
+    global_list = dict()
     _lock = threading.Lock()
-    
-    # Keep track of all camera instances for cleanup
     _instances = weakref.WeakSet()
 
-    @staticmethod
-    # Figures out how many cameras are connected to the system
-    def initialize_all_cameras(type: str = "usb"):
-        sim_test = (type == "virtual") 
+    @classmethod
+    def create(cls, camera_id: int, camera_type: str = "usb"):
+        """Factory method to create camera by type"""
+        if camera_type == "usb":
+            from cameras.camera_usb import Camera_USB
+            return Camera_USB(camera_id)
+        elif camera_type == "thor":
+            from cameras.camera_thor import Camera_Thor
+            return Camera_Thor(camera_id)
+        else:
+            return cls(camera_id)
 
+    @staticmethod
+    def initialize_all_cameras(type: str = "usb"):
+        """Figures out how many cameras are connected to the system"""
         max_cameras_to_check = 4
         available_cameras = []
-        
-        # First, clean up any existing cameras
         Camera.cleanup_all()
-        
-        # Clear the global list
         Camera.global_list.clear()
         
         print("Searching for cameras...")
         for i in range(0, max_cameras_to_check):
             try:
-                print(f"Trying camera {i}...")
-                if os.name == 'nt':  # Check if running on Windows
-                    cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
-                else:
-                    cap = cv2.VideoCapture(i)
-
-                # Set the resolution to the transfer station's resolution
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
-                ret, test_frame = cap.read()
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_width)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, transfer_functions.Transfer_Functions.TRANSFER_STATION.camera_height)
-             
-
-                if not ret or test_frame is None:
-                    print(f"  Camera {i} opened but could not read frame, skipping")
-                    cap.release()
-                    continue
-                    
-                print(f"  Camera {i} successfully initialized")
-                available_cameras.append(i)
-                
-                # Create camera instance
-                try:
-                    camera = Camera(i, cap)
-                    if camera.current_frame is None:
-                        print(f"  Warning: Camera {i} initialized but no frame captured")
-                except Exception as e:
-                    print(f"  Error initializing camera {i}: {e}")
-                    cap.release()
-                    continue
+                camera = Camera.create(camera_id=i, camera_type=type)
+                timeout = os.getenv('CAMERA_INIT_TIMEOUT', 4.0)
+                start_time = time.time()
+                while not camera.is_active and time.time() - start_time < timeout:
+                    time.sleep(0.1)
+                if camera.is_active:
+                    print(f"  Camera {i} successfully initialized")
+                    available_cameras.append(i)
+                    with Camera._lock:
+                        Camera.global_list[i] = camera
+                        Camera._instances.add(camera)
+                else:   
+                    print(f"  Camera {i} failed to initialize")
             except Exception as e:
                 print(f"Error checking camera {i}: {e}")
 
@@ -80,7 +63,6 @@ class Camera:
             return {}
         else: 
             print(f"Detected {len(available_cameras)} cameras: {available_cameras}")
-            return available_cameras
     
     @staticmethod
     def cleanup_all():
@@ -92,101 +74,46 @@ class Camera:
             except:
                 pass
 
-    def __init__(self, cameraId, cap):
-        self.video = cap
-        self.is_active = True
+    def __init__(self, cameraId):
+        self.is_active = False
         self.camera_id = cameraId
         self.frame_lock = threading.Lock()
+        self.current_frame = self.get_black_frame()
+        self.snapshot_image = self.get_black_frame()
+        self.snapshot_image_flake_hunted = self.get_black_frame()
         
-        # Initialize frame buffers
-        self.current_frame = None
-        self.snapshot_image = None
-        self.snapshot_image_flake_hunted = None
-        
-        # Start frame capture thread
         self.capture_thread = threading.Thread(target=self._capture_frames, daemon=True)
         self.capture_thread.start()
         
-        # Wait for first frame
-        timeout = 3.0  # seconds
-        start_time = time.time()
-        while self.current_frame is None:
-            time.sleep(0.1)
-            if time.time() - start_time > timeout:
-                print(f"Warning: Timeout waiting for first frame from camera {cameraId}")
-                break
-        
-        # Store in global list and instances set
-        with Camera._lock:
-            Camera.global_list[cameraId] = self
-            Camera._instances.add(self)
-
     def __del__(self):
         """Clean up resources when the camera is deleted"""
         self.cleanup()
 
     def cleanup(self):
-        """Clean up resources explicitly"""
-        if hasattr(self, 'is_active') and self.is_active:
-            self.is_active = False
-            
-            # Wait for capture thread to terminate
-            if hasattr(self, 'capture_thread') and self.capture_thread.is_alive():
-                try:
-                    self.capture_thread.join(timeout=1.0)
-                except:
-                    pass
-                
-            # Release video capture
-            if hasattr(self, 'video') and self.video is not None:
-                try:
-                    self.video.release()
-                    self.video = None
-                except Exception as e:
-                    print(f"Error releasing camera {self.camera_id}: {e}")
-                    
-            # Clear frame buffers
-            self.current_frame = None
-            self.snapshot_image = None
-            self.snapshot_image_flake_hunted = None
+        self.is_active = False
+        if self.capture_thread.is_alive():
+            try:
+                self.capture_thread.join(timeout=1.0)
+            except Exception as e:
+                print(f"Error joining capture thread for camera {self.camera_id}: {e}")
+
+    def initialize_camera(self):
+        print(f"Trying camera {self.camera_id}...")
+        pass
+
+    def read_frame(self):
+        return True, self.get_black_frame()
 
     def _capture_frames(self):
         """Background thread to continuously capture frames"""
-        last_error_time = 0
-        error_count = 0
-
-        while self.is_active:
+        self.initialize_camera()
+        while True:
             try:
-                if not hasattr(self, 'video') or self.video is None or not self.video.isOpened():
-                    time.sleep(0.1)
+                ret, frame = self.read_frame()
+                if not ret: 
                     continue
-                
-                # Capture frame
-                ret, frame = self.video.read()
-
-                if not ret:
-                    # Limit error logging to avoid flooding
-                    current_time = time.time()
-                    if current_time - last_error_time > 5.0:
-                        print(f"Error: Could not read frame from camera {self.camera_id}")
-                        last_error_time = current_time
-                        error_count += 1
-                        
-                    # If we've had too many errors, sleep longer
-                    if error_count > 10:
-                        time.sleep(0.5)
-                    else:
-                        time.sleep(0.01)
-                    continue
-                
-                # Reset error count on successful frame
-                error_count = 0
-                
-                # Update current frame with thread safety
                 with self.frame_lock:
                     self.current_frame = frame
-                
-                # Don't capture too fast
                 time.sleep(0.01)
                 
             except Exception as e:
@@ -196,35 +123,14 @@ class Camera:
     def get_frame(self):
         """Get the most recent frame (thread-safe)"""
         with self.frame_lock:
-            if self.current_frame is None:
-                return None
             return self.current_frame.copy()
 
-    def get_single_frame_as_response(self):
-        """Get a single frame formatted as an HTTP response"""
-        frame = self.get_frame()
-        if frame is None:
-            return None
-            
-        try:
-            ret, png = cv2.imencode(".jpg", frame)
-            if not ret:
-                return None
-                
-            return (
-                b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n\r\n" + png.tobytes() + b"\r\n\r\n"
-            )
-        except Exception as e:
-            print(f"Error encoding frame: {e}")
-            return None
+    def get_black_frame(self):
+        with self.frame_lock:
+            return np.zeros((480, 640, 3), dtype=np.uint8)
 
     def save_image(self, frame):
         """Save an image to disk"""
-        if frame is None:
-            print("Cannot save None frame")
-            return
-            
         try:
             cv2.imwrite(
                 f"../{Camera.IMAGE_REPO_NAME}/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.jpg",
@@ -237,70 +143,60 @@ class Camera:
     def snap_image(self):
         """Take a snapshot and store it"""
         frame = self.get_frame()
-
-
         self.snapshot_image = frame
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
-        return self.snapshot_image
 
     def snap_image_flake_hunted(self):
         """Take a flake hunted snapshot and store it"""
         frame = self.get_frame()
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT_FLAKE_HUNTED", "camera": self.camera_id})
-        if frame is None:
-            return None
-            
         try:
             # processed_frame = CV_Functions.matGMM2DTransform(frame)
             processed_frame = frame
-            with self.frame_lock:
-                self.snapshot_image_flake_hunted = processed_frame
-            return self.snapshot_image_flake_hunted
+            self.snapshot_image_flake_hunted = processed_frame
         except Exception as e:
             print(f"Error in flake hunting: {e}")
+
+    def get_single_frame_as_response(self):
+        """Get a single frame formatted as an HTTP response"""
+        frame = self.get_frame()
+        try:
+            ret, png = cv2.imencode(".jpg", frame)
+            if not ret:
+                return None
+            return (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + png.tobytes() + b"\r\n\r\n"
+            )
+        except Exception as e:
+            print(f"Error encoding frame: {e}")
             return None
 
     def get_snapshot_as_response(self):
         """Get the snapshot as an HTTP response"""
-        # Take a new snapshot if needed
-        if self.snapshot_image is None:
-            self.snap_image()
-            
-        # Get the snapshot with thread safety
-        with self.frame_lock:
-            frame = self.snapshot_image
-            
-        if frame is None:
-            # Return a blank image if we can't get a real one
-            blank_image = np.zeros((480, 640, 3), np.uint8)
-            ret, png = cv2.imencode(".jpg", blank_image)
-        else:
-            focus_score = CV_Functions.calculate_focus_score(frame)
-            has_enough_edges = CV_Functions.get_edge_count(frame)
-            color_ratio = CV_Functions.get_color_features(frame)
-
-            # Add focus score text to the frame
-            cv2.putText(
-                frame,
-                f"Focus Score: {focus_score:.2f} {has_enough_edges}",
-                (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (255, 255, 255),  # White text
-                2  # Thickness
-            )
-
-            cv2.putText(
-                frame,
-                f"Color Ratio: {color_ratio:.2f}",
-                (10, 60),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (255, 255, 255),  # White text
-                2  # Thickness
-            )
-            ret, png = cv2.imencode(".jpg", frame)
-            
+        frame = self.get_frame()
+        focus_score = Autofocus.calculate_focus_score(frame)
+        has_enough_edges = Autofocus.get_edge_count(frame)
+        color_ratio = Autofocus.get_color_features(frame)
+        cv2.putText(
+            frame,
+            f"Focus Score: {focus_score:.2f} {has_enough_edges}",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),  # White text
+            2  # Thickness
+        )
+        cv2.putText(
+            frame,
+            f"Color Ratio: {color_ratio:.2f}",
+            (10, 60),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),  # White text
+            2  # Thickness
+        )
+        ret, png = cv2.imencode(".jpg", frame)
         return (
             b"--frame\r\n"
             b"Content-Type: image/jpeg\r\n\r\n" + png.tobytes() + b"\r\n\r\n"
@@ -308,85 +204,8 @@ class Camera:
 
     def get_flake_hunted_snapshot_as_response(self):
         """Get the flake hunted snapshot as an HTTP response"""
-        # Take a new snapshot if needed
-        if self.snapshot_image_flake_hunted is None:
-            self.snap_image_flake_hunted()
-            
-        # Get the snapshot with thread safety
-        with self.frame_lock:
-            frame = self.snapshot_image_flake_hunted
-            
-        if frame is None:
-            # Return a blank image if we can't get a real one
-            blank_image = np.zeros((480, 640, 3), np.uint8)
-            ret, png = cv2.imencode(".jpg", blank_image)
-        else:
-            ret, png = cv2.imencode(".jpg", frame)
-            
-        return (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + png.tobytes() + b"\r\n\r\n"
-        )
-
-    @staticmethod
-    def generate_video(camera):
-        """Generate video frames with proper resource management"""
-        try:
-            while camera.is_active:
-                frame = camera.get_frame()
-                if frame is None:
-                    # If we can't get a frame, pause briefly and try again
-                    import time
-                    time.sleep(0.1)
-                    continue
-                    
-                # frame = Camera.matGMM2DTransform(frame)
-                ret, png = cv2.imencode(".jpg", frame)
-                if not ret:
-                    continue
-                    
-                yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n" + png.tobytes() + b"\r\n\r\n"
-                )
-        except Exception as e:
-            print(f"Error in generate_video for camera {camera.camera_id}: {e}")
-        finally:
-            # Ensure we don't leave any resources hanging
-            pass
-
-    @staticmethod
-    def get_snapped_image_flake_hunted(camera):
-        if not hasattr(camera, 'snapshot_image') or camera.snapshot_image is None:
-            camera.snap_image()
-            
-        if not hasattr(camera, 'snapshot_image_flake_hunted') or camera.snapshot_image_flake_hunted is None:
-            camera.snap_image_flake_hunted()
-            
-        if camera.snapshot_image_flake_hunted is None:
-            # Return a blank image if we can't get a real one
-            blank_image = np.zeros((480, 640, 3), np.uint8)
-            ret, png = cv2.imencode(".jpg", blank_image)
-        else:
-            ret, png = cv2.imencode(".jpg", camera.snapshot_image_flake_hunted)
-            
-        return (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + png.tobytes() + b"\r\n\r\n"
-        )
-
-    @staticmethod
-    def get_snapped_image(camera):
-        if not hasattr(camera, 'snapshot_image') or camera.snapshot_image is None:
-            camera.snap_image()
-            
-        if camera.snapshot_image is None:
-            # Return a blank image if we can't get a real one
-            blank_image = np.zeros((480, 640, 3), np.uint8)
-            ret, png = cv2.imencode(".jpg", blank_image)
-        else:
-            ret, png = cv2.imencode(".jpg", camera.snapshot_image)
-            
+        frame = self.get_frame()
+        ret, png = cv2.imencode(".jpg", frame)
         return (
             b"--frame\r\n"
             b"Content-Type: image/jpeg\r\n\r\n" + png.tobytes() + b"\r\n\r\n"
