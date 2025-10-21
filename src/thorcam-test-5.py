@@ -12,11 +12,11 @@ load_dotenv("defualt.env")
 load_dotenv(".env", override=True)
 
 
-# camera = Camera.create(camera_id=0, camera_type="thor")
-Camera.initialize_all_cameras(Image_Container(), "thor")
-camera = Camera.global_list[0]
+camera = Camera.create(camera_id=0, camera_type="thor")
+# Camera.initialize_all_cameras(Image_Container(), "thor")
+# camera = Camera.global_list[0]
 print("Getting frame")
-# time.sleep(5)
+time.sleep(5)
 frame = camera.get_frame()
 cv2.imwrite('frame.png', frame)
 camera.cleanup()
