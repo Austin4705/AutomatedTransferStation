@@ -159,32 +159,56 @@ class Image_Container:
         return metadata
 
     def apply_metadata_to_image(self, image_id: int, metadata: Dict):
+        image = self.conn.getObject("Image", image_id)
+
         if metadata.get('key_value_pairs'):
-            map_ann = omero.gateway.MapAnnotationWrapper(self.conn)
-            namespace = omero.constants.metadata.NSCLIENTMAPANNOTATION
-            map_ann.setNs(namespace)
-            map_ann.setValue(list(metadata['key_value_pairs'].items()))
-            map_ann.save()
+            existing_map_ann = None
+            for ann in image.listAnnotations():
+                if isinstance(ann, omero.gateway.MapAnnotationWrapper):
+                    existing_map_ann = ann
+                    break
+            if existing_map_ann:
+                existing_map_ann.setValue(list(metadata['key_value_pairs'].items()))
+                existing_map_ann.save()
+            else:
+                map_ann = omero.gateway.MapAnnotationWrapper(self.conn)
+                namespace = omero.constants.metadata.NSCLIENTMAPANNOTATION
+                map_ann.setNs(namespace)
+                map_ann.setValue(list(metadata['key_value_pairs'].items()))
+                map_ann.save()
+                image.linkAnnotation(map_ann)
 
-            image = self.conn.getObject("Image", image_id)
-            image.linkAnnotation(map_ann)
+        if 'tags' in metadata:
+            existing_tags = [ann for ann in image.listAnnotations()
+                           if isinstance(ann, omero.gateway.TagAnnotationWrapper)]
+            new_tag_values = metadata.get('tags', [])
+            for i, tag_value in enumerate(new_tag_values):
+                if i < len(existing_tags):
+                    existing_tags[i].setValue(tag_value)
+                    existing_tags[i].save()
+                else:
+                    tag_ann = omero.gateway.TagAnnotationWrapper(self.conn)
+                    tag_ann.setValue(tag_value)
+                    tag_ann.save()
+                    image.linkAnnotation(tag_ann)
+            for j in range(len(new_tag_values), len(existing_tags)):
+                image.unlinkAnnotation(existing_tags[j])
 
-        for tag_value in metadata.get('tags', []):
-            tag_ann = omero.gateway.TagAnnotationWrapper(self.conn)
-            tag_ann.setValue(tag_value)
-            tag_ann.save()
-
-            image = self.conn.getObject("Image", image_id)
-            image.linkAnnotation(tag_ann)
-
-        # Add comments
-        for comment_value in metadata.get('comments', []):
-            comment_ann = omero.gateway.CommentAnnotationWrapper(self.conn)
-            comment_ann.setValue(comment_value)
-            comment_ann.save()
-
-            image = self.conn.getObject("Image", image_id)
-            image.linkAnnotation(comment_ann)
+        if 'comments' in metadata:
+            existing_comments = [ann for ann in image.listAnnotations()
+                               if isinstance(ann, omero.gateway.CommentAnnotationWrapper)]
+            new_comment_values = metadata.get('comments', [])
+            for i, comment_value in enumerate(new_comment_values):
+                if i < len(existing_comments):
+                    existing_comments[i].setValue(comment_value)
+                    existing_comments[i].save()
+                else:
+                    comment_ann = omero.gateway.CommentAnnotationWrapper(self.conn)
+                    comment_ann.setValue(comment_value)
+                    comment_ann.save()
+                    image.linkAnnotation(comment_ann)
+            for j in range(len(new_comment_values), len(existing_comments)):
+                image.unlinkAnnotation(existing_comments[j])
 
     def dataset_serialize(self, dataset_id: int) -> Dict:
         dataset = self.conn.getObject("Dataset", dataset_id)
@@ -197,9 +221,10 @@ class Image_Container:
             'description': dataset.getDescription(),
             'owner': dataset.getOwnerFullName(),
             'image_count': dataset.countChildren(),
-            'images': [{'id': img.getId(), 'name': img.getName()} for img in dataset.listChildren()],
+            # 'images': [{'id': img.getId(), 'name': img.getName()} for img in dataset.listChildren()],
             'key_value_pairs': {},
             'tags': [],
+            'comments': [],
         }
         
         for ann in dataset.listAnnotations():
@@ -212,7 +237,43 @@ class Image_Container:
         return metadata
 
     def apply_metadata_to_dataset(self, dataset_id: int, metadata: Dict):
-        pass
+        dataset = self.conn.getObject("Dataset", dataset_id)
+        if not dataset:
+            raise ValueError(f"Dataset {dataset_id} not found")
+
+        if metadata.get('key_value_pairs'):
+            existing_map_ann = None
+            for ann in dataset.listAnnotations():
+                if isinstance(ann, omero.gateway.MapAnnotationWrapper):
+                    existing_map_ann = ann
+                    break
+
+            if existing_map_ann:
+                existing_map_ann.setValue(list(metadata['key_value_pairs'].items()))
+                existing_map_ann.save()
+            else:
+                map_ann = omero.gateway.MapAnnotationWrapper(self.conn)
+                namespace = omero.constants.metadata.NSCLIENTMAPANNOTATION
+                map_ann.setNs(namespace)
+                map_ann.setValue(list(metadata['key_value_pairs'].items()))
+                map_ann.save()
+                dataset.linkAnnotation(map_ann)
+
+        if 'tags' in metadata:
+            existing_tags = [ann for ann in dataset.listAnnotations()
+                           if isinstance(ann, omero.gateway.TagAnnotationWrapper)]
+            new_tag_values = metadata.get('tags', [])
+            for i, tag_value in enumerate(new_tag_values):
+                if i < len(existing_tags):
+                    existing_tags[i].setValue(tag_value)
+                    existing_tags[i].save()
+                else:
+                    tag_ann = omero.gateway.TagAnnotationWrapper(self.conn)
+                    tag_ann.setValue(tag_value)
+                    tag_ann.save()
+                    dataset.linkAnnotation(tag_ann)
+            for j in range(len(new_tag_values), len(existing_tags)):
+                dataset.unlinkAnnotation(existing_tags[j])
 
     def generate_image_output(self):
         pass

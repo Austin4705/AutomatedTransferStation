@@ -51,9 +51,36 @@ if isinstance(image_downloaded, np.ndarray):
     print("Shape:", image_downloaded.shape)
     print("Dtype:", image_downloaded.dtype)
 
-# print(metadata_serialize(image_id))
-# print(dataset_serialize(dataset))
+metadata_image = image_container.metadata_serialize(image_id)
+metadata_dataset = image_container.dataset_serialize(dataset)
+print("--------------------------------")
+print(metadata_dataset)
+print("--------------------------------")
+print(metadata_image)
+print("--------------------------------")
+metadata_image['tags'] = ["tag_test_changed-1"]
+metadata_image['key_value_pairs']['test'] = "image_test_changed-1"
+metadata_image['comments'] = ["comment_test_changed-1"]
+metadata_dataset['tags'] = ["tag_test_changed-1"]
+metadata_dataset['key_value_pairs']['test'] = "dataset_test_changed-1"
+metadata_dataset['comments'] = ["comment_test_changed-1"]
+image_container.apply_metadata_to_image(image_id, metadata_image)
+metadata_image = image_container.metadata_serialize(image_id)
+print(metadata_image)
+print("--------------------------------")
+metadata_image['tags'] = ["tag_test_changed-1", "tag_test_changed-2"]
+metadata_image['key_value_pairs']['test'] = "image_test_changed-2"
+metadata_image['comments'] = ["comment_test_changed-1", "comment_test_changed-2"]
+metadata_dataset['tags'] = ["tag_test_changed-1", "tag_test_changed-2"]
+metadata_dataset['key_value_pairs']['test'] = "dataset_test_changed-2"
+metadata_dataset['comments'] = ["comment_test_changed-1", "comment_test_changed-2"]
+image_container.apply_metadata_to_image(image_id, metadata_image)
+metadata_image = image_container.metadata_serialize(image_id)
+print(metadata_image)
+print("--------------------------------")
+print(metadata_dataset)
 
-show_image_cv2(image_downloaded)
+
+# show_image_cv2(image_downloaded)
 
 
