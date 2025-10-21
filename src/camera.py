@@ -45,7 +45,7 @@ class Camera:
         for i in range(0, max_cameras_to_check):
             try:
                 camera = Camera.create(camera_id=i, camera_type=type)
-                timeout = os.getenv('CAMERA_INIT_TIMEOUT', 4.0)
+                timeout = os.getenv('CAMERA_INIT_TIMEOUT', 0)
                 start_time = time.time()
                 while not camera.is_active and time.time() - start_time < timeout:
                     time.sleep(0.1)
@@ -83,7 +83,9 @@ class Camera:
         self.current_frame = self.get_black_frame()
         self.snapshot_image = self.get_black_frame()
         self.snapshot_image_flake_hunted = self.get_black_frame()
+        self.capture_thread = None
         
+        self.initialize_camera()
 
         self.capture_thread = threading.Thread(target=self._capture_frames, daemon=True)
         self.capture_thread.start()
@@ -94,11 +96,12 @@ class Camera:
 
     def cleanup(self):
         self.is_active = False
-        if self.capture_thread.is_alive():
-            try:
-                self.capture_thread.join(timeout=1.0)
-            except Exception as e:
-                print(f"Error joining capture thread for camera {self.camera_id}: {e}")
+        if self.capture_thread is not None:
+            if self.capture_thread.is_alive():
+                try:
+                    self.capture_thread.join(timeout=1.0)
+                except Exception as e:
+                    print(f"Error joining capture thread for camera {self.camera_id}: {e}")
 
     def initialize_camera(self):
         print(f"Trying camera {self.camera_id}...")
@@ -110,7 +113,6 @@ class Camera:
 
     def _capture_frames(self):
         """Background thread to continuously capture frames"""
-        self.initialize_camera()
         while True:
             try:
                 ret, frame = self.read_frame()
