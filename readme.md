@@ -46,7 +46,6 @@ docker compose up  -d #to turn on the database
 ```
 If you want to view data, login at `http://localhost:4080/` with usrname:password `root:omero`
 
-To install a thorlabs camera you need to `C:\Program Files\Thorlabs\Scientific Imaging\Scientific Camera Support\`. `Micro-Manager-README` should describe the process, but simply extract `Scientific_Camera_Interfaces` somewhere, get the sdk, native toolkit, dlls, 64 bit. Download `https://micro-manager.org/Download_Micro-Manager_Latest_Release` and install into here
 C:\Program Files\Thorlabs\Scientific Imaging\Scientific Camera Support
 `pip install ".\thorlabs_tsi_camera_python_sdk_package.zip"`
 ### 3. Set up the Client
