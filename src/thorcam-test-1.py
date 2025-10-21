@@ -19,11 +19,14 @@ if sys.version_info >= (3, 8):
 # Also add to PATH for compatibility
 os.environ['PATH'] = dll_dir + os.pathsep + os.environ.get('PATH', '')
 
-from thorlabs_tsi_sdk.tl_camera import TLCameraSDK
+from thorlabs_tsi_sdk.tl_camera import TLCameraSDK, SENSOR_TYPE
+from thorlabs_tsi_sdk.tl_mono_to_color_processor import MonoToColorProcessorSDK
+from thorlabs_tsi_sdk.tl_mono_to_color_enums import COLOR_SPACE
+from thorlabs_tsi_sdk.tl_color_enums import FORMAT
 import numpy as np
 
 # Use context managers for automatic cleanup
-with TLCameraSDK() as sdk:
+with TLCameraSDK() as sdk, MonoToColorProcessorSDK() as mono_to_color_sdk:
     serials = sdk.discover_available_cameras()
     print("Found cameras:", serials)
     if not serials:
@@ -31,14 +34,18 @@ with TLCameraSDK() as sdk:
 
     with sdk.open_camera(serials[0]) as cam:
         print("Model:", cam.model, "SN:", cam.serial_number)
+        print("Sensor type:", cam.camera_sensor_type)
         
-        # Configure camera settings
+        
         cam.exposure_time_us = 10000
         cam.frames_per_trigger_zero_for_unlimited = 0  # continuous mode
         cam.image_poll_timeout_ms = 1000  # 1 second timeout
         
         # Arm the camera with 2 frame buffers
         cam.arm(2)
+        
+        image_width = cam.image_width_pixels
+        image_height = cam.image_height_pixels
         
         # Trigger image acquisition
         cam.issue_software_trigger()
@@ -52,22 +59,28 @@ with TLCameraSDK() as sdk:
             print("Bit depth:", cam.bit_depth)
             print("Image min:", img.min(), "max:", img.max())
             
-            # Normalize the image to 8-bit for display/saving
-            if img.dtype == np.uint16 or cam.bit_depth > 8:
-                # Scale from 12/16-bit to 8-bit
-                img_normalized = ((img - img.min()) / (img.max() - img.min()) * 255).astype(np.uint8)
-            else:
-                img_normalized = img
+            cam.disarm()
             
-            cv2.imwrite("frame.png", img_normalized)
-            print("Image saved as frame.png")
-            
-            # Make a deep copy if you need to keep the data
-            # img_copy = np.copy(frame.image_buffer)
+            print("Converting Bayer pattern to RGB...")
+            with mono_to_color_sdk.create_mono_to_color_processor(
+                cam.camera_sensor_type,
+                cam.color_filter_array_phase,
+                cam.get_color_correction_matrix(),
+                cam.get_default_white_balance_matrix(),
+                cam.bit_depth
+            ) as mono_to_color_processor:
+                mono_to_color_processor.color_space = COLOR_SPACE.SRGB
+                mono_to_color_processor.output_format = FORMAT.BGR_PIXEL
+                color_image_flat = mono_to_color_processor.transform_to_24(
+                    img, image_width, image_height
+                )
+                color_image = color_image_flat.reshape(image_height, image_width, 3)
+
+                print("Color image shape:", color_image.shape)
+                cv2.imwrite("frame.png", color_image)
+                print("Color image saved as frame.png")
         else:
             print("Timeout: No frame received")
-        
-        # Disarm the camera
-        cam.disarm()
+            cam.disarm()
 
 print("Program completed successfully")
