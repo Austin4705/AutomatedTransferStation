@@ -16,14 +16,19 @@ class Camera_USB(Camera):
         while not self.cap.isOpened():
             time.sleep(0.1)
         self.is_active = True
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, os.getenv(f'CAMERA{self.camera_id}_RESOLUTION_WIDTH'))
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, os.getenv(f'CAMERA{self.camera_id}_RESOLUTION_HEIGHT'))
+        self.frame_height = os.getenv(f'CAMERA{self.camera_id}_RESOLUTION_HEIGHT', 480)
+        self.frame_width = os.getenv(f'CAMERA{self.camera_id}_RESOLUTION_WIDTH', 640)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     def read_frame(self):
         return self.cap.read()
 
     def __init__(self, cameraId):
         super().__init__(cameraId)
+
+    def get_black_frame(self):
+        return np.zeros((480, 640, 3), dtype=np.uint8)
 
     def cleanup(self):
         """Clean up resources explicitly"""

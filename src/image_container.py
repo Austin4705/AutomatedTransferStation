@@ -16,7 +16,6 @@ from multiprocessing import Pool
 import cv2
 
 # import camera
-# from transfer_station import Transfer_Station
 # from cv_functions import CV_Functions
 # from GMMDetector.structures import Flake
 # import packet_handlers
@@ -26,9 +25,12 @@ class Image_Container:
     This class is used to store images.
     """
 
-    def __init__(self, transfer_station):
+    def __init__(self):
         self.connect_to_omero(os.getenv('OMERO_HOST'), os.getenv('OMERO_USERNAME'), os.getenv('OMERO_PASSWORD'))
-        self.transfer_station = transfer_station
+        self.wafers = {}
+        self.active_chip_id = os.getenv('ACTIVE_CHIP_ID', 1)
+        self.load_chip(self.active_chip_id)
+        # self.create_chip("testing_chip_1")
 
     def connect_to_omero(self, host: str, username: str, password: str, port: int = 4064) -> BlitzGateway:
         logging.getLogger("omero").setLevel(logging.ERROR)
@@ -69,8 +71,7 @@ class Image_Container:
 
 
         
-    def upload_image(self, img_array: np.ndarray | list | tuple, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None) -> int:
-
+    def upload_image(self, img_array: np.ndarray | list | tuple, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None, include_time_name: bool = True) -> int:
         img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR) 
         img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
         size_c, size_y, size_x = img_array.shape
@@ -82,6 +83,8 @@ class Image_Container:
                 plane = np.ascontiguousarray(img_copy[c, :, :])
                 yield plane
 
+        if include_time_name:
+            image_name = f"{image_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         image = self.conn.createImageFromNumpySeq(
             plane_gen(), image_name, size_z, size_c, size_t,
             dataset=None
@@ -274,3 +277,47 @@ class Image_Container:
                     dataset.linkAnnotation(tag_ann)
             for j in range(len(new_tag_values), len(existing_tags)):
                 dataset.unlinkAnnotation(existing_tags[j])
+
+    def get_dataset_by_name(self, project_id: int, dataset_name: str) -> Optional[int]:
+        project = self.conn.getObject("Project", project_id)
+        if not project:
+            return None
+
+        for dataset in project.listChildren():
+            if dataset.getName() == dataset_name:
+                return dataset.getId()
+
+        return None
+
+    def load_chip(self, chip_id: int):
+        project = self.conn.getObject("Project", chip_id)
+        if not project:
+            return
+        
+        chip_name = project.getName()
+        project_id = project.getId()
+        self.wafers[chip_id] = {
+            'id': chip_id,
+            'name': chip_name,
+            'dataset_snapshot_id': self.get_dataset_by_name(project_id, "snapshot"),
+            'dataset_flake_hunted_snapshot_id': self.get_dataset_by_name(project_id, "flake_hunted_snapshot")
+        }
+
+    def create_chip(self, chip_name: str):
+        chip_id = self.create_project(chip_name)
+        
+        dataset_snapshot_id = self.create_dataset("snapshot", project_id=chip_id)
+        dataset_flake_hunted_snapshot_id = self.create_dataset("flake_hunted_snapshot", project_id=chip_id)
+        self.wafers[chip_id] = {
+            'id': chip_id,
+            'name': chip_name,
+            'dataset_snapshot_id': dataset_snapshot_id,
+            'dataset_flake_hunted_snapshot_id': dataset_flake_hunted_snapshot_id
+        }
+        return chip_id
+
+    def save_snapshot(self, chip_id: int, snapshot: np.ndarray):
+        self.upload_image(snapshot, self.wafers[chip_id]['dataset_snapshot_id'])
+
+    def save_flake_hunted_snapshot(self, chip_id: int, snapshot: np.ndarray):
+        self.upload_image(snapshot, self.wafers[chip_id]['dataset_flake_hunted_snapshot_id'])
