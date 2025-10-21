@@ -148,6 +148,7 @@ class Camera:
         """Take a snapshot and store it"""
         frame = self.get_frame()
         self.snapshot_image = frame
+        print(self.snapshot_image.shape)
         Camera.image_container.save_snapshot(Camera.image_container.active_chip_id, self.snapshot_image)
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
 

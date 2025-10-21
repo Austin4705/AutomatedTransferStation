@@ -53,9 +53,9 @@ class Camera_Thor(Camera):
             self.frame_width = self.cam.image_width_pixels
             self.frame_height = self.cam.image_height_pixels
             print(f"Image dimensions: {self.frame_width}x{self.frame_height}")
-            self.cam.exposure_time_us = 10
-            self.cam.frames_per_trigger_zero_for_unlimited = 0
+            self.cam.exposure_time_us = os.getenv('CAMERA_EXPOSURE_TIME_US', 1000)
             self.cam.image_poll_timeout_ms = 1000
+            self.cam.frames_per_trigger_zero_for_unlimited = 0
             
             # Arm camera with 2 frame buffers
             self.cam.arm(2)
