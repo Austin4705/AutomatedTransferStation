@@ -34,6 +34,57 @@ class CV_Functions:
         )
         return image
 
+    def generate_image_output(self):
+        pass
+        # for image_metadata in self.metadata.get("searched"):
+        #     image = self.load_image(image_metadata["name"], image_metadata["wafer_id"])
+        #     flakes = [
+        #         Flake(
+        #             thickness=flake.get("thickness"),
+        #             size=flake.get("size"), 
+        #             false_positive_probability=flake.get("false_positive_probability"),
+        #             center=flake.get("center"),
+        #             mask=cv2.imread(os.path.join(self.directory_flake_masks, flake.get("mask")), cv2.IMREAD_GRAYSCALE),
+        #             max_sidelength=flake.get("max_sidelength"),  # Default values for required parameters
+        #             min_sidelength=flake.get("min_sidelength"),  # Default values for required parameters
+        #             mean_contrast=flake.get("mean_contrast")  #
+        #         )
+        #         for flake in image_metadata.get("flakes", [])
+        #     ]
+        #     # image_data = CV_Functions.visualise_flakes(flakes, image, 0.5)
+        #     image_data = image
+        #     # Add wafer and position text
+        #     cv2.putText(
+        #         image_data,
+        #         f"Wafer: {image_metadata['wafer_id']}", 
+        #         (image_data.shape[1] - 300, 30),
+        #         cv2.FONT_HERSHEY_SIMPLEX,
+        #         1,
+        #         (255, 255, 255),
+        #         2
+        #     )
+        #     cv2.putText(
+        #         image_data,
+        #         f"Image Number: {image_metadata['image_id']}", 
+        #         (image_data.shape[1] - 300, 60),
+        #         cv2.FONT_HERSHEY_SIMPLEX,
+        #         1,
+        #         (255, 255, 255),
+        #         2
+        #     )
+        #     cv2.putText(
+        #         image_data,
+        #         f"x: {image_metadata['x']} y: {image_metadata['y']}", 
+        #         (image_data.shape[1] - 300, 90),
+        #         cv2.FONT_HERSHEY_SIMPLEX,
+        #         1,
+        #         (255, 255, 255),
+        #         2
+        #     )
+        #     cv2.imwrite(os.path.join(self.directory_searched, image_metadata["name"]), image_data)
+
+        
+
     def cvImageBoarderOp(img):
         # Convert to YCrCb Channel and extract cb channel
         imgYCrCb = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)

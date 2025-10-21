@@ -8,11 +8,10 @@ from dotenv import load_dotenv
 
 from socket_manager import Socket_Manager
 from camera import Camera
-import web_server
-# from cv_functions import CV_Functions
 from packet_handlers import PacketHandlers
 from transfer_functions import Transfer_Functions
 from transfer_station import Transfer_Station
+import web_server
 
 if __name__ == "__main__":
     load_dotenv("defualt.env")
@@ -28,11 +27,6 @@ if __name__ == "__main__":
     print("Detecting and initializing cameras...")
     camera_type = os.getenv('CAMERA_TYPE', 'usb')
     cameras = Camera.initialize_all_cameras(camera_type)
-    
-    # We get issues with initalization if we dont run this command first 
-    # print("Loading Model")
-    # cv_functions = CV_Functions()
-    # print("Model Loaded")
     
     print("Initializing Flask server")
     flask_server_thread = threading.Thread(target=web_server.startup_flask_app)
