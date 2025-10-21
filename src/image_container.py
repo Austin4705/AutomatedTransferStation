@@ -70,9 +70,11 @@ class Image_Container:
 
         
     def upload_image(self, img_array: np.ndarray | list | tuple, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None) -> int:
-        img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB)
+
+        img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR) 
         img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
         size_c, size_y, size_x = img_array.shape
+        size_z, size_t = 1, 1
 
         img_copy = np.ascontiguousarray(img_array)
         def plane_gen():
@@ -81,7 +83,7 @@ class Image_Container:
                 yield plane
 
         image = self.conn.createImageFromNumpySeq(
-            plane_gen(), image_name, 1, size_c, 1,
+            plane_gen(), image_name, size_z, size_c, size_t,
             dataset=None
         )
         image_id = image.getId()
@@ -113,12 +115,11 @@ class Image_Container:
         sizeT = image.getSizeT()
         sizeY = image.getSizeY()
         sizeX = image.getSizeX()
-        data = np.zeros((sizeX, sizeY, sizeC), dtype=np.uint8)
+        data = np.zeros((sizeY, sizeX, sizeC), dtype=np.uint8)
         for c in range(sizeC):
             plane = pixels.getPlane(0, c, 0)
             data[:, :, c] = plane
-
-        return data
+        return cv2.cvtColor(np.ascontiguousarray(data), cv2.COLOR_BGR2RGB)
        
     
     def metadata_serialize(self, image_id: int) -> Dict:
