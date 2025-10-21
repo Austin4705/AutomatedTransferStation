@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { isConsoleMessage } from "../state/consoleState";
 import { jsonStateAtom } from "../state/jsonState";
+import { hostConfigAtom } from "../state/hostState";
 import { useRecoilValue } from "recoil";
 
 export default function CameraFeed(props: any) {
     const [imageKey, setImageKey] = useState(Date.now());
     const [error, setError] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const baseUrl: string = "http://127.0.0.1:5000/";
+    const hostConfig = useRecoilValue(hostConfigAtom);
+    const baseUrl: string = `http://${hostConfig.host}:5000/`;
     const cameraId = props.id;
     const imgRef = useRef<HTMLImageElement>(null);
     const [lastCameraId, setLastCameraId] = useState(cameraId);
