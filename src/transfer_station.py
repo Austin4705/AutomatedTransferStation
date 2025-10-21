@@ -50,6 +50,7 @@ class Transfer_Station():
     def get_subclass_instances(cls):
         return cls._subclass_instances
 
+
     #Functions to reimplement 
     def _send_command(self, command):
         print(f"Send Command: {command}-V")
@@ -62,11 +63,6 @@ class Transfer_Station():
 
     def moveZ(self, Z):
         print("Move Z-V")
-
-    def moveXY(self, x, y):
-        print(f"Move XY to {x}, {y}-V")
-        self.moveX(x)
-        self.moveY(y)
 
     def posX(self):
         # print("Get X Position-V")
@@ -86,8 +82,12 @@ class Transfer_Station():
     def led_off(self):
         print("Turn LED off-V")
 
-
     #Functions NOT TO REIMPLEMENT
+    def moveXY(self, x, y):
+        print(f"Move XY to {x}, {y}-V")
+        self.moveX(x)
+        self.moveY(y)
+
     def setLED(self, status):
         if status:
             self.led_on()
