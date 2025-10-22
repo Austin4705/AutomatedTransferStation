@@ -115,6 +115,19 @@ class Camera_Thor(Camera):
             cv2.putText(display_image, f"Frame: {self.frame_count}", (10, 70),
             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
+            # Debug: uncomment to save frames
+            # cv2.imwrite(f'base_frame_{time.strftime("%Y%m%d_%H%M%S")}.png', display_image)
+
+            # Resize if image is too large for OMERO's non-tiled writing
+            # max_dimension = 2048
+            # height, width = display_image.shape[:2]
+            # if max(height, width) > max_dimension:
+            #     scale = max_dimension / max(height, width)
+            #     new_width = int(width * scale)
+            #     new_height = int(height * scale)
+            #     img_array = cv2.resize(img_array, (new_width, new_height), interpolation=cv2.INTER_AREA)
+            #     print(f"Resized image from {width}x{height} to {new_width}x{new_height} for OMERO upload")
+
             return True, display_image
         except Exception as e:
             self.is_active = False

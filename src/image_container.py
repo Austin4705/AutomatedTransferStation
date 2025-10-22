@@ -71,8 +71,21 @@ class Image_Container:
 
 
         
-    def upload_image(self, img_array: np.ndarray | list | tuple, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None, include_time_name: bool = True) -> int:
-        img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR) 
+    def upload_image(self, img_array: np.ndarray | list | tuple, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None, include_time_name: bool = True, max_dimension: int = 2048) -> int:
+
+        height, width = img_array.shape[:2]
+        if max_dimension is not None and max(height, width) > max_dimension:
+            scale = max_dimension / max(height, width)
+            new_width = int(width * scale)
+            new_height = int(height * scale)
+            img_array = cv2.resize(img_array, (new_width, new_height), interpolation=cv2.INTER_AREA)
+            # print(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+            height, width = new_height, new_width
+        
+        if include_time_name:
+            image_name = f"{image_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        
+        img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB) 
         img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
         size_c, size_y, size_x = img_array.shape
         size_z, size_t = 1, 1
@@ -83,8 +96,6 @@ class Image_Container:
                 plane = np.ascontiguousarray(img_copy[c, :, :])
                 yield plane
 
-        if include_time_name:
-            image_name = f"{image_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         image = self.conn.createImageFromNumpySeq(
             plane_gen(), image_name, size_z, size_c, size_t,
             dataset=None
@@ -101,7 +112,6 @@ class Image_Container:
             self.add_metadata(image_id, metadata)
 
         return image_id
-
     
     def download_image(self, image_id: int) -> np.ndarray:
         """
@@ -317,7 +327,7 @@ class Image_Container:
         return chip_id
 
     def save_snapshot(self, chip_id: int, snapshot: np.ndarray):
-        self.upload_image(snapshot, self.wafers[chip_id]['dataset_snapshot_id'])
+        return self.upload_image(snapshot, self.wafers[chip_id]['dataset_snapshot_id'])
 
     def save_flake_hunted_snapshot(self, chip_id: int, snapshot: np.ndarray):
-        self.upload_image(snapshot, self.wafers[chip_id]['dataset_flake_hunted_snapshot_id'])
+        return self.upload_image(snapshot, self.wafers[chip_id]['dataset_flake_hunted_snapshot_id'])

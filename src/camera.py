@@ -115,7 +115,9 @@ class Camera:
         """Background thread to continuously capture frames"""
         while True:
             try:
+                print(f"Reading frame for camera {self.camera_id}")
                 ret, frame = self.read_frame()
+                print(f"Frame read for camera {self.camera_id}: {ret}")
                 if not ret: 
                     continue
                 with self.frame_lock:
