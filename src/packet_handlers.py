@@ -7,6 +7,7 @@ import transfer_functions
 from threading import Thread
 from image_container import Image_Container
 from socket_manager import Socket_Manager
+
 # Dictionary to store packet handlers
 _handlers: Dict[str, Callable] = {}
 def packet_handler(packet_type: str):

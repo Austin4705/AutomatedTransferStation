@@ -20,12 +20,6 @@ if __name__ == "__main__":
 
     print("Initializing Image Container")
     IMAGE_CONTAINER = Image_Container()
-
-    # import cv2
-    # image = cv2.imread("image.png")
-    # IMAGE_CONTAINER.save_snapshot(IMAGE_CONTAINER.active_chip_id, image)
-    # IMAGE_CONTAINER.save_flake_hunted_snapshot(IMAGE_CONTAINER.active_chip_id, image)
-
     print("Starting Transfer Station")
     transfer_station_type = os.getenv('TRANSFER_STATION_TYPE', 'virtual')
     TRANSFER_STATION = Transfer_Station.create(transfer_station_type)

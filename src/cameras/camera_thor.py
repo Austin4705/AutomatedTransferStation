@@ -50,16 +50,19 @@ class Camera_Thor(Camera):
             self.cam = self.sdk.open_camera(serials[self.camera_id])
             print("Model:", self.cam.model, "SN:", self.cam.serial_number)
             print("Sensor type:", self.cam.camera_sensor_type)
+            
+            print(f"Max sensor dimensions: {self.cam.image_width_pixels}x{self.cam.image_height_pixels}")
+            desired_dimensitons = (680, 420)
+            offset_x = (self.cam.image_width_pixels - desired_dimensitons[0]) // 2
+            offset_y = (self.cam.image_height_pixels - desired_dimensitons[1]) // 2
+            # self.cam.roi = (offset_x, offset_y, offset_x + desired_dimensitons[0] - 1, offset_y + desired_dimensitons[1] - 1)
+            
             self.frame_width = self.cam.image_width_pixels
             self.frame_height = self.cam.image_height_pixels
-            print(f"Image dimensions: {self.frame_width}x{self.frame_height}")
             self.cam.exposure_time_us = os.getenv('CAMERA_EXPOSURE_TIME_US', 10000)
             self.cam.image_poll_timeout_ms = 1000
             self.cam.frames_per_trigger_zero_for_unlimited = 0
-            
-            # Arm camera with 2 frame buffers
             self.cam.arm(2)
-            
             self.mono_to_color_processor = self.mono_to_color_sdk.create_mono_to_color_processor(
                 self.cam.camera_sensor_type,
                 self.cam.color_filter_array_phase,
@@ -73,12 +76,12 @@ class Camera_Thor(Camera):
             
             start_time = time.time()
             self.frame_count = 0
+            self.last_fps_frame_count = 0
             self.fps_update_time = start_time
             self.start_time = start_time
             self.fps_display = 0
             self.is_active = True
-            
-            print(f"ThorLabs camera {self.camera_id} initialized successfully")
+            print(f"ThorLabs camera {self.camera_id} initialized successfully, is-active: {self.is_active}, frame-width: {self.frame_width}, frame-height: {self.frame_height}")
             
         except Exception as e:
             print(f"Error initializing ThorLabs camera {self.camera_id}: {e}")
@@ -87,9 +90,11 @@ class Camera_Thor(Camera):
 
     def read_frame(self):
         if self.cam is None or not self.is_active:
+            # print(f"Camera {self.camera_id} is None: {self.cam==None} or not active: {self.is_active==False}")
             return False, None
         
         if self.mono_to_color_processor is None:
+            print("Mono to color processor is None")
             return False, None
             
         try:
@@ -107,29 +112,20 @@ class Camera_Thor(Camera):
             current_time = time.time()
             if current_time - self.fps_update_time >= 1.0:
                 elapsed = current_time - self.fps_update_time
-                self.fps_display = self.frame_count / (current_time - self.start_time)
+                self.fps_display = (self.frame_count - self.last_fps_frame_count) / elapsed
+                self.last_fps_frame_count = self.frame_count
                 self.fps_update_time = current_time
-            display_image = color_image.copy()
-            cv2.putText(display_image, f"FPS: {self.fps_display:.1f}", (10, 30),
+            height, width = color_image.shape[:2]
+            color_image = cv2.resize(color_image, (int(width/2), int(height/2)), interpolation=cv2.INTER_AREA)
+            cv2.putText(color_image, f"FPS: {self.fps_display:.1f}", (10, 30),
             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(display_image, f"Frame: {self.frame_count}", (10, 70),
+            cv2.putText(color_image, f"Frame: {self.frame_count}", (10, 70),
             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            # print(f"FPS: {self.fps_display:.1f}, Frame: {self.frame_count}")
 
-            # Debug: uncomment to save frames
-            # cv2.imwrite(f'base_frame_{time.strftime("%Y%m%d_%H%M%S")}.png', display_image)
-
-            # Resize if image is too large for OMERO's non-tiled writing
-            # max_dimension = 2048
-            # height, width = display_image.shape[:2]
-            # if max(height, width) > max_dimension:
-            #     scale = max_dimension / max(height, width)
-            #     new_width = int(width * scale)
-            #     new_height = int(height * scale)
-            #     img_array = cv2.resize(img_array, (new_width, new_height), interpolation=cv2.INTER_AREA)
-            #     print(f"Resized image from {width}x{height} to {new_width}x{new_height} for OMERO upload")
-
-            return True, display_image
+            return True, color_image
         except Exception as e:
+            print(f"Error reading frame {self.camera_id}: {e}")
             self.is_active = False
             return False, None
 

@@ -72,10 +72,23 @@ def create_video_feed_route(camera_id):
     def video_feed():
         stream_id = f"video_{camera_id}_{threading.get_ident()}"
         
+        # Kill all old streams for this camera first
         with stream_lock:
+            old_streams_to_remove = []
             for sid in list(active_streams.keys()):
                 if sid.startswith(f"video_{camera_id}_") and sid != stream_id:
                     active_streams[sid]['active'] = False
+                    old_streams_to_remove.append(sid)
+            
+            # Remove old streams immediately
+            for sid in old_streams_to_remove:
+                if sid in active_streams:
+                    del active_streams[sid]
+                    print(f"Killed old stream {sid}")
+        
+        # Short wait for old stream threads to notice they're dead
+        if old_streams_to_remove:
+            time.sleep(0.1)
         
         with stream_lock:
             active_streams[stream_id] = {
