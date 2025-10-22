@@ -36,7 +36,7 @@ class Camera:
     def initialize_all_cameras(image_container: Image_Container, type: str = "usb"):
         """Figures out how many cameras are connected to the system"""
         Camera.image_container = image_container
-        max_cameras_to_check = 3
+        max_cameras_to_check = int(os.getenv('MAX_CAMERAS', 3))
         available_cameras = []
         Camera.cleanup_all()
         Camera.global_list.clear()
@@ -93,6 +93,7 @@ class Camera:
         self.cleanup()
 
     def cleanup(self):
+        print(f"Cleaning up camera {self.camera_id}")
         self.is_active = False
         if self.capture_thread is not None:
             if self.capture_thread.is_alive():
