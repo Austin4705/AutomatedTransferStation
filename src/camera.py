@@ -45,10 +45,7 @@ class Camera:
         for i in range(0, max_cameras_to_check):
             try:
                 camera = Camera.create(camera_id=i, camera_type=type)
-                timeout = os.getenv('CAMERA_INIT_TIMEOUT', 0)
-                start_time = time.time()
-                while not camera.is_active and time.time() - start_time < timeout:
-                    time.sleep(0.1)
+
                 if camera.is_active:
                     print(f"Camera {i} successfully initialized")
                     available_cameras.append(i)
@@ -89,6 +86,7 @@ class Camera:
 
         self.capture_thread = threading.Thread(target=self._capture_frames, daemon=True)
         self.capture_thread.start()
+        time.sleep(os.getenv('CAMERA_INIT_TIMEOUT', 3))
         
     def __del__(self):
         """Clean up resources when the camera is deleted"""
@@ -115,9 +113,7 @@ class Camera:
         """Background thread to continuously capture frames"""
         while True:
             try:
-                print(f"Reading frame for camera {self.camera_id}")
                 ret, frame = self.read_frame()
-                print(f"Frame read for camera {self.camera_id}: {ret}")
                 if not ret: 
                     continue
                 with self.frame_lock:
