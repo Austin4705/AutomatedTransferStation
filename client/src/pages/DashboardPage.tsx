@@ -1,11 +1,11 @@
-import CameraDisplay from '../components/CameraDisplay';
-import UnifiedLog from '../components/UnifiedLog';
-import CommandInput from '../components/CommandInput';
-import PacketInput from '../components/PacketInput';
-import ActionButtons from '../components/ActionButtons';
-import TraceOverBox from '../components/TraceOverBox';
-import ScanFlakesBox from '../components/ScanFlakesBox';
-import TransferStationCommandInput from '../components/TransferStationCommandInput';
+import CameraBox from '../components/dashboard/CameraBox';
+import SystemLogsBox from '../components/dashboard/SystemLogsBox';
+import CommandInputBox from '../components/dashboard/CommandInputBox';
+import PacketInputBox from '../components/dashboard/PacketInputBox';
+import ActionsBox from '../components/dashboard/ActionsBox';
+import TraceOverBox from '../components/dashboard/TraceOverBox';
+import ScanFlakesBox from '../components/dashboard/ScanFlakesBox';
+import TransferStationCommandsBox from '../components/dashboard/TransferStationCommandsBox';
 import { useState } from 'react';
 
 type CameraType = 'primary' | 'secondary';
@@ -32,13 +32,13 @@ const DashboardPage = () => {
             <div className="camera-container primary flex flex-col h-full">
               <h2 className="mb-2">Primary Camera</h2>
               <div className="flex-grow overflow-hidden">
-                <CameraDisplay />
+                <CameraBox />
               </div>
             </div>
             <div className="camera-container secondary flex flex-col h-full">
               <h2 className="mb-2">Secondary Camera</h2>
               <div className="flex-grow overflow-hidden">
-                <CameraDisplay />
+                <CameraBox />
               </div>
             </div>
           </>
@@ -95,21 +95,21 @@ const DashboardPage = () => {
                   )}
                 </div>
               </div>
-              <ActionButtons />
+              <ActionsBox />
             </div>
             
             <div className="input-container">
               <div className="command-input">
                 <h2>Command Input</h2>
-                <CommandInput />
+                <CommandInputBox />
               </div>
               <div className="ts-command-input">
                 <h2>Transfer Station Commands</h2>
-                <TransferStationCommandInput />
+                <TransferStationCommandsBox />
               </div>
               <div className="packet-input">
                 <h2>Packet Input</h2>
-                <PacketInput />
+                <PacketInputBox />
               </div>
             </div>
           </div>
@@ -118,7 +118,7 @@ const DashboardPage = () => {
             <div className="log-container full-width">
               <h2>System Logs</h2>
               <div className="dashboard-log-wrapper">
-                <UnifiedLog />
+                <SystemLogsBox />
               </div>
             </div>
           </div>

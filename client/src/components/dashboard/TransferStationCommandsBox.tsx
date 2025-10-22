@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSendJSON } from "../hooks/useSendJSON";
+import { useSendJSON } from "../../hooks/useSendJSON";
 
 // Empty template with exact spacing to match placeholder
 const EMPTY_TEMPLATE = `[
@@ -9,7 +9,7 @@ const EMPTY_TEMPLATE = `[
 // Placeholder template with exact spacing to match empty template
 const PLACEHOLDER_TEMPLATE = '';
 
-const TransferStationCommandInput = () => {
+const TransferStationCommandsBox = () => {
   const [command, setCommand] = useState("");
   const [parameters, setParameters] = useState(EMPTY_TEMPLATE);
   const [keepText, setKeepText] = useState(true);
@@ -161,4 +161,4 @@ const TransferStationCommandInput = () => {
   );
 };
 
-export default TransferStationCommandInput; 
+export default TransferStationCommandsBox; 

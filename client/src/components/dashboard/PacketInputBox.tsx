@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSendJSON } from "../hooks/useSendJSON";
+import { useSendJSON } from "../../hooks/useSendJSON";
 
 // Empty template and placeholder with identical structure
 const EMPTY_TEMPLATE = `{
@@ -13,7 +13,7 @@ const PLACEHOLDER_TEMPLATE = `{
   "parameter": "value"
 }`;
 
-const PacketInput = () => {
+const PacketInputBox = () => {
   const [packetJson, setPacketJson] = useState(EMPTY_TEMPLATE);
   const [error, setError] = useState<string | null>(null);
   const [keepText, setKeepText] = useState(true);
@@ -196,4 +196,4 @@ const PacketInput = () => {
   );
 };
 
-export default PacketInput; 
+export default PacketInputBox; 

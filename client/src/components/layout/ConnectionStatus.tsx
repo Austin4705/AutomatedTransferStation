@@ -1,7 +1,7 @@
 import { useRecoilValue } from "recoil";
-import { jsonStateAtom } from "../state/jsonState";
+import { jsonStateAtom } from "../../state/jsonState";
 import { ReadyState } from "react-use-websocket";
-import useWebSocketReconnect from "../hooks/useWebSocketReconnect";
+import useWebSocketReconnect from "../../hooks/useWebSocketReconnect";
 import { useEffect, useState } from "react";
 
 const readyStateMap = {

@@ -1,5 +1,5 @@
-import CameraDisplay from '../components/CameraDisplay';
-import ActionButtons from '../components/ActionButtons';
+import CameraBox from '../components/dashboard/CameraBox';
+import ActionsBox from '../components/dashboard/ActionsBox';
 import { useState } from 'react';
 
 type CameraType = 'primary' | 'secondary';
@@ -28,14 +28,14 @@ const CameraPage = () => {
             <div className="camera-container primary p-3 border rounded-lg flex flex-col h-full">
               <h2 className="mb-2">Primary Camera</h2>
               <div className="flex-grow overflow-hidden">
-                <CameraDisplay />
+                <CameraBox />
               </div>
             </div>
             
             <div className="camera-container secondary p-3 border rounded-lg flex flex-col h-full">
               <h2 className="mb-2">Secondary Camera</h2>
               <div className="flex-grow overflow-hidden">
-                <CameraDisplay />
+                <CameraBox />
               </div>
             </div>
           </div>
@@ -80,7 +80,7 @@ const CameraPage = () => {
             )}
           </div>
         </div>
-        <ActionButtons />
+        <ActionsBox />
       </div>
     </div>
   );

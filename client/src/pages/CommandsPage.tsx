@@ -1,7 +1,7 @@
-import ActionButtons from '../components/ActionButtons';
-import CommandInput from '../components/CommandInput';
-import TransferStationCommandInput from '../components/TransferStationCommandInput';
-import PacketInput from '../components/PacketInput';
+import ActionsBox from '../components/dashboard/ActionsBox';
+import CommandInputBox from '../components/dashboard/CommandInputBox';
+import TransferStationCommandsBox from '../components/dashboard/TransferStationCommandsBox';
+import PacketInputBox from '../components/dashboard/PacketInputBox';
 
 const CommandsPage = () => {
   return (
@@ -9,23 +9,23 @@ const CommandsPage = () => {
       <div className="commands-section">
         <div className="action-container">
           <h2>Actions</h2>
-          <ActionButtons />
+          <ActionsBox />
         </div>
         
         <div className="input-container mt-6">
           <div className="command-input mb-4">
             <h2>Command Input</h2>
-            <CommandInput />
+            <CommandInputBox />
           </div>
           
           <div className="ts-command-input mb-4">
             <h2>Transfer Station Commands</h2>
-            <TransferStationCommandInput />
+            <TransferStationCommandsBox />
           </div>
           
           <div className="packet-input mb-4">
             <h2>Packet Input</h2>
-            <PacketInput />
+            <PacketInputBox />
           </div>
         </div>
       </div>

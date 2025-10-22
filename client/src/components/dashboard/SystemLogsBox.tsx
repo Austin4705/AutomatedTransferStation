@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRecoilValue } from "recoil";
-import { jsonStateAtom } from "../state/jsonState";
-import { useSendJSON } from "../hooks/useSendJSON";
-import { PacketManager } from "../packets/PacketHandler";
+import { jsonStateAtom } from "../../state/jsonState";
+import { useSendJSON } from "../../hooks/useSendJSON";
+import { PacketManager } from "../../packets/PacketHandler";
 
 // Maximum number of log entries to keep
 const MAX_LOG_ENTRIES = 1000;
@@ -39,7 +39,7 @@ interface ResponseMessage extends BaseMessage {
 }
 
 
-const UnifiedLog = () => {
+const SystemLogsBox = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [visibleLogTypes, setVisibleLogTypes] = useState<Set<LogType>>(new Set(["command", "response", "outgoing", "packet"]));
   const [showUnknownPackets, setShowUnknownPackets] = useState<boolean>(true);
@@ -1038,4 +1038,4 @@ const UnifiedLog = () => {
   );
 };
 
-export default UnifiedLog; 
+export default SystemLogsBox; 

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRecoilValue } from "recoil";
-import { jsonStateAtom } from "../state/jsonState";
-import { isConsoleMessage } from "../state/consoleState";
-import { hostConfigAtom } from "../state/hostState";
+import { jsonStateAtom } from "../../state/jsonState";
+import { isConsoleMessage } from "../../state/consoleState";
+import { hostConfigAtom } from "../../state/hostState";
 
 const CAMERA_OPTIONS = [
   { id: "video_feed0", label: "Main Camera" },
@@ -16,7 +16,7 @@ const CAMERA_OPTIONS = [
   { id: "snapshot_flake_hunted2", label: "Flake Hunted 2" },
 ];
 
-const CameraDisplay = () => {
+const CameraBox = () => {
   const [selectedCamera, setSelectedCamera] = useState(CAMERA_OPTIONS[0].id);
   const [error, setError] = useState<string | null>(null);
   const [imageKey, setImageKey] = useState(Date.now()); // Add a key to force re-render
@@ -219,4 +219,4 @@ const CameraDisplay = () => {
   );
 };
 
-export default CameraDisplay; 
+export default CameraBox; 

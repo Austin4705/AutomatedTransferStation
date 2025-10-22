@@ -1,4 +1,4 @@
-import { useSendJSON } from "../hooks/useSendJSON";
+import { useSendJSON } from "../../hooks/useSendJSON";
 import { useState, useRef } from "react";
 
 // Create a global event for refreshing streams
@@ -24,7 +24,7 @@ declare global {
   }
 }
 
-const ActionButtons = () => {
+const ActionsBox = () => {
   const sendJson = useSendJSON();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedDirectory, setSelectedDirectory] = useState<string>("");
@@ -272,4 +272,4 @@ const ActionButtons = () => {
   );
 };
 
-export default ActionButtons; 
+export default ActionsBox; 

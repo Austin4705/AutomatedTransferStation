@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useSendJSON } from "../hooks/useSendJSON";
+import { useSendJSON } from "../../hooks/useSendJSON";
 
-const CommandInput = () => {
+const CommandInputBox = () => {
   const [command, setCommand] = useState("");
   const [keepText, setKeepText] = useState(true);
   const sendJson = useSendJSON();
@@ -75,4 +75,4 @@ const CommandInput = () => {
   );
 };
 
-export default CommandInput; 
+export default CommandInputBox; 
