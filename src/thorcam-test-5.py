@@ -16,7 +16,7 @@ camera = Camera.create(camera_id=0, camera_type="thor")
 # Camera.initialize_all_cameras(Image_Container(), "thor")
 # camera = Camera.global_list[0]
 print("Getting frame")
-time.sleep(5)
+# time.sleep(0.5)
 frame = camera.get_frame()
 cv2.imwrite(f'frame_{time.strftime("%Y%m%d_%H%M%S")}.png', frame)
 camera.cleanup()
