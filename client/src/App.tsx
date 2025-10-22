@@ -12,7 +12,7 @@ import { PositionProvider } from "./state/positionContext";
 import { ReadyState } from "react-use-websocket";
 
 // Layout and Pages
-import MainLayout from "./components/MainLayout";
+import MainLayout from "./components/layout/MainLayout";
 import CameraPage from "./pages/CameraPage";
 import TraceOverPage from "./pages/TraceOverPage";
 import SystemLogsPage from "./pages/SystemLogsPage";

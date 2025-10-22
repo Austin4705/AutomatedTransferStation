@@ -1,8 +1,8 @@
-import { useSendJSON } from "../hooks/useSendJSON";
+import { useSendJSON } from "../../hooks/useSendJSON";
 import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { useRecoilValue } from "recoil";
-import { jsonStateAtom } from "../state/jsonState";
-import { usePositionContext } from "../state/positionContext";
+import { jsonStateAtom } from "../../state/jsonState";
+import { usePositionContext } from "../../state/positionContext";
 
 // Interface for flake coordinates
 interface WaferCoordinates {

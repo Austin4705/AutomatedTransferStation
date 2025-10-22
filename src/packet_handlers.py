@@ -8,7 +8,6 @@ from threading import Thread
 from image_container import Image_Container
 from socket_manager import Socket_Manager
 
-# Dictionary to store packet handlers
 _handlers: Dict[str, Callable] = {}
 def packet_handler(packet_type: str):
     """Decorator to register packet handlers"""
@@ -38,41 +37,29 @@ class PacketHandlers:
     @packet_handler("TS_COMMAND")
     def handle_ts_command(packet_type: str, data: dict):
         try:
-            # Validate inputs
             if "command" not in data or not data["command"].strip():
                 PacketCommander.send_error("Missing or empty command")
                 return
-                
             command = data["command"].strip()
             parameters_str = data.get("parameters", "[]").strip()
-                
             if not hasattr(PacketHandlers.transfer_station, command):
                 PacketCommander.send_error(f"Command '{command}' not found")
                 return
-                
-            # Parse parameters
             try:
-                # Convert curly braces to square brackets if needed
                 if parameters_str.startswith('{') and parameters_str.endswith('}'):
                     parameters_str = '[' + parameters_str[1:-1] + ']'
                 elif not (parameters_str.startswith('[') and parameters_str.endswith(']')):
                     parameters_str = '[' + parameters_str + ']'
-                
-                # Parse parameters using json or ast
                 try:
                     params = json.loads(parameters_str)
                 except json.JSONDecodeError:
                     import ast
                     params = ast.literal_eval(parameters_str)
-                
-                # Ensure params is a list
                 if not isinstance(params, list):
                     params = [params]
-                    
             except Exception as e:
                 PacketCommander.send_error(f"Parameter parsing error: {str(e)}")
                 return
-                
 
             def execute_command():
                 try:
@@ -103,7 +90,6 @@ class PacketHandlers:
     @packet_handler("TRACE_OVER")
     def handle_trace_over(packet_type: str, data: dict):
         PacketCommander.send_message("Trace over request received. Creating a thread to run execution")
-
         thread = threading.Thread(target=transfer_functions.Transfer_Functions.run_trace_over, args=(data,))
         thread.daemon = True
         transfer_functions.Transfer_Functions.executing_threads[thread] = True
@@ -117,7 +103,6 @@ class PacketHandlers:
     @packet_handler("CANCEL_EXECUTION")
     def handle_cancel_execution(packet_type: str, data: dict):
         PacketCommander.send_message(f"Cancelling execution of running operations")
-        # Set the cancellation flag to stop running threads
         for thread in transfer_functions.Transfer_Functions.executing_threads:
             transfer_functions.Transfer_Functions.executing_threads[thread] = False
             print(f"Thread {thread} signaled to stop")
@@ -161,8 +146,6 @@ class PacketHandlers:
         PacketCommander.send_message(f"Goto wafer {waferNumber} image {imageNumber} at {x}, {y}")
         PacketCommander.send_message(f"Bottom Left Offset: ({bottomLeftXOffset}, {bottomLeftYOffset})")
         PacketCommander.send_message(f"Top Right Offset: ({topRightXOffset}, {topRightYOffset})")
-        
-        # Move to the position with the bottom left offset
         PacketHandlers.transfer_station.moveXY(x + bottomLeftXOffset, y + bottomLeftYOffset)
 
     @packet_handler("ACK")
@@ -194,7 +177,6 @@ class PacketHandlers:
     def handle_command(packet_type: str, data: dict):
         command = data.get("command")
         print(f"Received command: {command}")
-        # Forward the command to all clients to ensure it appears in the command log
         Transfer_Station.send_command(command)
         #Socket_Manager.send_all_json({
         #    "type": "COMMAND",

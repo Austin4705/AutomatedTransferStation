@@ -1,4 +1,4 @@
-import useSendJSON from "../hooks/useSendJSON"
+import useSendJSON from "../../hooks/useSendJSON"
 
 export default function CustomButton(props: any) {
     const str: string = props.message;

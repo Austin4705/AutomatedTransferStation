@@ -6,13 +6,9 @@ import threading
 import time
 import weakref
 
-
 from autofocus import Autofocus
 from socket_manager import Socket_Manager
 from image_container import Image_Container
-
-# import transfer_functions
-# from cv_functions import CV_Functions
 
 class Camera:
     image_container: Image_Container = None

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import UnifiedLog from '../components/UnifiedLog';
+import SystemLogsBox from '../components/dashboard/SystemLogsBox';
 
 const SystemLogsPage = () => {
   // When the page mounts, dispatch an event to disable logs
@@ -30,7 +30,7 @@ const SystemLogsPage = () => {
       <div className="log-section">
         <div className="log-container full-width">
           <h2>System Logs</h2>
-          <UnifiedLog />
+          <SystemLogsBox />
         </div>
       </div>
     </div>

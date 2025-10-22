@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRecoilState } from "recoil";
-import { hostConfigAtom } from "../state/hostState";
+import { hostConfigAtom } from "../../state/hostState";
 
 const HostConfigInput = () => {
   const [hostConfig, setHostConfig] = useRecoilState(hostConfigAtom);

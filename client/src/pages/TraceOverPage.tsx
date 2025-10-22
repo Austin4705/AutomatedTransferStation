@@ -1,4 +1,4 @@
-import TraceOverBox from '../components/TraceOverBox';
+import TraceOverBox from '../components/dashboard/TraceOverBox';
 
 const TraceOverPage = () => {
   return (

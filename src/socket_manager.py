@@ -13,30 +13,21 @@ class Socket_Manager:
     """
     CONNECTIONS = set()
 
-
     # Load packet definitions
     # with open("./../shared/packet_definitions.json", "r") as f:
     #     PACKET_DEFS = json.load(f)["packets"]
 
-    # Dictionary to store packet handlers
     packet_handlers: Dict[str, Callable] = dict()
 
     def start():
         """Start the WebSocket server and related tasks"""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        
         async def main():
-            # Create the WebSocket server
             server = await serve(Socket_Manager.conn_handler, "localhost", 8765)
-            
-            # We'll store tasks here so they persist
             tasks = []
-            
-            # Return the server and tasks for cleanup if needed
             return server, tasks
         
-        # Run the server forever
         loop.run_until_complete(main())
         loop.run_forever()
 
@@ -47,19 +38,11 @@ class Socket_Manager:
         asyncio.set_event_loop(loop)
         
         async def main():
-            # Create the WebSocket server
             server = await serve(cls.conn_handler, "localhost", 8765)
-            
-            # Start the sending thread as a task
             sending_task = asyncio.create_task(cls.ts_sending_thread(transfer_station))
-            
-            # We'll store tasks here so they persist
             tasks = [sending_task]
-            
-            # Return the server and tasks for cleanup if needed
             return server, tasks
         
-        # Run the server forever
         loop.run_until_complete(main())
         loop.run_forever()
 
@@ -72,10 +55,7 @@ class Socket_Manager:
 
         try:
             async for message in websocket:
-                # Handle different types of messages
                 if isinstance(message, str):
-                    # Text message
-                    # print(f"Received message: {message}")
                     Socket_Manager.handle_packet(message)
                 else:
                     print(f"Received unsupported message type: {type(message)}")
@@ -100,18 +80,14 @@ class Socket_Manager:
     def handle_packet(cls, message: str):
         """Handle incoming packets"""
         try:
-            # Parse the message as JSON safely
             try:
                 packet = json.loads(message)
             except json.JSONDecodeError:
                 raise ValueError("Message is not valid JSON")
 
-            # Ensure packet has a type
             packet_type = packet.get("type")
             if not packet_type:
                 raise ValueError("Packet missing 'type' field")
-
-            # Call the appropriate handler
             handler = cls.packet_handlers.get(packet_type, cls.default_handler)
             handler(packet_type, packet)
 
@@ -152,15 +128,11 @@ class Socket_Manager:
     #     """Validate packet data against definition"""
     #     if packet_type not in cls.PACKET_DEFS:
     #         return False
-
     #     expected_fields = cls.PACKET_DEFS[packet_type]["fields"]
-        
     #     for field, expected_type in expected_fields.items():
     #         if field not in data:
     #             return False
-            
     #         value = data[field]
-            
     #         # Type checking
     #         if expected_type == "bool" and not isinstance(value, bool):
     #             return False
@@ -170,7 +142,6 @@ class Socket_Manager:
     #             return False
     #         elif expected_type == "string" and not isinstance(value, str):
     #             return False
-
     #     return True
 
     @classmethod
@@ -194,7 +165,6 @@ class Socket_Manager:
         try:
             await websocket.send(msg)
         except websockets.exceptions.ConnectionClosed:
-            # Connection already closed, remove it from CONNECTIONS
             if websocket in cls.CONNECTIONS:
                 cls.CONNECTIONS.remove(websocket)
                 print(f"Removed closed connection {websocket}")
@@ -206,14 +176,11 @@ class Socket_Manager:
         """Send JSON data to all connected clients"""
         try:
             msg = json.dumps(json_data)
-            # Get the current event loop or create a new one if none exists
             try:
                 loop = asyncio.get_event_loop()
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-            
-            # Create and run the coroutine in the event loop
             loop.call_soon_threadsafe(lambda: asyncio.create_task(cls._send_all_async(msg)))
         except Exception as e:
             print(f"Error serializing JSON: {e}")
@@ -241,32 +208,26 @@ class Socket_Manager:
     #             # CALL DISPATCH HERE
     #             #Socket_Manager.socket_dispatch(data, TRANSFER_STATION)
 
-
     async def ts_sending_thread(TRANSFER_STATION):
         while True:
             try:
                 if TRANSFER_STATION.exist_new_sent_commands():
-                    # print("Sending commands")
                     message = TRANSFER_STATION.since_last_send()
                     for m in message:
-                        await asyncio.sleep(0.01)  # Small delay to prevent flooding
+                        await asyncio.sleep(0.01)
                         Socket_Manager.send_all(json.dumps({
                             "type": "COMMAND",
                             "command": m["command"],
                         }))
-
                 if TRANSFER_STATION.exist_new_received_commands():
-                    # print("Sending responses")
                     message = TRANSFER_STATION.since_last_receive()
                     for m in message:
-                        await asyncio.sleep(0.01)  # Small delay to prevent flooding
+                        await asyncio.sleep(0.01)
                         Socket_Manager.send_all(json.dumps({
                             "type": "RESPONSE",
                             "response": m["response"],
                         }))
-                
-                # Sleep to prevent busy waiting
                 await asyncio.sleep(0.1)
             except Exception as e:
                 print(f"Error in ts_sending_thread: {e}")
-                await asyncio.sleep(1)  # Sleep longer on error
+                await asyncio.sleep(1)
