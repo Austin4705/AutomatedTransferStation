@@ -2,7 +2,7 @@ import { useSendJSON } from "../../hooks/useSendJSON";
 import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../../state/jsonState";
-import { usePositionContext } from "../../state/positionContext";
+import { positionSettingsAtom } from "../../state/appState";
 
 interface WaferCoordinates {
   id: number;
@@ -49,7 +49,8 @@ const TraceOverBox = () => {
   const [saveImages, setSaveImages] = useState<boolean>(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
-  const { autoUpdate, pollRate, position } = usePositionContext();
+  const positionSettings = useRecoilValue(positionSettingsAtom);
+  const position = positionSettings.currentPosition;
 
   useEffect(() => {
     if (waferCount > waferCoordinates.length) {

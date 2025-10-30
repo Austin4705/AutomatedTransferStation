@@ -5,10 +5,10 @@ import "./App.css";
 
 import useSocketJSON from "./hooks/useSocketJSON";
 import { jsonStateAtom } from "./state/jsonState";
-import { hostConfigAtom } from "./state/hostState";
+import { connectionStateAtom } from "./state/appState";
 import { PacketManager } from "./packets/PacketHandler";
 import { PacketHandlers } from "./packets/PacketHandlers";
-import { PositionProvider } from "./state/positionContext";
+import { usePositionPolling } from "./hooks/usePositionPolling";
 import { ReadyState } from "react-use-websocket";
 
 // Layout and Pages
@@ -20,14 +20,17 @@ import CommandsPage from "./pages/CommandsPage";
 import DashboardPage from "./pages/DashboardPage";
 
 function App() {
-  const hostConfig = useRecoilValue(hostConfigAtom);
-  const WS_URL = `ws://${hostConfig.host}:8765`;
+  const connection = useRecoilValue(connectionStateAtom);
+  const WS_URL = `ws://${connection.host}:8765`;
   // Use a state to force re-initialization of the WebSocket
   const [wsKey, setWsKey] = useState(0);
-  
+
   // Use the key to force the hook to reinitialize
   useSocketJSON(`${WS_URL}?key=${wsKey}`);
-  
+
+  // Initialize position polling
+  usePositionPolling();
+
   const jsonState = useRecoilValue(jsonStateAtom);
   const setJsonState = useSetRecoilState(jsonStateAtom);
   // Add a ref to track the last processed message
@@ -108,21 +111,19 @@ function App() {
   }, [jsonState.lastJsonMessage]);
 
   return (
-    <PositionProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="camera" element={<CameraPage />} />
-            <Route path="trace-over" element={<TraceOverPage />} />
-            <Route path="system-logs" element={<SystemLogsPage />} />
-            <Route path="commands" element={<CommandsPage />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </PositionProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="camera" element={<CameraPage />} />
+          <Route path="trace-over" element={<TraceOverPage />} />
+          <Route path="system-logs" element={<SystemLogsPage />} />
+          <Route path="commands" element={<CommandsPage />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }
 

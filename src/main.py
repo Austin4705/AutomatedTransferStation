@@ -15,36 +15,36 @@ from socket_manager import Socket_Manager
 from packet_handlers import PacketHandlers
 
 if __name__ == "__main__":
-    logger = Logger()
+    Logger.set_socket_manager(Socket_Manager)
     load_dotenv("defualt.env")
     load_dotenv(".env", override=True)
 
-    logger.log("Initializing Image Container")
+    Logger.log("Initializing Image Container")
     IMAGE_CONTAINER = Image_Container()
 
-    logger.log("Starting Transfer Station")
+    Logger.log("Starting Transfer Station")
     transfer_station_type = os.getenv('TRANSFER_STATION_TYPE', 'virtual')
     TRANSFER_STATION = Transfer_Station.create(transfer_station_type)
 
-    logger.log("Detecting and initializing cameras...")
-    camera_type = os.getenv('CAMERA_TYPE', os.getenv('CAMERA_TYPE', 'usb'))
+    Logger.log("Detecting and initializing cameras...")
+    camera_type = os.getenv('CAMERA_TYPE', os.getenv('CAMERA_TYPE', 'virtual'))
     cameras = Camera.initialize_all_cameras(IMAGE_CONTAINER, camera_type)
     
-    logger.log("Initializing Flask server")
+    Logger.log("Initializing Flask server")
     flask_server_thread = threading.Thread(target=web_server.startup_flask_app)
     flask_server_thread.daemon = True
     flask_server_thread.start()
 
-    logger.log("Initializing Packet Handlers")
-    packet_handlers = PacketHandlers(TRANSFER_STATION, logger)
+    Logger.log("Initializing Packet Handlers")
+    packet_handlers = PacketHandlers(TRANSFER_STATION, IMAGE_CONTAINER)
 
-    logger.log("Starting socket")
+    Logger.log("Starting socket")
     socket_manager_thread = threading.Thread(target=Socket_Manager.start, args=(packet_handlers,))
     socket_manager_thread.daemon = True
     socket_manager_thread.start()
 
-    logger.log(f"System initialized with {len(Camera.global_list)} cameras: {list(Camera.global_list.keys())}")
-    logger.log("Press Enter to exit...")
+    Logger.log(f"System initialized with {len(Camera.global_list)} cameras: {list(Camera.global_list.keys())}")
+    Logger.log("Press Enter to exit...")
     input()
     for thread in threading.enumerate():
         if thread.daemon:
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     for thread in threading.enumerate():
         print(thread.name)
         print(thread.daemon)
-    logger.save_logs()
+    Logger.save_logs()
     print("Done")
     quit()
     # exit(0)

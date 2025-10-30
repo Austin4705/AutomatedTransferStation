@@ -26,11 +26,12 @@ class PacketHandlers:
     """Class containing all packet handlers"""
     transfer_station = None
 
-    def __init__(self, transfer_station: Transfer_Station, logger):
+    def __init__(self, transfer_station: Transfer_Station, image_container: Image_Container):
         print(f"Initializing PacketHandlers")
         PacketHandlers.transfer_station = transfer_station
+        PacketHandlers.image_container = image_container
+        PacketHandlers.transfer_functions = Transfer_Functions(transfer_station, image_container)
         self.packet_handlers = _handlers
-        self.logger = logger
     
     @packet_handler("ACK")
     def handle_ack(packet_type: str, data: dict):
@@ -69,7 +70,7 @@ class PacketHandlers:
         except Exception as e:
             Socket_Manager.send_error(f"Parameter parsing error: {str(e)}")
             return
-        Transfer_Functions.run_command(transfer_function, parameters)
+        PacketHandlers.transfer_functions.run_command(transfer_function, parameters)
 
     @packet_handler("REQUEST_STATE")
     def handle_request_state(packet_type: str, data: dict):
@@ -82,47 +83,27 @@ class PacketHandlers:
                 }
             }
         }
+        # Logger.log(f"Sending state: {message}")
         Socket_Manager.send_all_json(message)
 
     @packet_handler("PAUSE_EXECUTION")
     def handle_pause_execution(packet_type: str, data: dict):
-        Transfer_Functions.pause_execution()
-        self.logger.log("Execution paused")
+        PacketHandlers.transfer_functions.pause_execution()
+        Logger.log("Execution paused")
 
     @packet_handler("RESUME_EXECUTION")
     def handle_resume_execution(packet_type: str, data: dict):
-        Transfer_Functions.resume_execution()
-        self.logger.log("Execution resumed")
+        PacketHandlers.transfer_functions.resume_execution()
+        Logger.log("Execution resumed")
 
     @packet_handler("CANCEL_EXECUTION")
     def handle_cancel_execution(packet_type: str, data: dict):
-        Transfer_Functions.stop_execution()
-        self.logger.log("All operations cancelled")
-
-    @packet_handler("GOTO_WAFER_IMAGE")
-    def handle_goto_wafer_image(packet_type: str, data: dict):
-        print(f"Goto wafer image packet received: {data}")
-        directory = data.get("directory")
-        bottomLeftXOffset = data.get("bottomLeftXOffset")
-        bottomLeftYOffset = data.get("bottomLeftYOffset")
-        topRightXOffset = data.get("topRightXOffset")
-        topRightYOffset = data.get("topRightYOffset")
-        waferNumber = data.get("waferNumber")
-        imageNumber = data.get("imageNumber")
-        image_container = Image_Container(PacketHandlers.transfer_station, directory)
-        image_data = image_container.metadata.get("wafers")[waferNumber][imageNumber]
-        x = image_data["x"]
-        y = image_data["y"]
-        Logger.global_log(f"Goto wafer {waferNumber} image {imageNumber} at {x}, {y}")
-        Logger.global_log(f"Bottom Left Offset: ({bottomLeftXOffset}, {bottomLeftYOffset})")
-        Logger.global_log(f"Top Right Offset: ({topRightXOffset}, {topRightYOffset})")
-        PacketHandlers.transfer_station.moveXY(x + bottomLeftXOffset, y + bottomLeftYOffset)
-
+        PacketHandlers.transfer_functions.stop_execution()
+        Logger.log("All operations cancelled")
 
     @packet_handler("SNAP_SHOT")
     def handle_snap_shot(packet_type: str, data: dict):
         camera.Camera.global_list[data["camera"]].snap_image()
-        print("Took Screenshot")
         Socket_Manager.send_all_json({
             "type": "REFRESH_SNAPSHOT",
             "camera": data["camera"]
@@ -131,7 +112,6 @@ class PacketHandlers:
     @packet_handler("SNAP_SHOT_FLAKE_HUNTED")
     def handle_snap_shot_flake_hunted(packet_type: str, data: dict):
         camera.Camera.global_list[data["camera"]].snap_image_flake_hunted()
-        print("Took Screenshot")
         Socket_Manager.send_all_json({
             "type": "REFRESH_SNAPSHOT_FLAKE_HUNTED",
             "camera": data["camera"]

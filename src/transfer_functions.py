@@ -31,7 +31,7 @@ class Transfer_Functions:
         """
         given a command and parameters, execute the command
         """
-        thread = Thread(target=self.execute_command, args=(command, params))
+        thread = threading.Thread(target=self.execute_command, args=(command, params))
         thread.daemon = True
         thread.start()
 
@@ -41,9 +41,9 @@ class Transfer_Functions:
         else:
             result = _transfer_functions[command](*params)
         if(result is not None):
-            Logger.global_log(f"TS Command executed: {result}")
+            Logger.log(f"TS Command executed: {result}")
         else:
-            Logger.global_log(f"TS Command executed")
+            Logger.log(f"TS Command executed")
 
     def pause_execution(self):
         self.execute = False
@@ -55,11 +55,11 @@ class Transfer_Functions:
         self.execute = False
         for thread in self.executing_threads:
             self.executing_threads[thread] = False
-            Logger.global_log(f"Thread {thread} signaled to stop")
+            Logger.log(f"Thread {thread} signaled to stop")
 
     @transfer_function("run_trace_over")
     def run_trace_over(self, data):
-        Logger.global_log("Serializing a script to run trace over")
+        Logger.log("Serializing a script to run trace over")
         MAGNIFICATION_TRAVEL = self.transfer_station.MAGNIFICATION_TRAVEL
         
         # Extract parameters from data
@@ -149,4 +149,31 @@ class Transfer_Functions:
                         self.image_container.add_image(image, wafer_id, image_metadata)
                     counter += 1
         except Exception as e:
-            Logger.log_error(f"Error generating script: {str(e)}")            
+            Logger.log_error(f"Error generating script: {str(e)}")
+
+    @transfer_function("goto_wafer_image")
+    def goto_wafer_image(self, data: dict):
+        """Navigate to a specific wafer image location with optional offsets"""
+        try:
+            directory = data.get("directory")
+            bottomLeftXOffset = data.get("bottomLeftXOffset", 0)
+            bottomLeftYOffset = data.get("bottomLeftYOffset", 0)
+            topRightXOffset = data.get("topRightXOffset", 0)
+            topRightYOffset = data.get("topRightYOffset", 0)
+            waferNumber = data.get("waferNumber")
+            imageNumber = data.get("imageNumber")
+
+            # Load image container for the specified directory
+            image_container = Image_Container(self.transfer_station, directory)
+            image_data = image_container.metadata.get("wafers")[waferNumber][imageNumber]
+            x = image_data["x"]
+            y = image_data["y"]
+
+            Logger.log(f"Goto wafer {waferNumber} image {imageNumber} at {x}, {y}")
+            Logger.log(f"Bottom Left Offset: ({bottomLeftXOffset}, {bottomLeftYOffset})")
+            Logger.log(f"Top Right Offset: ({topRightXOffset}, {topRightYOffset})")
+
+            # Move to the image location with offset
+            self.transfer_station.moveXY(x + bottomLeftXOffset, y + bottomLeftYOffset)
+        except Exception as e:
+            Logger.log_error(f"Error navigating to wafer image: {str(e)}")            

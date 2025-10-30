@@ -15,10 +15,7 @@ import logging
 from multiprocessing import Pool
 import cv2
 
-# import camera
-# from cv_functions import CV_Functions
-# from GMMDetector.structures import Flake
-# import packet_handlers
+from logger import Logger
 
 class Image_Container:
     """

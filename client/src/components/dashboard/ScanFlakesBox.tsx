@@ -2,7 +2,7 @@ import { useSendJSON } from "../../hooks/useSendJSON";
 import { useState, useRef, useEffect } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../../state/jsonState";
-import { usePositionContext } from "../../state/positionContext";
+import { positionSettingsAtom } from "../../state/appState";
 
 declare global {
   interface HTMLInputElement {
@@ -36,7 +36,8 @@ const ScanFlakesBox = () => {
     imageNumber: ""
   });
   const [keepInputs, setKeepInputs] = useState<boolean>(false);
-  const { autoUpdate, pollRate, position } = usePositionContext();
+  const positionSettings = useRecoilValue(positionSettingsAtom);
+  const position = positionSettings.currentPosition;
 
   useEffect(() => {
     if (position) {

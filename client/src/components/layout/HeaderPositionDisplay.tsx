@@ -1,14 +1,17 @@
-import { usePositionContext } from "../../state/positionContext";
+import { useRecoilState } from "recoil";
+import { positionSettingsAtom } from "../../state/appState";
 
 const HeaderPositionDisplay = () => {
-  const { 
-    autoUpdate, 
-    setAutoUpdate, 
-    pollRate, 
-    setPollRate, 
-    position, 
-    isLoading 
-  } = usePositionContext();
+  const [positionSettings, setPositionSettings] = useRecoilState(positionSettingsAtom);
+  const { autoUpdate, pollRate, currentPosition: position, isLoading } = positionSettings;
+
+  const setAutoUpdate = (value: boolean) => {
+    setPositionSettings(prev => ({ ...prev, autoUpdate: value }));
+  };
+
+  const setPollRate = (value: number) => {
+    setPositionSettings(prev => ({ ...prev, pollRate: value }));
+  };
 
   const getPollInterval = () => {
     const safeRate = Math.max(0.1, Math.min(50, pollRate));

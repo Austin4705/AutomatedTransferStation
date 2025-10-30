@@ -1,16 +1,24 @@
-import { useState, useEffect, useRef } from "react";
-import { usePositionContext } from "../../state/positionContext";
+import { useRecoilState } from "recoil";
+import { positionSettingsAtom } from "../../state/appState";
+import { useSendJSON } from "../../hooks/useSendJSON";
 
 const PositionDisplay = () => {
-  const { 
-    autoUpdate, 
-    setAutoUpdate, 
-    pollRate, 
-    setPollRate, 
-    position, 
-    requestImmediateUpdate,
-    isLoading 
-  } = usePositionContext();
+  const [positionSettings, setPositionSettings] = useRecoilState(positionSettingsAtom);
+  const { autoUpdate, pollRate, currentPosition: position, isLoading } = positionSettings;
+  const sendJson = useSendJSON();
+
+  const setAutoUpdate = (value: boolean) => {
+    setPositionSettings(prev => ({ ...prev, autoUpdate: value }));
+  };
+
+  const setPollRate = (value: number) => {
+    setPositionSettings(prev => ({ ...prev, pollRate: value }));
+  };
+
+  const requestImmediateUpdate = () => {
+    setPositionSettings(prev => ({ ...prev, isLoading: true }));
+    sendJson({ type: "REQUEST_STATE" });
+  };
 
   const getPollInterval = () => {
     const safeRate = Math.max(0.1, Math.min(50, pollRate));
