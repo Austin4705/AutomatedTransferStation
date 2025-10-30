@@ -25,14 +25,11 @@ const ConnectionStatus = () => {
   const readyState = jsonState.readyState;
   const reconnect = useWebSocketReconnect();
   
-  // Track how long we've been in CONNECTING state
   const [connectingTime, setConnectingTime] = useState(0);
-  const [connectingTimer, setConnectingTimer] = useState<NodeJS.Timeout | null>(null);
+  const [connectingTimer, setConnectingTimer] = useState<ReturnType<typeof setInterval> | null>(null);
   
-  // Reset or start the connecting timer based on readyState
   useEffect(() => {
     if (readyState === ReadyState.CONNECTING) {
-      // Start or continue the timer
       if (!connectingTimer) {
         const timer = setInterval(() => {
           setConnectingTime(prev => prev + 1);
@@ -40,7 +37,6 @@ const ConnectionStatus = () => {
         setConnectingTimer(timer);
       }
     } else {
-      // Clear the timer and reset the counter
       if (connectingTimer) {
         clearInterval(connectingTimer);
         setConnectingTimer(null);
@@ -48,7 +44,6 @@ const ConnectionStatus = () => {
       setConnectingTime(0);
     }
     
-    // Cleanup on unmount
     return () => {
       if (connectingTimer) {
         clearInterval(connectingTimer);
@@ -56,12 +51,11 @@ const ConnectionStatus = () => {
     };
   }, [readyState, connectingTimer]);
   
-  // Determine if we should show the reconnect button
   const shouldShowReconnectButton = 
     readyState === ReadyState.CLOSED || 
     readyState === ReadyState.UNINSTANTIATED ||
     readyState === ReadyState.CLOSING ||
-    (readyState === ReadyState.CONNECTING && connectingTime > 5); // Show after 5 seconds of connecting
+    (readyState === ReadyState.CONNECTING && connectingTime > 5);
 
   return (
     <div className="connection-status flex items-center">

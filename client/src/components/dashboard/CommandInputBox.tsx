@@ -11,19 +11,16 @@ const CommandInputBox = () => {
     
     if (!command.trim()) return;
     
-    // Send command to the server
     sendJson({
       type: "SEND_COMMAND",
       command: command.trim()
     });
     
-    // Clear the input field if keepText is false
     if (!keepText) {
       setCommand("");
     }
   };
 
-  // Reset field to default state
   const handleReset = () => {
     setCommand("");
   };

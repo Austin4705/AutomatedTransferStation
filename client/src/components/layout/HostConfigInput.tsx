@@ -1,23 +1,22 @@
 import { useState } from "react";
 import { useRecoilState } from "recoil";
-import { hostConfigAtom } from "../../state/hostState";
+import { connectionStateAtom } from "../../state/appState";
 
 const HostConfigInput = () => {
-  const [hostConfig, setHostConfig] = useRecoilState(hostConfigAtom);
-  const [inputValue, setInputValue] = useState(hostConfig.host);
+  const [connection, setConnection] = useRecoilState(connectionStateAtom);
+  const [inputValue, setInputValue] = useState(connection.host);
   const [isEditing, setIsEditing] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setHostConfig({ host: inputValue });
+    setConnection(prev => ({ ...prev, host: inputValue }));
     setIsEditing(false);
-    
-    // Trigger a page reload to reconnect with the new host
+
     window.location.reload();
   };
 
   const handleCancel = () => {
-    setInputValue(hostConfig.host);
+    setInputValue(connection.host);
     setIsEditing(false);
   };
 
@@ -52,7 +51,7 @@ const HostConfigInput = () => {
       ) : (
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-300">
-            Host: <span className="font-mono font-semibold">{hostConfig.host}</span>
+            Host: <span className="font-mono font-semibold">{connection.host}</span>
           </span>
           <button
             onClick={() => setIsEditing(true)}

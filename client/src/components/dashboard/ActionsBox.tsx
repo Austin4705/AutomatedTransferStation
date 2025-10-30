@@ -1,8 +1,6 @@
 import { useSendJSON } from "../../hooks/useSendJSON";
 import { useState, useRef } from "react";
 
-// Create a global event for refreshing streams
-// This allows components to communicate without direct props
 const createRefreshEvent = (streamType: string, cameraNumber: number) => {
   const event = new CustomEvent('refresh-camera-stream', { 
     detail: { streamType, cameraNumber } 
@@ -10,13 +8,11 @@ const createRefreshEvent = (streamType: string, cameraNumber: number) => {
   window.dispatchEvent(event);
 };
 
-// Global function to refresh all streams
 const refreshAllStreams = () => {
   const event = new CustomEvent('refresh-all-camera-streams');
   window.dispatchEvent(event);
 };
 
-// Extend the HTMLInputElement interface to include webkitdirectory
 declare global {
   interface HTMLInputElement {
     webkitdirectory: boolean;
@@ -44,20 +40,13 @@ const ActionsBox = () => {
     });
   };
 
-  // Function to refresh a specific camera stream
   const refreshStream = (streamType: string, cameraNumber: number) => {
-    // Dispatch a custom event that CameraDisplay will listen for
     createRefreshEvent(streamType, cameraNumber);
   };
 
-  // Function to refresh all streams with visual feedback
   const handleRefreshAll = () => {
     setIsRefreshing(true);
-    
-    // Dispatch the refresh all event
     refreshAllStreams();
-    
-    // Also try to refresh all known camera types
     refreshStream("video_feed", 0);
     refreshStream("video_feed", 1);
     refreshStream("video_feed", 2);
@@ -74,50 +63,36 @@ const ActionsBox = () => {
     }, 2000);
   };
 
-  // Trigger directory input click
   const handleDirectorySelectClick = () => {
     if (directoryInputRef.current) {
       directoryInputRef.current.click();
     }
   };
 
-  // Handle directory selection
   const handleDirectoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
-    
-    // Get the directory path
-    // Note: Due to security restrictions, we can only get the file name, not the full path
-    // We'll use webkitRelativePath to get the directory structure
     const directory = files[0].webkitRelativePath.split('/')[0];
     setSelectedDirectory(directory);
-    
-    // Reset the file input so the same directory can be selected again
     event.target.value = '';
   };
 
-  // Handle scan flakes button click
   const handleScanFlakes = () => {
     if (!selectedDirectory) {
       alert("Please select a directory first");
       return;
     }
-    
-    // Send the scan flakes packet with the selected directory
     sendJson({
       type: "SCAN_FLAKES",
       directory: selectedDirectory
     });
   };
 
-  // Handle draw flakes button click
   const handleDrawFlakes = () => {
     if (!selectedDirectory) {
       alert("Please select a directory first");
       return;
     }
-    
-    // Send the draw flakes packet with the selected directory
     sendJson({
       type: "DRAW_FLAKES",
       directory: selectedDirectory
@@ -176,97 +151,6 @@ const ActionsBox = () => {
             Flake Hunt 2
           </button>
         </div>
-      </div>
-
-      <div className="button-section">
-        {/* <h3 className="text-sm font-medium mb-2">Refresh Streams</h3>
-        <div className="button-group flex flex-wrap gap-2">
-          <button 
-            onClick={handleRefreshAll}
-            disabled={isRefreshing}
-            className={`refresh-button ${isRefreshing ? 'bg-green-700 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white px-3 py-1 rounded flex items-center`}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            {isRefreshing ? 'Refreshing...' : 'Refresh ALL Streams'}
-          </button>
-          
-          <button 
-            onClick={() => {
-              setIsRefreshing(true);
-              refreshStream("video_feed", 0);
-              refreshStream("video_feed", 1);
-              refreshStream("video_feed", 2);
-              setTimeout(() => setIsRefreshing(false), 1000);
-            }}
-            disabled={isRefreshing}
-            className={`refresh-button ${isRefreshing ? 'bg-green-600 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-1 rounded flex items-center`}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh Video Feeds
-          </button>
-          
-          <button 
-            onClick={() => {
-              setIsRefreshing(true);
-              refreshStream("snapshot_feed", 0);
-              refreshStream("snapshot_feed", 1);
-              refreshStream("snapshot_feed", 2);
-              setTimeout(() => setIsRefreshing(false), 1000);
-            }}
-            disabled={isRefreshing}
-            className={`refresh-button ${isRefreshing ? 'bg-green-600 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-1 rounded flex items-center`}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh Snapshots
-          </button>
-          
-          <button 
-            onClick={() => {
-              setIsRefreshing(true);
-              refreshStream("snapshot_flake_hunted", 0);
-              refreshStream("snapshot_flake_hunted", 1);
-              refreshStream("snapshot_flake_hunted", 2);
-              setTimeout(() => setIsRefreshing(false), 1000);
-            }}
-            disabled={isRefreshing}
-            className={`refresh-button ${isRefreshing ? 'bg-green-600 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-1 rounded flex items-center`}
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Refresh Flake Hunted
-          </button>
-        </div> */}
       </div>
     </div>
   );

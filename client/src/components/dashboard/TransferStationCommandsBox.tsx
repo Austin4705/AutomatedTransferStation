@@ -1,12 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useSendJSON } from "../../hooks/useSendJSON";
 
-// Empty template with exact spacing to match placeholder
-const EMPTY_TEMPLATE = `[
+const EMPTY_TEMPLATE = `[ ]`;
 
-]`;
-
-// Placeholder template with exact spacing to match empty template
 const PLACEHOLDER_TEMPLATE = '';
 
 const TransferStationCommandsBox = () => {
@@ -18,12 +14,10 @@ const TransferStationCommandsBox = () => {
   const sendJson = useSendJSON();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Check if we should show the placeholder
   useEffect(() => {
     setShowPlaceholder(parameters === EMPTY_TEMPLATE);
   }, [parameters]);
 
-  // Calculate rows based on content
   useEffect(() => {
     const lineCount = (parameters.match(/\n/g) || []).length + 1;
     setRows(Math.max(lineCount, 4)); // Minimum 4 rows
@@ -34,26 +28,21 @@ const TransferStationCommandsBox = () => {
     
     if (!command.trim()) return;
     
-    // Send TS_COMMAND to the server
     sendJson({
       type: "TS_COMMAND",
       command: command.trim(),
       parameters: parameters.trim()
     });
     
-    // Clear the command input but keep the parameters
     if (!keepText) {
       setCommand("");
     }
   };
 
-  // Handle focusing the textarea to position cursor properly
   const handleFocus = () => {
     if (textareaRef.current) {
-      // If the content is just the default template, position cursor between braces
       if (parameters === EMPTY_TEMPLATE) {
         const textarea = textareaRef.current;
-        // Position cursor after the first newline
         setTimeout(() => {
           textarea.selectionStart = textarea.selectionEnd = 2;
         }, 0);
@@ -61,7 +50,6 @@ const TransferStationCommandsBox = () => {
     }
   };
 
-  // Handle tab key in textarea
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -70,11 +58,9 @@ const TransferStationCommandsBox = () => {
       const start = target.selectionStart;
       const end = target.selectionEnd;
       
-      // Insert tab at cursor position (2 spaces)
       const newValue = parameters.substring(0, start) + '  ' + parameters.substring(end);
       setParameters(newValue);
       
-      // Move cursor after the inserted tab
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
@@ -84,7 +70,6 @@ const TransferStationCommandsBox = () => {
     }
   };
 
-  // Reset function to clear both command and parameters
   const handleReset = () => {
     setCommand("");
     setParameters(EMPTY_TEMPLATE);

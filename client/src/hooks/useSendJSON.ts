@@ -11,7 +11,6 @@ export const useSendJSON = () => {
   const sendJson = useCallback(
     (data: any) => {
       if (jsonState.sendJsonMessage) {
-        // Check if packet definitions have been loaded
         if (PacketManager.isInitialized && !PacketManager.isInitialized()) {
           console.warn("Packet manager not initialized yet. Initializing now...");
           PacketManager.initialize().then(() => {
@@ -19,19 +18,16 @@ export const useSendJSON = () => {
           });
         }
 
-        // Log the outgoing message to the console
         appendConsole({
           sender: "Client",
           message: JSON.stringify(data),
         });
         
-        // Dispatch a custom event for the OutgoingLog component
         const outgoingEvent = new CustomEvent('outgoingMessage', { 
           detail: data 
         });
         window.dispatchEvent(outgoingEvent);
         
-        // Send the message
         jsonState.sendJsonMessage(data);
       } else {
         console.error("WebSocket connection not established", { 
@@ -50,7 +46,6 @@ export const useSendJSON = () => {
   return sendJson;
 };
 
-// Helper function to get a description of the WebSocket ready state
 function getReadyStateDescription(readyState: number): string {
   switch (readyState) {
     case 0: return "CONNECTING";

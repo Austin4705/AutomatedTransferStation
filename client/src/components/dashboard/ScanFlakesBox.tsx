@@ -4,7 +4,6 @@ import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../../state/jsonState";
 import { usePositionContext } from "../../state/positionContext";
 
-// Extend the HTMLInputElement interface to include webkitdirectory
 declare global {
   interface HTMLInputElement {
     webkitdirectory: boolean;
@@ -12,13 +11,11 @@ declare global {
   }
 }
 
-// Interface for position
 interface Position {
   x: number;
   y: number;
 }
 
-// Interface for flake coordinates
 interface FlakeCoordinates {
   bottomLeft: { x: string; y: string };
   topRight: { x: string; y: string };
@@ -41,10 +38,7 @@ const ScanFlakesBox = () => {
   const [keepInputs, setKeepInputs] = useState<boolean>(false);
   const { autoUpdate, pollRate, position } = usePositionContext();
 
-  // Initialize position polling based on autoUpdate setting
   useEffect(() => {
-    // Position will be updated automatically through the context
-    // and we can just update our local state from the context
     if (position) {
       setCurrentPosition({
         x: position.x,
@@ -53,35 +47,25 @@ const ScanFlakesBox = () => {
     }
   }, [position]);
 
-  // Trigger directory input click
   const handleDirectorySelectClick = () => {
     if (directoryInputRef.current) {
       directoryInputRef.current.click();
     }
   };
 
-  // Handle directory selection
   const handleDirectoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
-    
-    // Get the directory path
-    // Note: Due to security restrictions, we can only get the file name, not the full path
-    // We'll use webkitRelativePath to get the directory structure
     const directory = files[0].webkitRelativePath.split('/')[0];
     setSelectedDirectory(directory);
-    
-    // Reset the file input so the same directory can be selected again
     event.target.value = '';
   };
 
-  // Handle coordinate change
   const handleCoordinateChange = (
     corner: "bottomLeft" | "topRight",
     axis: "x" | "y",
     value: string
   ) => {
-    // Only allow numbers and decimal points
     if (value !== "" && !/^-?\d*\.?\d*$/.test(value)) {
       return;
     }
@@ -94,10 +78,7 @@ const ScanFlakesBox = () => {
       }
     }));
   };
-
-  // Handle wafer and image number changes
   const handleNumberChange = (field: "waferNumber" | "imageNumber", value: string) => {
-    // Only allow positive integers
     if (value !== "" && !/^\d*$/.test(value)) {
       return;
     }
@@ -108,13 +89,11 @@ const ScanFlakesBox = () => {
     }));
   };
 
-  // Copy current position to bottom left coordinates
   const copyCurrentPosition = (corner: "bottomLeft" | "topRight") => {
     // Format the current position values
     const xValue = currentPosition.x.toFixed(3);
     const yValue = currentPosition.y.toFixed(3);
     
-    // Update the specified coordinates with the current position
     setFlakeCoordinates(prev => ({
       ...prev,
       [corner]: {
@@ -124,9 +103,7 @@ const ScanFlakesBox = () => {
     }));
   };
 
-  // Handle goto flake button click
   const handleGotoFlake = () => {
-    // Validate required fields
     if (!flakeCoordinates.waferNumber || !flakeCoordinates.imageNumber) {
       alert("Please enter both wafer number and image number");
       return;
@@ -137,7 +114,6 @@ const ScanFlakesBox = () => {
       return;
     }
     
-    // Send the goto wafer image packet with the coordinates and numbers
     const payload = {
       type: "GOTO_WAFER_IMAGE",
       directory: selectedDirectory,
@@ -151,7 +127,6 @@ const ScanFlakesBox = () => {
     
     sendJson(payload);
     
-    // Clear only wafer and image numbers if keepInputs is false
     if (!keepInputs) {
       setFlakeCoordinates(prev => ({
         ...prev,
@@ -161,20 +136,17 @@ const ScanFlakesBox = () => {
     }
   };
 
-  // Handle scan flakes button click
   const handleScanFlakes = () => {
     if (!selectedDirectory) {
       alert("Please select a directory first");
       return;
     }
     
-    // Send the scan flakes packet with the selected directory and coordinates if provided
     const payload: any = {
       type: "SCAN_FLAKES",
       directory: selectedDirectory
     };
 
-    // Add coordinates if they are provided
     if (flakeCoordinates.bottomLeft.x && flakeCoordinates.bottomLeft.y) {
       payload.bottomLeft = {
         x: parseFloat(flakeCoordinates.bottomLeft.x),
@@ -182,7 +154,6 @@ const ScanFlakesBox = () => {
       };
     }
 
-    // Add top right coordinates if they are provided
     if (flakeCoordinates.topRight.x && flakeCoordinates.topRight.y) {
       payload.topRight = {
         x: parseFloat(flakeCoordinates.topRight.x),
@@ -190,19 +161,16 @@ const ScanFlakesBox = () => {
       };
     }
 
-    // Add wafer number if provided
     if (flakeCoordinates.waferNumber) {
       payload.waferNumber = parseInt(flakeCoordinates.waferNumber);
     }
 
-    // Add image number if provided
     if (flakeCoordinates.imageNumber) {
       payload.imageNumber = parseInt(flakeCoordinates.imageNumber);
     }
     
     sendJson(payload);
     
-    // Clear inputs if keepInputs is false
     if (!keepInputs) {
       setFlakeCoordinates(prev => ({
         ...prev,
@@ -212,14 +180,12 @@ const ScanFlakesBox = () => {
     }
   };
 
-  // Handle draw flakes button click
   const handleDrawFlakes = () => {
     if (!selectedDirectory) {
       alert("Please select a directory first");
       return;
     }
     
-    // Send the draw flakes packet with the selected directory
     sendJson({
       type: "DRAW_FLAKES",
       directory: selectedDirectory
@@ -241,13 +207,10 @@ const ScanFlakesBox = () => {
           <span className="text-sm text-gray-600 truncate max-w-xs">
             {selectedDirectory ? selectedDirectory : "No directory selected"}
           </span>
-          {/* Hidden directory input */}
           <input
             type="file"
             ref={directoryInputRef}
             onChange={handleDirectoryChange}
-            // Use data attributes to avoid TypeScript errors
-            // @ts-ignore
             webkitdirectory=""
             directory=""
             className="hidden"
@@ -290,7 +253,6 @@ const ScanFlakesBox = () => {
           </button>
         </div>        
 
-        {/* Flake Coordinates */}
         <div className="flake-coordinates mb-2">
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium">Bottom Left Offset:</span>
@@ -343,7 +305,6 @@ const ScanFlakesBox = () => {
           </div>
         </div>
 
-        {/* Wafer and Image Numbers */}
         <div className="wafer-image-numbers mb-2">
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium">Wafer Number:</span>

@@ -1,10 +1,10 @@
 import asyncio
-from websockets.asyncio.server import serve
 import json
-from queue import Queue
 import websockets
-from typing import Any, Dict, Callable
 import inspect
+from queue import Queue
+from typing import Any, Dict, Callable
+from websockets.asyncio.server import serve
 
 class Socket_Manager:
     """
@@ -12,44 +12,21 @@ class Socket_Manager:
     All you really have to know is that it has a queue of jsons that represent incoming messages and a function to send jsons to the clients.
     """
     CONNECTIONS = set()
-
-    # Load packet definitions
-    # with open("./../shared/packet_definitions.json", "r") as f:
-    #     PACKET_DEFS = json.load(f)["packets"]
-
     packet_handlers: Dict[str, Callable] = dict()
 
-    def start():
-        """Start the WebSocket server and related tasks"""
+    @classmethod
+    def start(cls, _packet_handler):
+        packet_handler = _packet_handler
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        
         async def main():
             server = await serve(Socket_Manager.conn_handler, "localhost", 8765)
-            tasks = []
-            return server, tasks
-        
-        loop.run_until_complete(main())
-        loop.run_forever()
-
-    @classmethod
-    def start_with_ts(cls, transfer_station):
-        """Start the WebSocket server with a transfer station for sending commands"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        async def main():
-            server = await serve(cls.conn_handler, "localhost", 8765)
-            sending_task = asyncio.create_task(cls.ts_sending_thread(transfer_station))
-            tasks = [sending_task]
-            return server, tasks
         
         loop.run_until_complete(main())
         loop.run_forever()
 
     async def conn_handler(websocket):
-        """
-        Main handler that gets called on each new websocket handshake
-        """
         Socket_Manager.CONNECTIONS.add(websocket)
         print(f"New connection created {websocket}")
 
@@ -76,41 +53,16 @@ class Socket_Manager:
             Socket_Manager.CONNECTIONS.remove(websocket)
             print(f"Connection removed {websocket}")
 
-    @classmethod
-    def handle_packet(cls, message: str):
-        """Handle incoming packets"""
+    def handle_packet(message: str):
         try:
             try:
                 packet = json.loads(message)
             except json.JSONDecodeError:
                 raise ValueError("Message is not valid JSON")
-
-            packet_type = packet.get("type")
-            if not packet_type:
-                raise ValueError("Packet missing 'type' field")
-            handler = cls.packet_handlers.get(packet_type, cls.default_handler)
+            packet_type = packet["type"]
+            handler = Socket_Manager.packet_handlers.get(packet_type, Socket_Manager.default_handler)
             handler(packet_type, packet)
 
-        except json.JSONDecodeError as e:
-            print(f"Invalid JSON format: {e}")
-            error_data = {
-                "type": "ERROR",
-                "data": {
-                    "code": 400,
-                    "message": "Invalid JSON format"
-                }
-            }
-            cls.send_all(json.dumps(error_data))
-        except ValueError as e:
-            print(f"Invalid packet format: {e}")
-            error_data = {
-                "type": "ERROR",
-                "data": {
-                    "code": 400,
-                    "message": str(e)
-                }
-            }
-            cls.send_all(json.dumps(error_data))
         except Exception as e:
             print(f"Error handling packet: {e}")
             error_data = {
@@ -120,60 +72,30 @@ class Socket_Manager:
                     "message": str(e)
                 }
             }
-            cls.send_all(json.dumps(error_data))
+            self.send_error(str(e))
 
-    #Not working, I dont care to validate it
-    # @classmethod
-    # def validate_packet_data(cls, packet_type: str, data: dict) -> bool:
-    #     """Validate packet data against definition"""
-    #     if packet_type not in cls.PACKET_DEFS:
-    #         return False
-    #     expected_fields = cls.PACKET_DEFS[packet_type]["fields"]
-    #     for field, expected_type in expected_fields.items():
-    #         if field not in data:
-    #             return False
-    #         value = data[field]
-    #         # Type checking
-    #         if expected_type == "bool" and not isinstance(value, bool):
-    #             return False
-    #         elif expected_type == "int" and not isinstance(value, int):
-    #             return False
-    #         elif expected_type == "float" and not isinstance(value, (int, float)):
-    #             return False
-    #         elif expected_type == "string" and not isinstance(value, str):
-    #             return False
-    #     return True
-
-    @classmethod
-    def default_handler(cls, packet_type: str, data: dict):
+    def default_handler(packet_type: str, data: dict):
         """Default handler for unhandled packet types"""
-        # print(f"Received unhandled packet type: {packet_type}")
         print("Data:", json.dumps(data, indent=2))
 
-    @classmethod
-    def send_all(cls, msg: str):
-        """Send message to all connected clients"""
-        # Don't use websockets.broadcast as it can cause concurrent writes
-        for websocket in cls.CONNECTIONS:
-            # Create a task for each send, but don't wait for it
-            # This avoids blocking but still allows the event loop to manage sends
-            asyncio.create_task(cls._safe_send(websocket, msg))
-    
-    @classmethod
-    async def _safe_send(cls, websocket, msg: str):
-        """Safely send a message to a websocket with error handling"""
+    async def _safe_send(websocket, msg: str):
         try:
             await websocket.send(msg)
         except websockets.exceptions.ConnectionClosed:
-            if websocket in cls.CONNECTIONS:
-                cls.CONNECTIONS.remove(websocket)
+            if websocket in Socket_Manager.CONNECTIONS:
+                Socket_Manager.CONNECTIONS.remove(websocket)
                 print(f"Removed closed connection {websocket}")
         except Exception as e:
             print(f"Error sending message to {websocket}: {e}")
 
-    @classmethod
-    def send_all_json(cls, json_data: dict):
-        """Send JSON data to all connected clients"""
+    async def _send_all_async(cls, msg: str):
+        for websocket in Socket_Manager.CONNECTIONS:
+            try:
+                await Socket_Manager._safe_send(websocket, msg)
+            except Exception as e:
+                print(f"Error in _send_all_async: {e}")
+
+    def send_all_json(json_data: dict):
         try:
             msg = json.dumps(json_data)
             try:
@@ -181,53 +103,20 @@ class Socket_Manager:
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-            loop.call_soon_threadsafe(lambda: asyncio.create_task(cls._send_all_async(msg)))
+            loop.call_soon_threadsafe(lambda: asyncio.create_task(Socket_Manager._send_all_async(msg)))
         except Exception as e:
             print(f"Error serializing JSON: {e}")
 
-    @classmethod
-    async def _send_all_async(cls, msg: str):
-        """Asynchronous helper method to send message to all clients"""
-        for websocket in cls.CONNECTIONS:
-            try:
-                await cls._safe_send(websocket, msg)
-            except Exception as e:
-                print(f"Error in _send_all_async: {e}")
+    def send_message_no_print(message: str):
+        Socket_Manager.send_all_json({
+            "type": "MESSAGE",
+            "message": message
+        })
 
-    # Socket stuff
-    # Queue of incoming messages from web browser 
-    # QUEUE_BUFFER_SIZE = 1000
-    # CLIENT_DATA_QUEUE = Queue(QUEUE_BUFFER_SIZE)
-    # def socket_dispatch_thread(TRANSFER_STATION):
-    #     while True:
-    #         if Socket_Manager.CLIENT_DATA_QUEUE.not_empty:
-    #             string_data = Socket_Manager.CLIENT_DATA_QUEUE.get()
-    #             print(f"Received message-s: {string_data}")
-    #             data = json.loads(string_data)
-    #             message = data.get("command")
-    #             # CALL DISPATCH HERE
-    #             #Socket_Manager.socket_dispatch(data, TRANSFER_STATION)
+    def send_message(message: str):
+        print(message)
+        Socket_Manager.send_message_no_print(message)
 
-    async def ts_sending_thread(TRANSFER_STATION):
-        while True:
-            try:
-                if TRANSFER_STATION.exist_new_sent_commands():
-                    message = TRANSFER_STATION.since_last_send()
-                    for m in message:
-                        await asyncio.sleep(0.01)
-                        Socket_Manager.send_all(json.dumps({
-                            "type": "COMMAND",
-                            "command": m["command"],
-                        }))
-                if TRANSFER_STATION.exist_new_received_commands():
-                    message = TRANSFER_STATION.since_last_receive()
-                    for m in message:
-                        await asyncio.sleep(0.01)
-                        Socket_Manager.send_all(json.dumps({
-                            "type": "RESPONSE",
-                            "response": m["response"],
-                        }))
-                await asyncio.sleep(0.1)
-            except Exception as e:
-                print(f"Error in ts_sending_thread: {e}")
-                await asyncio.sleep(1)
+    def send_error(message: str):
+        print("Error: ", message)
+        Socket_Manager.send_message_no_print(message)

@@ -4,22 +4,20 @@ import { jsonStateAtom } from "../../state/jsonState";
 import { useSendJSON } from "../../hooks/useSendJSON";
 import { PacketManager } from "../../packets/PacketHandler";
 
-// Maximum number of log entries to keep
 const MAX_LOG_ENTRIES = 1000;
 
 interface LogEntry {
   timestamp: string;
   message: string;
   type: "command" | "response" | "outgoing" | "packet";
-  rawData?: any; // For storing raw packet data
-  size?: number; // For packet size
-  packetType?: string; // For packet type filtering
-  isUnknown?: boolean; // For unknown packets
+  rawData?: any;
+  size?: number;
+  packetType?: string;
+  isUnknown?: boolean;
 }
 
 type LogType = "command" | "response" | "outgoing" | "packet";
 
-// Define message types to fix TypeScript errors
 interface BaseMessage {
   type: string;
   [key: string]: any;
@@ -48,7 +46,6 @@ const SystemLogsBox = () => {
   const [selectedOutgoingTypes, setSelectedOutgoingTypes] = useState<Set<string>>(new Set());
   const [definedPacketTypes, setDefinedPacketTypes] = useState<string[]>([]);
   const [autoScroll, setAutoScroll] = useState<boolean>(() => {
-    // Try to get the setting from localStorage, default to true
     const savedSetting = localStorage.getItem('log-auto-scroll');
     return savedSetting !== null ? savedSetting === 'true' : true;
   });
@@ -56,37 +53,28 @@ const SystemLogsBox = () => {
   const sendJson = useSendJSON();
   const logContentRef = useRef<HTMLDivElement>(null);
   const packetDefsLoaded = useRef<boolean>(false);
-  // Add a ref to track the last processed message to avoid duplicates after clearing
   const lastProcessedMessageRef = useRef<any>(undefined);
-  // Add a ref to track if logs were manually cleared
   const logsManuallyCleared = useRef<boolean>(false);
-  // Add a cooldown period after clearing logs
   const clearCooldownRef = useRef<boolean>(false);
-  // Add a message deduplication cache
   const recentMessagesRef = useRef<Set<string>>(new Set());
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
-  // Add state to track if certain log types should be hidden completely
   const [hiddenLogTypes, setHiddenLogTypes] = useState<Set<LogType>>(new Set());
 
-  // Update localStorage when auto-scroll setting changes
   useEffect(() => {
     localStorage.setItem('log-auto-scroll', autoScroll.toString());
   }, [autoScroll]);
 
-  // Listen for logs-visibility-changed event
   useEffect(() => {
     const handleLogsVisibilityEvent = (event: CustomEvent) => {
       const newHiddenLogTypes = new Set(hiddenLogTypes);
       
       if (event.detail) {
-        // If commandLogs is false, hide command logs
         if (event.detail.commandLogs === false) {
           newHiddenLogTypes.add("command");
         } else if (event.detail.commandLogs === true) {
           newHiddenLogTypes.delete("command");
         }
         
-        // If responseLogs is false, hide response logs
         if (event.detail.responseLogs === false) {
           newHiddenLogTypes.add("response");
         } else if (event.detail.responseLogs === true) {
@@ -95,7 +83,6 @@ const SystemLogsBox = () => {
         
         setHiddenLogTypes(newHiddenLogTypes);
         
-        // Update visible log types
         const newVisibleLogTypes = new Set(visibleLogTypes);
         if (event.detail.commandLogs === false) {
           newVisibleLogTypes.delete("command");
@@ -113,28 +100,23 @@ const SystemLogsBox = () => {
       }
     };
     
-    // Add event listener
     document.addEventListener('logs-visibility-changed', handleLogsVisibilityEvent as EventListener);
     
-    // Clean up
     return () => {
       document.removeEventListener('logs-visibility-changed', handleLogsVisibilityEvent as EventListener);
     };
   }, [hiddenLogTypes, visibleLogTypes]);
 
-  // Load packet definitions from document
   useEffect(() => {
     const loadPacketDefinitions = async () => {
       if (packetDefsLoaded.current) return;
       
       try {
-        // Initialize packet manager if needed
         if (!PacketManager.isInitialized()) {
           console.log("Initializing packet manager from UnifiedLog...");
           await PacketManager.initialize();
         }
         
-        // Load packet definitions from the shared directory
         const response = await fetch('/shared/packet_definitions.json');
         
         if (!response.ok) {
@@ -143,19 +125,14 @@ const SystemLogsBox = () => {
         
         const packetDefs = await response.json();
         
-        // Extract packet types from definitions
         const packetTypes = Object.keys(packetDefs.packets || {});
         
-        // Create the allPacketTypes array for use throughout the component
         const allPacketTypes = packetTypes;
         
-        // Combine with common packet types
         setDefinedPacketTypes(allPacketTypes);
         
-        // Initialize all packet types as selected
         setSelectedPacketTypes(new Set(allPacketTypes));
         
-        // Use the same packet types for outgoing messages
         setSelectedOutgoingTypes(new Set(allPacketTypes));
         
         packetDefsLoaded.current = true;
@@ -169,7 +146,6 @@ const SystemLogsBox = () => {
     loadPacketDefinitions();
   }, []);
 
-  // Extract unique packet types from logs and combine with defined types
   const packetTypes = useMemo(() => {
     const typesFromLogs = new Set<string>();
     logs.forEach(log => {
@@ -178,12 +154,10 @@ const SystemLogsBox = () => {
       }
     });
     
-    // Combine with defined packet types
     const allTypes = new Set([...definedPacketTypes, ...typesFromLogs]);
     return Array.from(allTypes).sort();
   }, [logs, definedPacketTypes]);
 
-  // Extract unique outgoing message types from logs and combine with defined types
   const outgoingTypes = useMemo(() => {
     const typesFromLogs = new Set<string>();
     logs.forEach(log => {
@@ -192,34 +166,24 @@ const SystemLogsBox = () => {
       }
     });
     
-    // Combine with defined packet types (using the same source as packets)
     const allTypes = new Set([...definedPacketTypes, ...typesFromLogs]);
     return Array.from(allTypes).sort();
   }, [logs, definedPacketTypes]);
 
-  // Helper function to add logs while respecting the maximum limit
   const addLogs = (newLogs: LogEntry[], replace = false) => {
-    // Skip if we're in a cooldown period after clearing
     if (clearCooldownRef.current) {
-      // console.log("Skipping log addition during cooldown period");
       return;
     }
     
-    // Deduplicate logs before adding them
     const uniqueLogs = newLogs.filter(newLog => {
-      // Create a unique key for this log
       const logKey = `${newLog.type}-${newLog.packetType}-${newLog.message}`;
       
-      // Check if we've seen this message recently
       if (recentMessagesRef.current.has(logKey)) {
-        // console.log("Preventing duplicate log:", logKey);
         return false;
       }
       
-      // Add to recent messages cache
       recentMessagesRef.current.add(logKey);
       
-      // Limit the size of the cache to prevent memory leaks
       if (recentMessagesRef.current.size > 1000) {
         const oldestKey = Array.from(recentMessagesRef.current)[0];
         recentMessagesRef.current.delete(oldestKey);
@@ -228,33 +192,27 @@ const SystemLogsBox = () => {
       return true;
     });
     
-    // Only proceed if there are unique logs to add
     if (uniqueLogs.length === 0) {
       return;
     }
     
     setLogs(prevLogs => {
-      // If replacing logs of a specific type, filter out that type first
       const filteredLogs = replace 
-        ? prevLogs.filter(log => log.type !== uniqueLogs[0]?.type) // Filter by type directly
+        ? prevLogs.filter(log => log.type !== uniqueLogs[0]?.type)
         : prevLogs;
       
-      // Log what's happening for debugging
       if (replace) {
         console.log(`Replacing ${prevLogs.filter(log => log.type === uniqueLogs[0]?.type).length} ${uniqueLogs[0]?.type} logs with ${uniqueLogs.length} new logs`);
       }
       
-      // Combine existing and new logs
       const combinedLogs = [...filteredLogs, ...uniqueLogs];
       
-      // Trim to maximum size if needed
       return combinedLogs.length > MAX_LOG_ENTRIES 
         ? combinedLogs.slice(combinedLogs.length - MAX_LOG_ENTRIES) 
         : combinedLogs;
     });
   };
 
-  // Toggle packet type selection
   const togglePacketType = (type: string) => {
     setSelectedPacketTypes(prev => {
       const newSet = new Set(prev);
@@ -267,7 +225,6 @@ const SystemLogsBox = () => {
     });
   };
 
-  // Toggle outgoing type selection
   const toggleOutgoingType = (type: string) => {
     setSelectedOutgoingTypes(prev => {
       const newSet = new Set(prev);
@@ -280,28 +237,22 @@ const SystemLogsBox = () => {
     });
   };
 
-  // Register packet traffic listener
   useEffect(() => {
     const unsubscribe = PacketManager.registerTrafficListener((packetInfo) => {
-      // Get the raw string representation of the entire packet
       const rawPacket = JSON.stringify({
         type: packetInfo.type,
         data: packetInfo.data
       });
       
-      // Determine if this is an unknown packet type
       const isUnknown = !PacketManager.isKnownPacketType(packetInfo.type);
       
-      // Determine the log type based on packet type
       let logType: "command" | "response" | "packet" = "packet";
       
-      // Check if this is a command packet
       if (packetInfo.type === "COMMAND" || 
           (packetInfo.data && (packetInfo.data.command || 
           (Array.isArray(packetInfo.data.commands) && packetInfo.data.commands.length > 0)))) {
         logType = "command";
       }
-      // Check if this is a response packet
       else if (packetInfo.type === "RESPONSE" || 
                packetInfo.type === "COMMAND_RESULT" || 
                packetInfo.type === "ERROR" ||
@@ -311,37 +262,31 @@ const SystemLogsBox = () => {
         logType = "response";
       }
       
-      // Create a message content based on the log type
       let messageContent: string;
       if (logType === "command") {
-        // For commands, show the command content if available
         messageContent = packetInfo.data && packetInfo.data.command 
           ? packetInfo.data.command
           : rawPacket;
       } else if (logType === "response") {
-        // For responses, show the response content if available
         messageContent = packetInfo.data && (packetInfo.data.response || packetInfo.data.message)
           ? (packetInfo.data.response || packetInfo.data.message)
           : rawPacket;
       } else {
-        // For regular packets, show the raw packet
         messageContent = rawPacket;
       }
       
       const newEntry: LogEntry = {
         timestamp: new Date(packetInfo.timestamp).toLocaleString(),
         message: messageContent,
-        type: logType, // Use the determined log type
+        type: logType,
         rawData: packetInfo.data,
         size: packetInfo.size,
         packetType: packetInfo.type,
         isUnknown
       };
       
-      // Create a unique key for this packet to check for duplication
       const packetKey = `${logType}-${packetInfo.type}-${packetInfo.timestamp}`;
       
-      // Check if this entry would be a duplicate
       const isDuplicate = logs.some(log => 
         log.type === logType && 
         log.packetType === packetInfo.type && 
@@ -349,10 +294,8 @@ const SystemLogsBox = () => {
       );
       
       if (!isDuplicate) {
-        // Add the new entry immediately to the logs
         setLogs(prevLogs => {
           const newLogs = [...prevLogs, newEntry];
-          // Trim to maximum size if needed
           return newLogs.length > MAX_LOG_ENTRIES 
             ? newLogs.slice(newLogs.length - MAX_LOG_ENTRIES) 
             : newLogs;
@@ -365,37 +308,31 @@ const SystemLogsBox = () => {
     };
   }, []);
 
-  // Track outgoing messages
   useEffect(() => {
     const handleOutgoingMessage = (event: CustomEvent) => {
       const message = event.detail;
       const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
       
-      // Try to extract type from JSON if possible
       let messageType = "";
       let isUnknown = false;
       
       try {
         if (typeof message === 'object' && message.type) {
           messageType = message.type;
-          // Check if this is an unknown packet type
           isUnknown = !definedPacketTypes.includes(messageType);
         } else if (typeof message === 'string') {
           try {
             const parsed = JSON.parse(message);
             if (parsed && parsed.type) {
               messageType = parsed.type;
-              // Check if this is an unknown packet type
               isUnknown =  
         !definedPacketTypes.includes(messageType);
             }
           } catch {
-            // If we can't parse the string, consider it unknown
             isUnknown = true;
           }
         }
       } catch (e) {
-        // Ignore parsing errors
         isUnknown = true;
       }
       
@@ -407,16 +344,13 @@ const SystemLogsBox = () => {
         isUnknown
       };
       
-      // Add the new entry immediately to the logs
       setLogs(prevLogs => {
         const newLogs = [...prevLogs, newEntry];
-        // Trim to maximum size if needed
         return newLogs.length > MAX_LOG_ENTRIES 
           ? newLogs.slice(newLogs.length - MAX_LOG_ENTRIES) 
           : newLogs;
       });
       
-      // Always scroll to bottom when new logs are added
       if (autoScroll) {
         scrollToBottom();
       }
@@ -430,7 +364,6 @@ const SystemLogsBox = () => {
   }, [definedPacketTypes, autoScroll]);
 
   const scrollToBottom = () => {
-    // Always scroll to bottom when called, regardless of autoScroll setting
     setTimeout(() => {
       if (logContentRef.current) {
         logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
@@ -438,27 +371,22 @@ const SystemLogsBox = () => {
     }, 100);
   };
 
-  // Function to request command logs
   const requestCommandLogs = () => {
     sendJson({
       type: "REQUEST_LOG_COMMANDS",
     });
     
-    // Flag to scroll once when the response comes in
     window.sessionStorage.setItem('log_scroll_on_next_command_response', 'true');
   };
 
-  // Function to request response logs
   const requestResponseLogs = () => {
     sendJson({
       type: "REQUEST_LOG_RESPONSE",
     });
     
-    // Flag to scroll once when the response comes in
     window.sessionStorage.setItem('log_scroll_on_next_response_response', 'true');
   };
 
-  // Toggle log type visibility
   const toggleLogType = (type: LogType) => {
     setVisibleLogTypes(prev => {
       const newSet = new Set(prev);
@@ -471,35 +399,27 @@ const SystemLogsBox = () => {
     });
   };
 
-  // Filter logs based on visibility settings and hidden log types
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
-      // Filter by log type visibility
       if (!visibleLogTypes.has(log.type) || hiddenLogTypes.has(log.type)) {
         return false;
       }
       
-      // Filter by packet type if it's a packet
       if (log.type === "packet" && log.packetType) {
-        // Filter unknown packets based on setting
         if (!showUnknownPackets && log.isUnknown) {
           return false;
         }
         
-        // Filter by selected packet types
         if (selectedPacketTypes.size > 0 && !selectedPacketTypes.has(log.packetType)) {
           return false;
         }
       }
       
-      // Filter by outgoing message type
       if (log.type === "outgoing" && log.packetType) {
-        // Filter unknown outgoing messages based on setting
         if (!showUnknownOutgoing && log.isUnknown) {
           return false;
         }
         
-        // Filter by selected outgoing types
         if (selectedOutgoingTypes.size > 0 && !selectedOutgoingTypes.has(log.packetType)) {
           return false;
         }
@@ -509,63 +429,50 @@ const SystemLogsBox = () => {
     });
   }, [logs, visibleLogTypes, hiddenLogTypes, showUnknownPackets, showUnknownOutgoing, selectedPacketTypes, selectedOutgoingTypes]);
 
-  // Get color for log type
   const getLogTypeColor = (type: "command" | "response" | "outgoing" | "packet") => {
     switch (type) {
       case "command":
-        return "#3498db"; // Blue
+        return "#3498db";
       case "response":
-        return "#2ecc71"; // Green
+        return "#2ecc71";
       case "outgoing":
-        return "#e67e22"; // Orange
+        return "#e67e22";
       case "packet":
-        return "#9b59b6"; // Purple
+        return "#9b59b6";
       default:
-        return "#718096"; // Gray
+        return "#718096";
     }
   };
 
-  // Add a dedicated clear function
   const clearLogs = () => {
     console.log("Clearing logs and setting cooldown period");
     
-    // Set the cooldown flag to prevent immediate additions
     clearCooldownRef.current = true;
     
-    setLogs([]); // Directly set logs to an empty array
+    setLogs([]);
     
-    // Mark that logs were manually cleared to prevent immediate re-adding
     logsManuallyCleared.current = true;
     
-    // Reset the last processed message reference
     lastProcessedMessageRef.current = undefined;
     
-    // Clear the message deduplication cache
     recentMessagesRef.current.clear();
     
-    // Reset any tracking variables that might cause issues
-    // This helps prevent the last message from reappearing
     const event = new CustomEvent('logs-cleared', {
       detail: { timestamp: new Date().getTime() }
     });
     document.dispatchEvent(event);
     
-    // Force stop all pending log requests by adding a small delay
-    // before new log messages can be processed
     setTimeout(() => {
-      // After a brief delay, we can allow processing messages again
       clearCooldownRef.current = false;
       console.log("Log clearing complete - ready for new messages");
-    }, 1000); // Use a longer cooldown period of 1 second
+    }, 1000);
   };
 
-  // Add click handler to close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const outgoingFilterElem = document.getElementById('outgoing-filter-options');
       const packetFilterElem = document.getElementById('packet-filter-options');
       
-      // Check if the click was outside the outgoing filter dropdown
       if (outgoingFilterElem && !outgoingFilterElem.classList.contains('hidden')) {
         const outgoingButton = document.querySelector('[data-dropdown="outgoing"]');
         if (
@@ -576,7 +483,6 @@ const SystemLogsBox = () => {
         }
       }
       
-      // Check if the click was outside the packet filter dropdown
       if (packetFilterElem && !packetFilterElem.classList.contains('hidden')) {
         const packetButton = document.querySelector('[data-dropdown="packet"]');
         if (
@@ -595,53 +501,37 @@ const SystemLogsBox = () => {
     };
   }, []);
 
-  // Process incoming messages
   useEffect(() => {
     if (!jsonState.lastJsonMessage) return;
 
-    // Skip if we're in a cooldown period after clearing
     if (clearCooldownRef.current) {
-      // console.log("Skipping message processing during cooldown period");
       return;
     }
 
-    // Skip if this is the same message we already processed
     if (lastProcessedMessageRef.current === jsonState.lastJsonMessage) {
       return;
     }
 
-    // Create a message key for deduplication
     const message = jsonState.lastJsonMessage as BaseMessage;
     const messageKey = `${message.type}-${JSON.stringify(message)}`;
     
-    // Skip if we've seen this exact message recently
     if (recentMessagesRef.current.has(messageKey)) {
-      // console.log("Skipping duplicate message:", messageKey);
       return;
     }
     
-    // Add to recent messages cache
     recentMessagesRef.current.add(messageKey);
 
-    // Update the last processed message
     lastProcessedMessageRef.current = jsonState.lastJsonMessage;
     
-    // If logs were manually cleared, we need to reset the flag
-    // but only process new messages after clearing
     if (logsManuallyCleared.current) {
-      // Simply reset the flag and skip all message processing until new messages arrive
       logsManuallyCleared.current = false;
       
-      // Skip all message processing right after clearing logs
-      // This prevents duplicating commands and responses right after clear
       return;
     }
     
-    // Handle command messages
     if (message.type === "COMMAND") {
       const commandMessage = message as CommandMessage;
       
-      // Check if this command is already in the logs to prevent duplicates
       const isDuplicate = logs.some(log => 
         log.type === "command" && 
         log.packetType === "COMMAND" && 
@@ -659,16 +549,13 @@ const SystemLogsBox = () => {
         
         addLogs([newEntry]);
         
-        // Check if we should auto-scroll after adding logs
         if (autoScroll) {
           scrollToBottom();
         }
       }
     }
-    // Handle bulk command logs
     else if (message.type === "RESPONSE_LOG_COMMANDS" && Array.isArray((message as CommandMessage).commands)) {
       const commandMessage = message as CommandMessage;
-      // Only process if there are actual commands in the response
       if (commandMessage.commands!.length > 0) {
         const commandLogs: LogEntry[] = commandMessage.commands!.map((cmd: any) => ({
           timestamp: new Date(cmd.timestamp || Date.now()).toLocaleString(),
@@ -678,23 +565,19 @@ const SystemLogsBox = () => {
           packetType: "COMMAND"
         }));
         
-        // Always replace all command logs with the new ones
         addLogs(commandLogs, true);
         
-        // Check if we should scroll for this response
         const shouldScrollForThisResponse = window.sessionStorage.getItem('log_scroll_on_next_command_response') === 'true';
         if (shouldScrollForThisResponse) {
           console.log("Performing one-time scroll for command response");
           window.sessionStorage.removeItem('log_scroll_on_next_command_response');
           
-          // Manually scroll without using auto-scroll
           setTimeout(() => {
             if (logContentRef.current) {
               logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
             }
           }, 100);
         } else if (autoScroll) {
-          // Also respect auto-scroll setting for command logs
           scrollToBottom();
         }
         
@@ -704,11 +587,9 @@ const SystemLogsBox = () => {
       }
     }
     
-    // Handle response messages
     else if (message.type === "RESPONSE" || message.type === "COMMAND_RESULT" || message.type === "ERROR") {
       const responseMessage = message as ResponseMessage;
       
-      // Check if this response is already in the logs to prevent duplicates
       const isDuplicate = logs.some(log => 
         log.type === "response" && 
         log.packetType === message.type && 
@@ -726,21 +607,16 @@ const SystemLogsBox = () => {
         
         addLogs([newEntry]);
         
-        // Check if we should auto-scroll after adding response logs
         if (autoScroll) {
           scrollToBottom();
         }
       }
     }
-    
-
-    // ... existing code for other message types ...
   }, [jsonState.lastJsonMessage, addLogs, scrollToBottom, logs, autoScroll]);
 
   return (
     <div className="unified-log h-full flex flex-col">
       <div className="log-controls p-2 bg-gray-100 rounded mb-2 overflow-visible">
-        {/* Log type filters - 4 rows with checkboxes */}
         <div className="log-type-filters flex flex-col gap-2 mb-3">
           <div className="flex items-center">
             <input
@@ -770,7 +646,6 @@ const SystemLogsBox = () => {
             </label>
           </div>
           
-          {/* Outgoing logs with collapsible filter section */}
           <div className="flex flex-col">
             <div className="flex items-center">
               <input
@@ -785,7 +660,6 @@ const SystemLogsBox = () => {
                 Outgoing
               </label>
               
-              {/* Collapsible button for outgoing filter options */}
               {visibleLogTypes.has("outgoing") && (
                 <button 
                   data-dropdown="outgoing"
@@ -794,7 +668,6 @@ const SystemLogsBox = () => {
                     if (outgoingFilterElem) {
                       outgoingFilterElem.classList.toggle('hidden');
                       
-                      // Close the other dropdown if open
                       const packetFilterElem = document.getElementById('packet-filter-options');
                       if (packetFilterElem && !packetFilterElem.classList.contains('hidden')) {
                         packetFilterElem.classList.add('hidden');
@@ -811,7 +684,6 @@ const SystemLogsBox = () => {
               )}
             </div>
             
-            {/* Collapsible outgoing filter options */}
             {visibleLogTypes.has("outgoing") && (
               <div id="outgoing-filter-options" className="hidden ml-6 mt-2 p-2 bg-gray-50 rounded border border-gray-200 z-10 absolute shadow-md">
                 {outgoingTypes.length > 0 && (
@@ -854,7 +726,6 @@ const SystemLogsBox = () => {
             )}
           </div>
           
-          {/* Packet logs with collapsible filter section */}
           <div className="flex flex-col">
             <div className="flex items-center">
               <input
@@ -869,7 +740,6 @@ const SystemLogsBox = () => {
                 Packets
               </label>
               
-              {/* Collapsible button for packet filter options */}
               {visibleLogTypes.has("packet") && (
                 <button 
                   data-dropdown="packet"
@@ -878,7 +748,6 @@ const SystemLogsBox = () => {
                     if (packetFilterElem) {
                       packetFilterElem.classList.toggle('hidden');
                       
-                      // Close the other dropdown if open
                       const outgoingFilterElem = document.getElementById('outgoing-filter-options');
                       if (outgoingFilterElem && !outgoingFilterElem.classList.contains('hidden')) {
                         outgoingFilterElem.classList.add('hidden');
@@ -895,7 +764,6 @@ const SystemLogsBox = () => {
               )}
             </div>
             
-            {/* Collapsible packet filter options */}
             {visibleLogTypes.has("packet") && (
               <div id="packet-filter-options" className="hidden ml-6 mt-2 p-2 bg-gray-50 rounded border border-gray-200 z-10 absolute shadow-md">
                 {packetTypes.length > 0 && (

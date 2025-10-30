@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
-import { useRecoilValue } from "recoil";
+import { useEffect, useRef } from "react";
+import { useRecoilValue, useRecoilState } from "recoil";
 import { jsonStateAtom } from "../../state/jsonState";
 import { isConsoleMessage } from "../../state/consoleState";
-import { hostConfigAtom } from "../../state/hostState";
+import { connectionStateAtom, cameraStateAtom } from "../../state/appState";
 
 const CAMERA_OPTIONS = [
   { id: "video_feed0", label: "Main Camera" },
@@ -17,127 +17,109 @@ const CAMERA_OPTIONS = [
 ];
 
 const CameraBox = () => {
-  const [selectedCamera, setSelectedCamera] = useState(CAMERA_OPTIONS[0].id);
-  const [error, setError] = useState<string | null>(null);
-  const [imageKey, setImageKey] = useState(Date.now()); // Add a key to force re-render
+  const [cameraState, setCameraState] = useRecoilState(cameraStateAtom);
+  const connection = useRecoilValue(connectionStateAtom);
+  const jsonState = useRecoilValue(jsonStateAtom);
+
   const imgRef = useRef<HTMLImageElement>(null);
   const imgContainerRef = useRef<HTMLDivElement>(null);
-  const jsonState = useRecoilValue(jsonStateAtom);
-  const hostConfig = useRecoilValue(hostConfigAtom);
-  const baseUrl = `http://${hostConfig.host}:5000/`;
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastSelectedCamera, setLastSelectedCamera] = useState(CAMERA_OPTIONS[0].id);
+  const baseUrl = `http://${connection.host}:5000/`;
 
-  // Handle camera selection changes
+  const { selectedCamera, error, imageKey, isRefreshing, lastSelectedCamera } = cameraState;
+
+  const updateCameraState = (updates: Partial<typeof cameraState>) => {
+    setCameraState(prev => ({ ...prev, ...updates }));
+  };
+
   useEffect(() => {
-    // Only refresh if the camera has actually changed
     if (selectedCamera !== lastSelectedCamera) {
-      setLastSelectedCamera(selectedCamera);
-      // Force a complete refresh of the image
+      updateCameraState({ lastSelectedCamera: selectedCamera });
       refreshStream();
     }
   }, [selectedCamera]);
 
-  // Handle snapshot updates
   useEffect(() => {
     if (
       isConsoleMessage(jsonState.lastJsonMessage) && 
       jsonState.lastJsonMessage.message === "snapped" && 
       (selectedCamera.startsWith("snapshot_feed") || selectedCamera.startsWith("snapshot_flake_hunted"))
     ) {
-      // Refresh snapshot image when a new snapshot is taken
       refreshStream();
     }
   }, [jsonState.lastJsonMessage, selectedCamera, baseUrl]);
 
-  // Function to refresh the current stream with a completely new approach
   const refreshStream = () => {
-    setIsRefreshing(true);
-    
-    // Generate a new timestamp for cache busting
+    updateCameraState({ isRefreshing: true });
     const newTimestamp = Date.now();
-    setImageKey(newTimestamp);
-    
-    // If we have a reference to the image element, we can also directly manipulate it
+    updateCameraState({ imageKey: newTimestamp });
     if (imgRef.current) {
-      // Create a new image element to preload the fresh image
       const preloadImg = new Image();
       
-      // Set a timeout to detect if the image load is taking too long
       const timeoutId = setTimeout(() => {
-        setError("Camera feed load timeout. The server might be slow or unresponsive.");
-        setIsRefreshing(false);
+        updateCameraState({
+          error: "Camera feed load timeout. The server might be slow or unresponsive.",
+          isRefreshing: false
+        });
       }, 5000);
       
-      // Set up event handlers for the preload image
       preloadImg.onload = () => {
         clearTimeout(timeoutId);
-        setError(null);
-        setIsRefreshing(false);
+        updateCameraState({ error: null, isRefreshing: false });
         
-        // Once preloaded successfully, update the src of the actual image in the DOM
         if (imgRef.current) {
-          // Force a complete reload by setting a new src with cache busting
           imgRef.current.src = `${baseUrl}${selectedCamera}?nocache=${newTimestamp}`;
         }
       };
       
       preloadImg.onerror = () => {
         clearTimeout(timeoutId);
-        setError("Failed to load camera feed. Please check if the camera server is running.");
-        setIsRefreshing(false);
+        updateCameraState({
+          error: "Failed to load camera feed. Please check if the camera server is running.",
+          isRefreshing: false
+        });
       };
       
-      // Set the new source with a cache-busting parameter
       preloadImg.src = `${baseUrl}${selectedCamera}?nocache=${newTimestamp}`;
     } else {
-      // If we don't have a reference to the image element, just update the imageKey
-      // and let React handle the re-render
       setTimeout(() => {
-        setIsRefreshing(false);
+        updateCameraState({ isRefreshing: false });
       }, 1000);
     }
   };
 
-  // Handle image loading errors
   const handleImageError = () => {
-    setError("Failed to load camera feed. Please check if the camera server is running.");
-    setIsRefreshing(false);
+    updateCameraState({
+      error: "Failed to load camera feed. Please check if the camera server is running.",
+      isRefreshing: false
+    });
   };
 
-  // Handle image load success
   const handleImageLoad = () => {
-    setError(null);
-    setIsRefreshing(false);
+    updateCameraState({ error: null, isRefreshing: false });
   };
 
   const handleCameraChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCamera(e.target.value);
-    setError(null); // Reset error when changing camera
-    // The refresh will be handled by the useEffect hook that watches for selectedCamera changes
+    updateCameraState({
+      selectedCamera: e.target.value,
+      error: null
+    });
   };
 
-  // Add event listeners for refresh events
   useEffect(() => {
-    // Handler for refreshing specific streams
     const handleRefreshStream = (event: CustomEvent) => {
       const { streamType, cameraNumber } = event.detail;
-      // Check if this is the stream we're currently displaying
       if (selectedCamera === `${streamType}${cameraNumber}`) {
         refreshStream();
       }
     };
 
-    // Handler for refreshing all streams
     const handleRefreshAllStreams = () => {
       refreshStream();
     };
 
-    // Add event listeners
     window.addEventListener('refresh-camera-stream', handleRefreshStream as EventListener);
     window.addEventListener('refresh-all-camera-streams', handleRefreshAllStreams);
 
-    // Clean up event listeners
     return () => {
       window.removeEventListener('refresh-camera-stream', handleRefreshStream as EventListener);
       window.removeEventListener('refresh-all-camera-streams', handleRefreshAllStreams);
@@ -194,7 +176,7 @@ const CameraBox = () => {
           <div ref={imgContainerRef} className="image-wrapper relative w-full h-full flex items-center justify-center">
             <img 
               ref={imgRef}
-              key={`${selectedCamera}-${imageKey}`} // This forces React to recreate the element when selectedCamera or imageKey changes
+              key={`${selectedCamera}-${imageKey}`}
               src={`${baseUrl}${selectedCamera}?nocache=${imageKey}`} 
               alt={`Camera feed: ${selectedCamera}`}
               className={`camera-image ${isRefreshing ? 'opacity-50' : ''}`}
