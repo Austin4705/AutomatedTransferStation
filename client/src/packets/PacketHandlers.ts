@@ -1,6 +1,5 @@
 import { PacketManager } from './PacketHandler';
 
-// Define interfaces for packet data types
 interface CommandData {
   command: string;
   value: number;
@@ -34,7 +33,6 @@ interface DrawFlakesResultData {
   timestamp?: number;
 }
 
-// Helper function to refresh a specific camera stream
 const createRefreshEvent = (streamType: string, cameraNumber: number) => {
   console.log(`Dispatching refresh event for ${streamType}${cameraNumber}`);
   const event = new CustomEvent('refresh-camera-stream', { 
@@ -43,11 +41,9 @@ const createRefreshEvent = (streamType: string, cameraNumber: number) => {
   window.dispatchEvent(event);
 };
 
-// Register packet handlers
 export class PacketHandlers {
   @PacketManager.registerHandler("POSITION")
   static handlePosition(data: any) {
-    // Ensure we have valid position data
     if (typeof data.x === 'number' && typeof data.y === 'number') {
       // console.log("Received valid position data:", data);
     } else {
@@ -58,28 +54,23 @@ export class PacketHandlers {
   @PacketManager.registerHandler("RESPONSE_POSITION")
   static handlePositionResponse(data: any) {
     console.log("Received position response data:", data);
-    // Position data will be handled by the PositionDisplay component
   }
 
   @PacketManager.registerHandler("RESPONSE_LOG_COMMANDS")
   static handleCommandLogResponse(data: any) {
     console.log("Received command log data:", data);
-    // Command logs will be handled by the CommandLog component
   }
 
   @PacketManager.registerHandler("RESPONSE_LOG_RESPONSE")
   static handleResponseLogResponse(data: any) {
     console.log("Received response log data:", data);
-    // Response logs will be handled by the ResponseLog component
   }
 
   @PacketManager.registerHandler("COMMAND_RESULT")
   static handleCommandResult(data: any) {
     console.log("Received command result:", data);
-    // Always create a timestamp if not present
     const timestamp = data.timestamp || new Date().getTime();
     
-    // Create a standardized data object for logging
     const logData = {
       ...data,
       timestamp
@@ -92,16 +83,13 @@ export class PacketHandlers {
   static handleTraceOverResult(data: TraceOverResultData) {
     console.log("Received trace over result:", data);
     
-    // Always create a timestamp if not present
     const timestamp = data.timestamp || new Date().getTime();
     
-    // Create a standardized data object for logging
     const logData = {
       ...data,
       timestamp
     };
     
-    // Create a readable message for the log
     let message = `Trace over ${data.success ? 'completed successfully' : 'failed'}`;
     if (data.message) {
       message += `: ${data.message}`;
@@ -112,7 +100,6 @@ export class PacketHandlers {
     
     PacketManager.appendToResponses(message, logData);
     
-    // Also display a notification for UI feedback
     if (data.success) {
       console.log(`Trace over completed successfully for ${data.waferCount || 'unknown'} wafers`);
     } else {
@@ -124,14 +111,11 @@ export class PacketHandlers {
   static handleRefreshSnapshot(data: any) {
     console.log("%c Received REFRESH_SNAPSHOT packet:", "background: #3498db; color: white; padding: 4px; border-radius: 4px;", data);
     
-    // Extract camera number from the packet
     const cameraNumber = data.camera;
     
     if (typeof cameraNumber === 'number') {
-      // Refresh only the snapshot feed for this camera
       console.log(`%c Refreshing snapshot feed for camera ${cameraNumber}`, "background: #2ecc71; color: white; padding: 4px; border-radius: 4px;");
       
-      // Dispatch event for snapshot_feed only
       const event = new CustomEvent('refresh-camera-stream', { 
         detail: { streamType: 'snapshot_feed', cameraNumber } 
       });
@@ -145,14 +129,11 @@ export class PacketHandlers {
   static handleRefreshSnapshotFlakeHunted(data: any) {
     console.log("%c Received REFRESH_SNAPSHOT_FLAKE_HUNTED packet:", "background: #9b59b6; color: white; padding: 4px; border-radius: 4px;", data);
     
-    // Extract camera number from the packet
     const cameraNumber = data.camera;
     
     if (typeof cameraNumber === 'number') {
-      // Refresh only the flake hunted feed for this camera
       console.log(`%c Refreshing flake hunted feed for camera ${cameraNumber}`, "background: #2ecc71; color: white; padding: 4px; border-radius: 4px;");
       
-      // Dispatch event for snapshot_flake_hunted only
       const event = new CustomEvent('refresh-camera-stream', { 
         detail: { streamType: 'snapshot_flake_hunted', cameraNumber } 
       });
@@ -165,10 +146,8 @@ export class PacketHandlers {
   @PacketManager.registerHandler("COMMAND")
   static handleCommand(data: any) {
     // console.log("Received command:", data);
-    // Always create a timestamp if not present
     const timestamp = data.timestamp || new Date().getTime();
     
-    // Create a standardized data object for logging
     const logData = {
       ...data,
       timestamp
@@ -212,10 +191,8 @@ export class PacketHandlers {
   static handleScanFlakesResult(data: ScanFlakesResultData) {
     console.log("Received scan flakes result:", data);
     
-    // Always create a timestamp if not present
     const timestamp = data.timestamp || new Date().getTime();
     
-    // Create a standardized data object for logging
     const logData = {
       ...data,
       timestamp

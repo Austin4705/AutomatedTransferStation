@@ -10,13 +10,11 @@ const HeaderPositionDisplay = () => {
     isLoading 
   } = usePositionContext();
 
-  // Calculate polling interval in milliseconds
   const getPollInterval = () => {
     const safeRate = Math.max(0.1, Math.min(50, pollRate));
     return Math.round(1000 / safeRate);
   };
 
-  // Handle poll rate change
   const handlePollRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     if (!isNaN(value) && value > 0) {

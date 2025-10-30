@@ -44,7 +44,7 @@ const CameraPage = () => {
           <div className="camera-container p-3 border rounded-lg flex flex-col h-full">
             <h2 className="mb-2">{activeCamera === 'primary' ? 'Primary' : 'Secondary'} Camera</h2>
             <div className="flex-grow overflow-hidden">
-              <CameraDisplay />
+              <CameraBox />
             </div>
           </div>
         )}

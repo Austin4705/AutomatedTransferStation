@@ -1,47 +1,66 @@
 import math
-import packet_handlers
-import camera
+from typing import Dict, Callable
 import threading
 import time
+import os
+
+
 from image_container import Image_Container
-# Dictionary containing travel distances for different magnifications (in micrometers)
+from logger import Logger
+from camera import Camera
+
+transfer_functions_dict: Dict[str, Callable] = {}
+def transfer_function(command: str):
+    """Decorator to register packet handlers"""
+    def decorator(func):
+        transfer_functions_dict[command] = func
+        return func
+    return decorator
 
 class Transfer_Functions:
     """Class containing all transfer functions"""
-    TRANSFER_STATION = None 
     executing_threads = dict()
-    MAGNIFICATION_TRAVEL = None
+    execute = True
 
-    def __init__(self, transfer_station) -> None:
-        Transfer_Functions.TRANSFER_STATION = transfer_station
-        Transfer_Functions.MAGNIFICATION_TRAVEL = Transfer_Functions.TRANSFER_STATION.MAGNIFICATION_TRAVEL
-        Transfer_Functions.EXECUTE_TRACE_OVER = True 
+    def __init__(self, transfer_station, image_container) -> None:
+        self.transfer_station = transfer_station
+        self.image_container = image_container
         pass
+    
+    def run_command(self, command: str, params: list):
+        """
+        given a command and parameters, execute the command
+        """
+        thread = Thread(target=self.execute_command, args=(command, params))
+        thread.daemon = True
+        thread.start()
 
-    def run_trace_over(data):
-        packet_handlers.PacketCommander.send_message("Serializing a script to run trace over")
-        image_container = Image_Container(Transfer_Functions.TRANSFER_STATION)
-        image_container.load_sent_data(data)
+    def execute_command(self, command: str, params: list):
+        if not params:
+            result = _transfer_functions[command]()
+        else:
+            result = _transfer_functions[command](*params)
+        if(result is not None):
+            Logger.global_log(f"TS Command executed: {result}")
+        else:
+            Logger.global_log(f"TS Command executed")
 
-        command_list = Transfer_Functions.generate_script(data, image_container)
-        packet_handlers.PacketCommander.send_message("Running trace over")
+    def pause_execution(self):
+        self.execute = False
 
-        # Execute the command with the given parameters
-        current_thread = threading.current_thread()
-        for command in command_list:
-            if Transfer_Functions.executing_threads[current_thread]:
-                while not Transfer_Functions.EXECUTE_TRACE_OVER:
-                    if not Transfer_Functions.executing_threads[current_thread]:
-                        break
-                    time.sleep(0.1)
-                command[0](*(command[1:]))
-            else:
-                break
-        packet_handlers.PacketCommander.send_message("Trace over complete")
-        del Transfer_Functions.executing_threads[current_thread]
+    def resume_execution(self):
+        self.execute = True
 
-    def generate_script(data, image_container):
-        command_list = []
+    def stop_execution(self):
+        self.execute = False
+        for thread in self.executing_threads:
+            self.executing_threads[thread] = False
+            Logger.global_log(f"Thread {thread} signaled to stop")
+
+    @transfer_function("run_trace_over")
+    def run_trace_over(self, data):
+        Logger.global_log("Serializing a script to run trace over")
+        MAGNIFICATION_TRAVEL = self.transfer_station.MAGNIFICATION_TRAVEL
         
         # Extract parameters from data
         try:
@@ -52,24 +71,13 @@ class Transfer_Functions:
             initial_wait_time = float(data.get("initial_wait_time", 8))
             focus_wait_time = float(data.get("focus_wait_time", 8))
             camera_index = int(data.get("camera_index", 0))
-            wait_time = Transfer_Functions.MAGNIFICATION_TRAVEL[magnification].get("wait_time", 1)
+            wait_time = MAGNIFICATION_TRAVEL[magnification].get("wait_time", 1)
             save_images = data.get("save_images", True)
 
             # Get travel distances for current magnification
-            travel = Transfer_Functions.MAGNIFICATION_TRAVEL[magnification]
-
-            # Log the parameters
-            packet_handlers.PacketCommander.send_message(f"Trace over parameters:")
-
-            packet_handlers.PacketCommander.send_message(f"Magnification: {magnification}x")
-            packet_handlers.PacketCommander.send_message(f"Steps between autofocus: {pics_until_focus}")
-            packet_handlers.PacketCommander.send_message(f"Camera index: {camera_index}")
-            packet_handlers.PacketCommander.send_message(f"Save images: {save_images}")
-            
+            travel = MAGNIFICATION_TRAVEL[magnification]
             #Wafer generation
             for wafer in data.get("wafers", [{}]):
-                print(f"Wafer: {wafer}")
-                packet_handlers.PacketCommander.send_message(f"Wafer: {wafer}")
                 bottom_left = wafer.get("bottomLeft", {})
                 bottom_x = float(bottom_left.get("x"))
                 bottom_y = float(bottom_left.get("y"))
@@ -77,19 +85,15 @@ class Transfer_Functions:
                 top_x = float(top_right.get("x"))
                 top_y = float(top_right.get("y"))
             
-                packet_handlers.PacketCommander.send_message(f"Bottom coordinates: ({bottom_x}, {bottom_y})")
-                packet_handlers.PacketCommander.send_message(f"Top coordinates: ({top_x}, {top_y})")           
                 # Validate magnification
-                if magnification not in Transfer_Functions.MAGNIFICATION_TRAVEL:
-                    packet_handlers.PacketCommander.send_error(f"Invalid magnification: {magnification}. Must be one of: {', '.join(map(str, Transfer_Functions.MAGNIFICATION_TRAVEL.keys()))}")
-                    return command_list
-            
+                if magnification not in MAGNIFICATION_TRAVEL:
+                    Logger.log_error(f"Invalid magnification: {magnification}. Must be one of: {', '.join(map(str, MAGNIFICATION_TRAVEL.keys()))}")
             
                 # Calculate number of steps in each direction
                 x_steps = int(abs(top_x - bottom_x) / travel["x"])
                 y_steps = int(abs(top_y - bottom_y) / travel["y"])
 
-                packet_handlers.PacketCommander.send_message(f"Generating {x_steps+1}x{y_steps+1} = {(x_steps+1)*(y_steps+1)} points")
+                Logger.log(f"Generating {x_steps+1}x{y_steps+1} = {(x_steps+1)*(y_steps+1)} points")
             
                 # Generate snake-like pattern coordinates
                 points = []
@@ -114,29 +118,35 @@ class Transfer_Functions:
             
                 # Generate commands from points
                 counter = 1
-                command_list.append([image_container.new_wafer])
-                command_list.append([Transfer_Functions.TRANSFER_STATION.moveXY, bottom_x, bottom_y]) # Add initial setup commands
-                command_list.append([Transfer_Functions.TRANSFER_STATION.wait, initial_wait_time]) # Initial wait
-                command_list.append([Transfer_Functions.TRANSFER_STATION.autoFocus]) # Initial autofocus
+                wafer_id = self.image_container.new_wafer()
+                self.transfer_station.moveXY(bottom_x, bottom_y)
+                self.transfer_station.wait(initial_wait_time)
+                self.transfer_station.autoFocus()
+
                 # Visit each point in the pattern
                 for x, y in points:
                     # Move to position
-                    command_list.append([Transfer_Functions.TRANSFER_STATION.moveXY, x, y])
+                    self.transfer_station.moveXY(x, y)
                     # Perform autofocus or led on if needed
                     if counter % pics_until_led == 0:
-                        command_list.append([Transfer_Functions.TRANSFER_STATION.led_on])
+                        self.transfer_station.led_on()
                     if counter % pics_until_focus == 0:
-                        command_list.append([Transfer_Functions.TRANSFER_STATION.autoFocus, camera_index])
+                        self.transfer_station.autoFocus(camera_index)
+
                     # Take picture
-                    command_list.append([Transfer_Functions.TRANSFER_STATION.wait, wait_time])
+                    self.transfer_station.wait(wait_time)
+                    image = Camera.global_list[camera_index].snap_image()
                     if save_images:
-                        command_list.append([image_container.add_image, camera_index])
-                    else:
-                        command_list.append([camera.Camera.global_list[camera_index].snap_image])
+                        image_metadata = {
+                            "wafer_id": wafer_id,
+                            "camera_index": camera_index,
+                            "x": x,
+                            "y": y,
+                            "sequence": counter,
+                            "timestamp": time.time(),
+                            "magnification": magnification,
+                        }
+                        self.image_container.add_image(image, wafer_id, image_metadata)
                     counter += 1
-            packet_handlers.PacketCommander.send_message(f"Generated {len(points)} points and {len(command_list)} commands")
         except Exception as e:
-            packet_handlers.PacketCommander.send_error(f"Error generating script: {str(e)}")
-        
-        return command_list
-            
+            Logger.log_error(f"Error generating script: {str(e)}")            

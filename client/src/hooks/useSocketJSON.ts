@@ -11,7 +11,6 @@ export default function useSocketJSON(ws_url: string) {
   const { lastJsonMessage, lastMessage, readyState, sendJsonMessage, getWebSocket } = useWebSocket(
     ws_url,
     {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       shouldReconnect: (_closeEvent) => true,
       reconnectAttempts: 10,
       reconnectInterval: 3000,
@@ -20,7 +19,6 @@ export default function useSocketJSON(ws_url: string) {
         console.log("WebSocket connection established");
         console.log(`WebSocket connected to ${ws_url}`);
         
-        // Dispatch a custom event that components can listen for
         const wsConnectedEvent = new CustomEvent('wsConnected');
         window.dispatchEvent(wsConnectedEvent);
       },
@@ -31,11 +29,8 @@ export default function useSocketJSON(ws_url: string) {
         console.error("WebSocket error:", event);
       },
       onMessage: (event) => {
-        // Store the raw message string
         const rawMessage = event.data;
         lastRawMessageRef.current = rawMessage;
-        
-        // Set the raw message in the PacketManager
         PacketManager.setLastRawMessage(rawMessage);
       }
     }

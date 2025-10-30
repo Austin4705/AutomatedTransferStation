@@ -1,12 +1,15 @@
 from typing import Any, Dict, Callable
 import json
-from transfer_station import Transfer_Station 
-import camera
+import ast
 import threading
-import transfer_functions
 from threading import Thread
+
+import camera
+from transfer_functions import transfer_functions_dict, Transfer_Functions
 from image_container import Image_Container
+from transfer_station import Transfer_Station 
 from socket_manager import Socket_Manager
+from logger import Logger
 
 _handlers: Dict[str, Callable] = {}
 def packet_handler(packet_type: str):
@@ -23,111 +26,78 @@ class PacketHandlers:
     """Class containing all packet handlers"""
     transfer_station = None
 
-    def __init__(self, transfer_station):
+    def __init__(self, transfer_station: Transfer_Station, logger):
         print(f"Initializing PacketHandlers")
-        Socket_Manager.packet_handlers = _handlers
         PacketHandlers.transfer_station = transfer_station
+        self.packet_handlers = _handlers
+        self.logger = logger
     
+    @packet_handler("ACK")
+    def handle_ack(packet_type: str, data: dict):
+        print("ACK received")
+        Socket_Manager.send_all_json({ "type": "ACK", })
+
     @packet_handler("SEND_COMMAND")
     def handle_send_command(packet_type: str, data: dict):
         command = data["command"]
         print(f"Executing command: {command}")
         PacketHandlers.transfer_station.send_command(command)
 
-    @packet_handler("TS_COMMAND")
-    def handle_ts_command(packet_type: str, data: dict):
+    @packet_handler("EXECUTE_TRANSFER_FUNCTION")
+    def handle_execute_transfer_function(packet_type: str, data: dict):
         try:
-            if "command" not in data or not data["command"].strip():
-                PacketCommander.send_error("Missing or empty command")
+            print(f"Executing transfer function: {data}, {packet_type}")
+            if "transfer_function_name" not in data or transfer_function_name not in transfer_functions_dict:
+                Socket_Manager.send_error("Missing or invalid transfer function name")
                 return
-            command = data["command"].strip()
-            parameters_str = data.get("parameters", "[]").strip()
-            if not hasattr(PacketHandlers.transfer_station, command):
-                PacketCommander.send_error(f"Command '{command}' not found")
-                return
-            try:
-                if parameters_str.startswith('{') and parameters_str.endswith('}'):
-                    parameters_str = '[' + parameters_str[1:-1] + ']'
-                elif not (parameters_str.startswith('[') and parameters_str.endswith(']')):
+            
+            transfer_function_name = data["transfer_function_name"].strip()
+            transfer_function = transfer_functions_dict[transfer_function_name]
+
+            parameters_str = "[]"
+            if "parameters" in data:
+                parameters_str = data["parameters"].strip()
+                if not parameters_str.startswith('{') and not parameters_str.endswith('}'):
                     parameters_str = '[' + parameters_str + ']'
                 try:
-                    params = json.loads(parameters_str)
+                    parameters = json.loads(parameters_str)
                 except json.JSONDecodeError:
-                    import ast
-                    params = ast.literal_eval(parameters_str)
-                if not isinstance(params, list):
-                    params = [params]
-            except Exception as e:
-                PacketCommander.send_error(f"Parameter parsing error: {str(e)}")
-                return
+                    parameters = ast.literal_eval(parameters_str)
+                if not isinstance(parameters, list):
+                    parameters = [parameters]
 
-            def execute_command():
-                try:
-                    if not params:
-                        result = getattr(PacketHandlers.transfer_station, command)()
-                    else:
-                        result = getattr(PacketHandlers.transfer_station, command)(*params)
-                    if(result is not None):
-                        PacketCommander.send_message(f"TS Command executed: {result}")
-                    else:
-                        PacketCommander.send_message(f"TS Command executed")
-                except Exception as e:
-                    PacketCommander.send_error(f"Execution error: {str(e)}")
-
-            thread = Thread(target=execute_command)
-            thread.daemon = True
-            thread.start()
-                
         except Exception as e:
-            PacketCommander.send_error(f"Handler error: {str(e)}")
-            print(f"TS_COMMAND handler error: {str(e)}")
+            Socket_Manager.send_error(f"Parameter parsing error: {str(e)}")
+            return
+        Transfer_Functions.run_command(transfer_function, parameters)
 
-    @packet_handler("REQUEST_POSITION")
-    def handle_request_position(packet_type: str, data: dict):
-        message = {"type": "POSITION", "x":PacketHandlers.transfer_station.posX(), "y":PacketHandlers.transfer_station.posY()}
+    @packet_handler("REQUEST_STATE")
+    def handle_request_state(packet_type: str, data: dict):
+        message = {
+            "type": "STATE",
+            "state": {
+                "position": {
+                    "x": PacketHandlers.transfer_station.posX(),
+                    "y": PacketHandlers.transfer_station.posY()
+                }
+            }
+        }
         Socket_Manager.send_all_json(message)
 
-    @packet_handler("TRACE_OVER")
-    def handle_trace_over(packet_type: str, data: dict):
-        PacketCommander.send_message("Trace over request received. Creating a thread to run execution")
-        thread = threading.Thread(target=transfer_functions.Transfer_Functions.run_trace_over, args=(data,))
-        thread.daemon = True
-        transfer_functions.Transfer_Functions.executing_threads[thread] = True
-        thread.start()
+    @packet_handler("PAUSE_EXECUTION")
+    def handle_pause_execution(packet_type: str, data: dict):
+        Transfer_Functions.pause_execution()
+        self.logger.log("Execution paused")
 
-    @packet_handler("EXECUTE_TRACE_OVER")
-    def handle_execute_trace_over(packet_type: str, data: dict):
-        PacketCommander.send_message(f"Executing trace over: {data['state']}")
-        transfer_functions.Transfer_Functions.EXECUTE_TRACE_OVER = data["state"]   
+    @packet_handler("RESUME_EXECUTION")
+    def handle_resume_execution(packet_type: str, data: dict):
+        Transfer_Functions.resume_execution()
+        self.logger.log("Execution resumed")
 
     @packet_handler("CANCEL_EXECUTION")
     def handle_cancel_execution(packet_type: str, data: dict):
-        PacketCommander.send_message(f"Cancelling execution of running operations")
-        for thread in transfer_functions.Transfer_Functions.executing_threads:
-            transfer_functions.Transfer_Functions.executing_threads[thread] = False
-            print(f"Thread {thread} signaled to stop")
-        PacketCommander.send_message("All operations cancelled")
-
-    @packet_handler("SCAN_FLAKES")
-    def handle_scan_flakes(packet_type: str, data: dict):
-        directory = data.get("directory")
-        image_container = Image_Container(PacketHandlers.transfer_station, directory)
-        PacketCommander.send_message(f"Scanning flakes in {directory}")
-        image_container.search_images()
-        Socket_Manager.send_all_json({
-            "type": "SCAN_FLAKES_RESPONSE",
-            "response": "Scan completed"
-        })
-
-    @packet_handler("DRAW_FLAKES")
-    def handle_draw_flakes(packet_type: str, data: dict):
-        directory = data.get("directory")
-        image_container = Image_Container(PacketHandlers.transfer_station, directory)
-        cv_functions.CV_Functions.generate_image_output()
-        Socket_Manager.send_all_json({
-            "type": "DRAW_FLAKES_RESPONSE",
-            "response": "Wafers drawn",
-        })
+        Transfer_Functions.stop_execution()
+        self.logger.log("All operations cancelled")
 
     @packet_handler("GOTO_WAFER_IMAGE")
     def handle_goto_wafer_image(packet_type: str, data: dict):
@@ -143,17 +113,11 @@ class PacketHandlers:
         image_data = image_container.metadata.get("wafers")[waferNumber][imageNumber]
         x = image_data["x"]
         y = image_data["y"]
-        PacketCommander.send_message(f"Goto wafer {waferNumber} image {imageNumber} at {x}, {y}")
-        PacketCommander.send_message(f"Bottom Left Offset: ({bottomLeftXOffset}, {bottomLeftYOffset})")
-        PacketCommander.send_message(f"Top Right Offset: ({topRightXOffset}, {topRightYOffset})")
+        Logger.global_log(f"Goto wafer {waferNumber} image {imageNumber} at {x}, {y}")
+        Logger.global_log(f"Bottom Left Offset: ({bottomLeftXOffset}, {bottomLeftYOffset})")
+        Logger.global_log(f"Top Right Offset: ({topRightXOffset}, {topRightYOffset})")
         PacketHandlers.transfer_station.moveXY(x + bottomLeftXOffset, y + bottomLeftYOffset)
 
-    @packet_handler("ACK")
-    def handle_ack(packet_type: str, data: dict):
-        print("ACK received")
-        Socket_Manager.send_all_json({
-            "type": "ACK",
-        })
 
     @packet_handler("SNAP_SHOT")
     def handle_snap_shot(packet_type: str, data: dict):
@@ -173,82 +137,14 @@ class PacketHandlers:
             "camera": data["camera"]
         })
 
-    @packet_handler("COMMAND")
-    def handle_command(packet_type: str, data: dict):
-        command = data.get("command")
-        print(f"Received command: {command}")
-        Transfer_Station.send_command(command)
-        #Socket_Manager.send_all_json({
-        #    "type": "COMMAND",
-        #    "command": command
-        #})
-
-    @packet_handler("REQUEST_LOG_COMMANDS")
-    def handle_request_log_commands(packet_type: str, data: dict):
-        print("Received request for command logs")
-        # Get command history from the transfer station
-        # command_history = PacketHandlers.transfer_station.sent_commands()
-        
-        # # Format the command history for the client
-        # formatted_commands = [
-        #     {
-        #         "timestamp": cmd.get("timestamp"),
-        #         "command": cmd.get("command")
-        #     }
-        #     for cmd in command_history
-        # ]
-        
-        # Send the command history to the client
+    @packet_handler("REQUEST_LOG_MESSAGES")
+    def handle_request_log_messages(packet_type: str, data: dict):
+        messages = self.logger.get_messages(50)
         Socket_Manager.send_all_json({
-            "type": "RESPONSE_LOG_COMMANDS",
-            "commands": []
+            "type": "RESPONSE_LOG_MESSAGES",
+            "messages": messages
         })
 
-    @packet_handler("REQUEST_LOG_RESPONSE")
-    def handle_request_log_response(packet_type: str, data: dict):
-        print("Received request for response logs")
-        # Get response history from the transfer station
-        # response_history = PacketHandlers.transfer_station.receive_commands()
-        
-        # # Format the response history for the client
-        # formatted_responses = [
-        #     {
-        #         "timestamp": resp.get("timestamp"),
-        #         "response": resp.get("response")
-        #     }
-        #     for resp in response_history
-        # ]
-        
-        # Send the response history to the client
-        Socket_Manager.send_all_json({
-            "type": "RESPONSE_LOG_RESPONSE",
-            "responses": []
-        })
-
-
-class PacketCommander:
-    """Class containing all packet commands"""
-    @staticmethod
-    def send_message(message: str):
-        print(message)
-        Socket_Manager.send_all_json({
-            "type": "MESSAGE",
-            "message": message
-        })
-    
-    def send_message_no_print(message: str):
-        Socket_Manager.send_all_json({
-            "type": "MESSAGE",
-            "message": message
-        })
-    
-    def send_error(message: str):
-        print("Error: ", message)
-        Socket_Manager.send_all_json({
-            "type": "ERROR",
-            "message": message
-        })
-    
     
 
         

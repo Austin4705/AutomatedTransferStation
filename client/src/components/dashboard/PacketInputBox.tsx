@@ -1,13 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useSendJSON } from "../../hooks/useSendJSON";
 
-// Empty template and placeholder with identical structure
 const EMPTY_TEMPLATE = `{
   "type": 
-  
 }`;
 
-// Placeholder template with example content
 const PLACEHOLDER_TEMPLATE = `{
   "type": "COMMAND_NAME",
   "parameter": "value"
@@ -24,71 +21,51 @@ const PacketInputBox = () => {
   const sendJson = useSendJSON();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Check if we should show the placeholder
   useEffect(() => {
     setShowPlaceholder(packetJson === EMPTY_TEMPLATE);
   }, [packetJson]);
 
-  // Calculate rows based on content
   useEffect(() => {
     const lineCount = (packetJson.match(/\n/g) || []).length + 1;
     setRows(Math.max(lineCount, 4)); // Minimum 4 rows
   }, [packetJson]);
 
-  // Function to disable or enable logs
   const toggleLogs = () => {
-    // Toggle the state
     setLogsDisabled(!logsDisabled);
-    
-    // Dispatch a custom event to notify log components
     const event = new CustomEvent('logs-visibility-changed', { 
       detail: { 
-        commandLogs: logsDisabled, // Will become true if currently false (enabling)
+        commandLogs: logsDisabled,
         responseLogs: logsDisabled,
       } 
     });
     document.dispatchEvent(event);
-    
-    // Also dispatch a logs-cleared event to clear existing logs
     const clearEvent = new Event('logs-cleared');
     document.dispatchEvent(clearEvent);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!packetJson.trim()) return;
-    
     try {
-      // Parse the JSON to validate it
       const packetObject = JSON.parse(packetJson.trim());
-      
-      // Send the packet to the server
       sendJson(packetObject);
-      
-      // Clear the input field and any errors if keepText is false
-      if (!keepText) {
+      if (!keepText) 
         setPacketJson(EMPTY_TEMPLATE);
-      }
       setError(null);
     } catch (err) {
       setError("Invalid JSON format");
     }
   };
 
-  // Reset fields to default state
   const handleReset = () => {
     setPacketJson(EMPTY_TEMPLATE);
     setError(null);
   };
 
-  // Handle focusing the textarea to position cursor properly
   const handleFocus = () => {
     if (textareaRef.current) {
-      // If the content is just the default template, position cursor after "type":
       if (packetJson === EMPTY_TEMPLATE) {
         const textarea = textareaRef.current;
-        // Position cursor after "type":
         setTimeout(() => {
           textarea.selectionStart = textarea.selectionEnd = 10;
         }, 0);
@@ -96,7 +73,6 @@ const PacketInputBox = () => {
     }
   };
 
-  // Handle tab key in textarea
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -105,11 +81,9 @@ const PacketInputBox = () => {
       const start = target.selectionStart;
       const end = target.selectionEnd;
       
-      // Insert tab at cursor position (2 spaces)
       const newValue = packetJson.substring(0, start) + '  ' + packetJson.substring(end);
       setPacketJson(newValue);
       
-      // Move cursor after the inserted tab
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
@@ -136,14 +110,6 @@ const PacketInputBox = () => {
                 Keep text
               </label>
             </div>
-            {/* <button
-              type="button"
-              onClick={toggleLogs}
-              className="logs-button"
-              title={logsDisabled ? "Enable logs" : "Disable logs"}
-            >
-              {logsDisabled ? "Enable Logs" : "Disable Logs"}
-            </button> */}
             <button
               type="button"
               onClick={handleReset}
@@ -160,7 +126,7 @@ const PacketInputBox = () => {
             value={packetJson}
             onChange={(e) => {
               setPacketJson(e.target.value);
-              setError(null); // Clear error when input changes
+              setError(null);
             }}
             onKeyDown={handleKeyDown}
             className="ts-parameters-input-field w-full"

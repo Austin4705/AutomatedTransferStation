@@ -47,7 +47,7 @@ const DashboardPage = () => {
           <div className="camera-container flex flex-col h-full" style={{ width: '100%' }}>
             <h2 className="mb-2">{activeCamera === 'primary' ? 'Primary' : 'Secondary'} Camera</h2>
             <div className="flex-grow overflow-hidden">
-              <CameraDisplay />
+              <CameraBox />
             </div>
           </div>
         )}
