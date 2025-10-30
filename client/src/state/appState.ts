@@ -128,7 +128,9 @@ const DEFAULT_CAMERA_STATE: CameraState = {
 };
 
 const DEFAULT_CONNECTION_STATE: ConnectionState = {
-  host: "127.0.0.1",
+  host: typeof window !== 'undefined'
+    ? (localStorage.getItem('connection-host') || '127.0.0.1')
+    : '127.0.0.1',
   readyState: ReadyState.CLOSED,
   isConnected: false,
 };

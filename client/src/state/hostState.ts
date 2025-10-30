@@ -10,7 +10,9 @@ export interface HostConfig {
 export const hostConfigAtom = atom<HostConfig>({
   key: "hostConfig",
   default: {
-    host: "127.0.0.1",
+    host: typeof window !== 'undefined'
+      ? (localStorage.getItem('host-config') || '127.0.0.1')
+      : '127.0.0.1',
   },
 });
 

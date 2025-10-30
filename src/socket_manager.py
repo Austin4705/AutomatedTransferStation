@@ -2,9 +2,13 @@ import asyncio
 import json
 import websockets
 import inspect
+import threading
+import time
 from queue import Queue
 from typing import Any, Dict, Callable
 from websockets.asyncio.server import serve
+
+from logger import Logger
 
 class Socket_Manager:
     """
@@ -13,13 +17,17 @@ class Socket_Manager:
     """
     CONNECTIONS = set()
     packet_handlers: Dict[str, Callable] = dict()
+    transfer_station = None
+    position_ping_enabled = True
+    position_ping_interval = 1.0  # seconds
 
     @classmethod
     def start(cls, _packet_handler):
-        packet_handler = _packet_handler
+        Socket_Manager.packet_handler = _packet_handler
+        Socket_Manager.packet_handlers = _packet_handler.packet_handlers
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        
+
         async def main():
             server = await serve(Socket_Manager.conn_handler, "localhost", 8765)
         
@@ -28,30 +36,21 @@ class Socket_Manager:
 
     async def conn_handler(websocket):
         Socket_Manager.CONNECTIONS.add(websocket)
-        print(f"New connection created {websocket}")
-
+        Logger.log(f"New connection created {websocket}")
         try:
             async for message in websocket:
                 if isinstance(message, str):
                     Socket_Manager.handle_packet(message)
                 else:
-                    print(f"Received unsupported message type: {type(message)}")
-                    error_data = {
-                        "type": "ERROR",
-                        "data": {
-                            "code": 400,
-                            "message": "Unsupported message type"
-                        }
-                    }
-                    await websocket.send(json.dumps(error_data))
+                    Logger.log_error(f"Received unsupported message type: {type(message)}")
 
         except websockets.exceptions.ConnectionClosedError as e:
-            print(f"Connection closed with error: {e}")
+            Logger.log(f"Connection closed with error: {e}")
         except Exception as e:
-            print(f"Socket error: {e}")
+            Logger.log(f"Socket error: {e}")
         finally:
             Socket_Manager.CONNECTIONS.remove(websocket)
-            print(f"Connection removed {websocket}")
+            Logger.log(f"Connection removed {websocket}")
 
     def handle_packet(message: str):
         try:
@@ -60,40 +59,31 @@ class Socket_Manager:
             except json.JSONDecodeError:
                 raise ValueError("Message is not valid JSON")
             packet_type = packet["type"]
+            # Logger.log(f"Handling packet: {packet_type}")
             handler = Socket_Manager.packet_handlers.get(packet_type, Socket_Manager.default_handler)
             handler(packet_type, packet)
 
         except Exception as e:
-            print(f"Error handling packet: {e}")
-            error_data = {
-                "type": "ERROR",
-                "data": {
-                    "code": 500,
-                    "message": str(e)
-                }
-            }
-            self.send_error(str(e))
+            Socket_Manager.send_error(f"Error handling packet: {e}")
 
     def default_handler(packet_type: str, data: dict):
         """Default handler for unhandled packet types"""
-        print("Data:", json.dumps(data, indent=2))
+        Logger.log("Default handler, data:", json.dumps(data, indent=2))
+        Logger.log("Packet handlers:", Socket_Manager.packet_handlers)
 
-    async def _safe_send(websocket, msg: str):
-        try:
-            await websocket.send(msg)
-        except websockets.exceptions.ConnectionClosed:
-            if websocket in Socket_Manager.CONNECTIONS:
-                Socket_Manager.CONNECTIONS.remove(websocket)
-                print(f"Removed closed connection {websocket}")
-        except Exception as e:
-            print(f"Error sending message to {websocket}: {e}")
 
-    async def _send_all_async(cls, msg: str):
+    async def _send_all_async(msg: str):
         for websocket in Socket_Manager.CONNECTIONS:
             try:
-                await Socket_Manager._safe_send(websocket, msg)
+                await websocket.send(msg)
+            except websockets.exceptions.ConnectionClosed:
+                if websocket in Socket_Manager.CONNECTIONS:
+                    Socket_Manager.CONNECTIONS.remove(websocket)
+                    Logger.log(f"Removed closed connection {websocket}")
             except Exception as e:
-                print(f"Error in _send_all_async: {e}")
+                Logger.log(f"Error sending message to {websocket}: {e}")
+            except Exception as e:
+                Logger.log(f"Error in _send_all_async: {e}")
 
     def send_all_json(json_data: dict):
         try:
@@ -105,7 +95,7 @@ class Socket_Manager:
                 asyncio.set_event_loop(loop)
             loop.call_soon_threadsafe(lambda: asyncio.create_task(Socket_Manager._send_all_async(msg)))
         except Exception as e:
-            print(f"Error serializing JSON: {e}")
+            Logger.log(f"Error serializing JSON: {e}")
 
     def send_message_no_print(message: str):
         Socket_Manager.send_all_json({
@@ -114,9 +104,13 @@ class Socket_Manager:
         })
 
     def send_message(message: str):
-        print(message)
         Socket_Manager.send_message_no_print(message)
 
     def send_error(message: str):
-        print("Error: ", message)
-        Socket_Manager.send_message_no_print(message)
+        Socket_Manager.send_all_json({
+            "type": "ERROR",
+            "data": {
+                "code": 500,
+                "message": message
+            }
+        })

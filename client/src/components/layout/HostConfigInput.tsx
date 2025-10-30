@@ -9,6 +9,10 @@ const HostConfigInput = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Save to localStorage before updating state
+    localStorage.setItem('connection-host', inputValue);
+
     setConnection(prev => ({ ...prev, host: inputValue }));
     setIsEditing(false);
 

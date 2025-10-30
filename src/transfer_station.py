@@ -19,7 +19,7 @@ class Transfer_Station():
     }
 
     def __init__(self):
-        Logger.global_log("Initializing Transfer Station")
+        Logger.log("Initializing Transfer Station")
         self.command_queue = []
         # Add self to the static list if this is a subclass instance
         if self.__class__ != Transfer_Station:
@@ -54,38 +54,38 @@ class Transfer_Station():
 
     #Functions to reimplement 
     def _send_command(self, command):
-        Logger.global_log(f"Send Command: {command}-V")
+        Logger.log(f"Send Command: {command}-V")
 
     def moveX(self, X):
-        Logger.global_log("Move X-V")
+        Logger.log("Move X-V")
 
     def moveY(self, Y):
-        Logger.global_log("Move Y-V")
+        Logger.log("Move Y-V")
 
     def moveZ(self, Z):
-        Logger.global_log("Move Z-V")
+        Logger.log("Move Z-V")
 
     def posX(self):
-        # Logger.global_log("Get X Position-V")
+        # Logger.log("Get X Position-V")
         return 0
 
     def posY(self):
-        # Logger.global_log("Get Y Position-V")
+        # Logger.log("Get Y Position-V")
         return 0
 
     def posZ(self):
-        # Logger.global_log("Get Z Position-V")
+        # Logger.log("Get Z Position-V")
         return 0
 
     def led_off(self):
-        Logger.global_log("Turn LED off-V")
+        Logger.log("Turn LED off-V")
 
     def led_off(self):
-        Logger.global_log("Turn LED off-V")
+        Logger.log("Turn LED off-V")
 
     #Functions NOT TO REIMPLEMENT
     def moveXY(self, x, y):
-        Logger.global_log(f"Move XY to {x}, {y}-V")
+        Logger.log(f"Move XY to {x}, {y}-V")
         self.moveX(x)
         self.moveY(y)
 
@@ -96,13 +96,13 @@ class Transfer_Station():
             self.led_off()
 
     def autoFocus(self, camera_index=0):
-        Logger.global_log("Auto Focus-V")
+        Logger.log("Auto Focus-V")
         original_pos_z = self.posZ()
         current_frame = camera.Camera.global_list[camera_index].get_frame()
-        # Logger.global_log(Autofocus.get_color_features(current_frame))
-        # Logger.global_log(Autofocus.exist_color_features(current_frame))
+        # Logger.log(Autofocus.get_color_features(current_frame))
+        # Logger.log(Autofocus.exist_color_features(current_frame))
         if not Autofocus.exist_color_features(current_frame):
-            Logger.global_log("Not enough edges to auto focus")
+            Logger.log("Not enough edges to auto focus")
             return
         # Sample points on either side of current Z position
         n_samples = 20
@@ -135,12 +135,12 @@ class Transfer_Station():
         # Find highest and lowest nonzero focus positions
         nonzero_scores = [(z, score) for z, score in edge_counts if score > 0]
         if not nonzero_scores:
-            Logger.global_log("No good focus scores found")
+            Logger.log("No good focus scores found")
             return
         highest_z = max(nonzero_scores, key=lambda x: x[0])[0]
         lowest_z = min(nonzero_scores, key=lambda x: x[0])[0]
 
-        Logger.global_log(edge_counts)
+        Logger.log(edge_counts)
         self.wait(2)
 
         # Sweep from highest to lowest with finer resolution
@@ -156,7 +156,7 @@ class Transfer_Station():
             fine_edge_counts.append((current_z, edge_count))
             current_z -= fine_z_step
 
-        Logger.global_log(fine_edge_counts)
+        Logger.log(fine_edge_counts)
             
         # Find z position with highest focus score
         best_z = max(fine_edge_counts, key=lambda x: x[1])[0]
@@ -181,23 +181,23 @@ class Transfer_Station():
         return response
 
     def wait(self, seconds):
-        Logger.global_log(f"Wait for {seconds} seconds-V")
+        Logger.log(f"Wait for {seconds} seconds-V")
         time.sleep(seconds)
     
     def send_command_history(self, depth = -1):
-        Logger.global_log("Send Command History-V")
+        Logger.log("Send Command History-V")
         if depth == -1:
             return self.send_command_history
         else:
             return self.send_command_history[-depth:]
 
     def receive_command(self, depth = -1):
-        Logger.global_log("Receive Command-V")
+        Logger.log("Receive Command-V")
         self._last_received_index = len(self.receive_command_history)
         return self.receive_command_history[-1]
 
     def receive_commands(self, depth = -1):
-        Logger.global_log("Receive Command-V")
+        Logger.log("Receive Command-V")
         self._last_received_index = len(self.receive_command_history)
         if depth == -1:
             return self.receive_command_history
@@ -213,7 +213,7 @@ class Transfer_Station():
         return commands
 
     def sent_commands(self, depth = -1):
-        Logger.global_log("Sent Commands-V")
+        Logger.log("Sent Commands-V")
         if depth == -1:
             return self.send_command_history
         else:

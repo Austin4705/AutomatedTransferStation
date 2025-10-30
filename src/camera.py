@@ -6,6 +6,7 @@ import threading
 import time
 import weakref
 
+from logger import Logger
 from autofocus import Autofocus
 from socket_manager import Socket_Manager
 from image_container import Image_Container
@@ -143,8 +144,11 @@ class Camera:
         """Take a snapshot and store it"""
         frame = self.get_frame()
         self.snapshot_image = frame
-        print(self.snapshot_image.shape)
-        Camera.image_container.save_snapshot(Camera.image_container.active_chip_id, self.snapshot_image)
+        # Logger.log(self.snapshot_image.shape)
+        try:
+            Camera.image_container.save_snapshot(Camera.image_container.active_chip_id, self.snapshot_image)
+        except Exception as e:
+            Logger.log_error(f"Error saving snapshot: {e}")
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
 
     def snap_image_flake_hunted(self):
@@ -155,7 +159,10 @@ class Camera:
             self.snapshot_image_flake_hunted = frame
         except Exception as e:
             print(f"Error in flake hunting: {e}")
-        Camera.image_container.save_flake_hunted_snapshot(Camera.image_container.active_chip_id, self.snapshot_image_flake_hunted)
+        try:
+            Camera.image_container.save_flake_hunted_snapshot(Camera.image_container.active_chip_id, self.snapshot_image_flake_hunted)
+        except Exception as e:
+            Logger.log_error(f"Error saving flake hunted snapshot: {e}")
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT_FLAKE_HUNTED", "camera": self.camera_id})
 
 

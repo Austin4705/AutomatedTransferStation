@@ -42,15 +42,36 @@ const createRefreshEvent = (streamType: string, cameraNumber: number) => {
 };
 
 export class PacketHandlers {
+  @PacketManager.registerHandler("STATE")
+  static handleState(data: any) {
+    // STATE packet contains nested state with position data
+    if (data.state && data.state.position) {
+      const position = data.state.position;
+      if (typeof position.x === 'number' && typeof position.y === 'number') {
+        // Dispatch custom event for position updates
+        const event = new CustomEvent('position-update', {
+          detail: { position }
+        });
+        window.dispatchEvent(event);
+      } else {
+        console.warn("Received invalid position data in STATE:", data);
+      }
+    }
+  }
+
   @PacketManager.registerHandler("POSITION")
   static handlePosition(data: any) {
     if (typeof data.x === 'number' && typeof data.y === 'number') {
-      // console.log("Received valid position data:", data);
+      // Dispatch custom event for position updates
+      const event = new CustomEvent('position-update', {
+        detail: { position: { x: data.x, y: data.y, z: data.z } }
+      });
+      window.dispatchEvent(event);
     } else {
       console.warn("Received invalid position data:", data);
     }
   }
-  
+
   @PacketManager.registerHandler("RESPONSE_POSITION")
   static handlePositionResponse(data: any) {
     console.log("Received position response data:", data);
