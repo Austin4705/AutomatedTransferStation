@@ -17,8 +17,8 @@ interface Position {
 }
 
 interface FlakeCoordinates {
-  bottomLeft: { x: string; y: string };
-  topRight: { x: string; y: string };
+  start: { x: string; y: string };
+  end: { x: string; y: string };
   waferNumber: string;
   imageNumber: string;
 }
@@ -30,8 +30,8 @@ const ScanFlakesBox = () => {
   const directoryInputRef = useRef<HTMLInputElement>(null);
   const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
   const [flakeCoordinates, setFlakeCoordinates] = useState<FlakeCoordinates>({
-    bottomLeft: { x: "0", y: "0" },
-    topRight: { x: "0", y: "0" },
+    start: { x: "0", y: "0" },
+    end: { x: "0", y: "0" },
     waferNumber: "",
     imageNumber: ""
   });
@@ -63,7 +63,7 @@ const ScanFlakesBox = () => {
   };
 
   const handleCoordinateChange = (
-    corner: "bottomLeft" | "topRight",
+    corner: "start" | "end",
     axis: "x" | "y",
     value: string
   ) => {
@@ -90,7 +90,7 @@ const ScanFlakesBox = () => {
     }));
   };
 
-  const copyCurrentPosition = (corner: "bottomLeft" | "topRight") => {
+  const copyCurrentPosition = (corner: "start" | "end") => {
     // Format the current position values
     const xValue = currentPosition.x.toFixed(3);
     const yValue = currentPosition.y.toFixed(3);
@@ -118,10 +118,10 @@ const ScanFlakesBox = () => {
     const payload = {
       type: "GOTO_WAFER_IMAGE",
       directory: selectedDirectory,
-      bottomLeftXOffset: parseFloat(flakeCoordinates.bottomLeft.x),
-      bottomLeftYOffset: parseFloat(flakeCoordinates.bottomLeft.y),
-      topRightXOffset: parseFloat(flakeCoordinates.topRight.x),
-      topRightYOffset: parseFloat(flakeCoordinates.topRight.y),
+      startXOffset: parseFloat(flakeCoordinates.start.x),
+      startYOffset: parseFloat(flakeCoordinates.start.y),
+      endXOffset: parseFloat(flakeCoordinates.end.x),
+      endYOffset: parseFloat(flakeCoordinates.end.y),
       waferNumber: parseInt(flakeCoordinates.waferNumber),
       imageNumber: parseInt(flakeCoordinates.imageNumber)
     };
@@ -148,17 +148,17 @@ const ScanFlakesBox = () => {
       directory: selectedDirectory
     };
 
-    if (flakeCoordinates.bottomLeft.x && flakeCoordinates.bottomLeft.y) {
-      payload.bottomLeft = {
-        x: parseFloat(flakeCoordinates.bottomLeft.x),
-        y: parseFloat(flakeCoordinates.bottomLeft.y)
+    if (flakeCoordinates.start.x && flakeCoordinates.start.y) {
+      payload.start = {
+        x: parseFloat(flakeCoordinates.start.x),
+        y: parseFloat(flakeCoordinates.start.y)
       };
     }
 
-    if (flakeCoordinates.topRight.x && flakeCoordinates.topRight.y) {
-      payload.topRight = {
-        x: parseFloat(flakeCoordinates.topRight.x),
-        y: parseFloat(flakeCoordinates.topRight.y)
+    if (flakeCoordinates.end.x && flakeCoordinates.end.y) {
+      payload.end = {
+        x: parseFloat(flakeCoordinates.end.x),
+        y: parseFloat(flakeCoordinates.end.y)
       };
     }
 
@@ -256,52 +256,52 @@ const ScanFlakesBox = () => {
 
         <div className="flake-coordinates mb-2">
           <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">Bottom Left Offset:</span>
+            <span className="text-sm font-medium">Start Offset:</span>
             <input
               type="text"
-              value={flakeCoordinates.bottomLeft.x}
-              onChange={(e) => handleCoordinateChange("bottomLeft", "x", e.target.value)}
+              value={flakeCoordinates.start.x}
+              onChange={(e) => handleCoordinateChange("start", "x", e.target.value)}
               className="p-1 border rounded w-20 text-xs"
               placeholder="X"
             />
             <input
               type="text"
-              value={flakeCoordinates.bottomLeft.y}
-              onChange={(e) => handleCoordinateChange("bottomLeft", "y", e.target.value)}
+              value={flakeCoordinates.start.y}
+              onChange={(e) => handleCoordinateChange("start", "y", e.target.value)}
               className="p-1 border rounded w-20 text-xs"
               placeholder="Y"
             />
             <button
-              onClick={() => copyCurrentPosition("bottomLeft")}
+              onClick={() => copyCurrentPosition("start")}
               className="px-2 py-1 bg-blue-500 text-white text-xs rounded"
-              title="Copy current position to Bottom Left"
+              title="Copy current position to Start"
             >
-              BL
+              Start
             </button>
           </div>
-          
+
           <div className="flex items-center space-x-2 mt-2">
-            <span className="text-sm font-medium">Top Right Offset:</span>
+            <span className="text-sm font-medium">End Offset:</span>
             <input
               type="text"
-              value={flakeCoordinates.topRight.x}
-              onChange={(e) => handleCoordinateChange("topRight", "x", e.target.value)}
+              value={flakeCoordinates.end.x}
+              onChange={(e) => handleCoordinateChange("end", "x", e.target.value)}
               className="p-1 border rounded w-20 text-xs"
               placeholder="X"
             />
             <input
               type="text"
-              value={flakeCoordinates.topRight.y}
-              onChange={(e) => handleCoordinateChange("topRight", "y", e.target.value)}
+              value={flakeCoordinates.end.y}
+              onChange={(e) => handleCoordinateChange("end", "y", e.target.value)}
               className="p-1 border rounded w-20 text-xs"
               placeholder="Y"
             />
             <button
-              onClick={() => copyCurrentPosition("topRight")}
+              onClick={() => copyCurrentPosition("end")}
               className="px-2 py-1 bg-blue-500 text-white text-xs rounded"
-              title="Copy current position to Top Right"
+              title="Copy current position to End"
             >
-              TR
+              End
             </button>
           </div>
         </div>
