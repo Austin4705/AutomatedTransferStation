@@ -177,100 +177,96 @@ const IndependentCameraBox = ({ cameraId, defaultCamera = 0 }: IndependentCamera
         )}
       </div>
 
-      {/* All Controls at Bottom */}
-      <div className="controls-container space-y-2">
+      {/* All Controls at Bottom - Single Compact Row */}
+      <div className="controls-container flex items-center gap-1 flex-wrap">
         {/* Camera Selection */}
-        <div className="camera-controls">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Camera
-          </label>
-          <div className="flex gap-1">
-            {[0, 1, 2].map((num) => (
-              <button
-                key={num}
-                onClick={() => setCameraNumber(num)}
-                className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
-                  cameraNumber === num
-                    ? 'bg-blue-500 text-white font-semibold'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Cam {num}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {[0, 1, 2].map((num) => (
+            <button
+              key={num}
+              onClick={() => setCameraNumber(num)}
+              className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                cameraNumber === num
+                  ? 'bg-blue-500 text-white font-semibold'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              C{num}
+            </button>
+          ))}
         </div>
+
+        {/* Divider */}
+        <div className="h-4 w-px bg-gray-300 flex-shrink-0"></div>
 
         {/* Feed Type Selection */}
-        <div className="feed-type-controls">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Feed Type
-          </label>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setFeedType('video')}
-              className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
-                feedType === 'video'
-                  ? 'bg-green-500 text-white font-semibold'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Video
-            </button>
-            <button
-              onClick={() => setFeedType('snapshot')}
-              className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
-                feedType === 'snapshot'
-                  ? 'bg-green-500 text-white font-semibold'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Snap
-            </button>
-            <button
-              onClick={() => setFeedType('flake_hunted')}
-              className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
-                feedType === 'flake_hunted'
-                  ? 'bg-green-500 text-white font-semibold'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Flake
-            </button>
-          </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={() => setFeedType('video')}
+            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+              feedType === 'video'
+                ? 'bg-green-500 text-white font-semibold'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Vid
+          </button>
+          <button
+            onClick={() => setFeedType('snapshot')}
+            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+              feedType === 'snapshot'
+                ? 'bg-green-500 text-white font-semibold'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Snap
+          </button>
+          <button
+            onClick={() => setFeedType('flake_hunted')}
+            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+              feedType === 'flake_hunted'
+                ? 'bg-green-500 text-white font-semibold'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Flake
+          </button>
         </div>
 
-        {/* Action Buttons Row */}
-        <div className="action-buttons flex gap-1">
+        {/* Divider */}
+        <div className="h-4 w-px bg-gray-300 flex-shrink-0"></div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={handleSnap}
-            className="flex-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors font-medium"
+            className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors font-medium"
           >
-            Take Snap
+            TSnap
           </button>
           <button
             onClick={handleSnapFlakeHunted}
-            className="flex-1 px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors font-medium"
+            className="px-2 py-0.5 text-xs bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors font-medium"
           >
-            Flake Snap
+            FSnap
           </button>
           <button
             onClick={refreshStream}
             disabled={isRefreshing}
-            className={`flex-1 px-2 py-1 text-xs rounded transition-colors flex items-center justify-center ${
+            className={`px-2 py-0.5 text-xs rounded transition-colors flex items-center ${
               isRefreshing ? 'bg-gray-300 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
             }`}
+            title={isRefreshing ? 'Refreshing' : 'Refresh'}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`}
+              className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            {isRefreshing ? 'Refreshing' : 'Refresh'}
           </button>
         </div>
       </div>

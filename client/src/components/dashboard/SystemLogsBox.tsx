@@ -13,7 +13,6 @@ interface LogEntry {
   rawData?: any;
   size?: number;
   packetType?: string;
-  isUnknown?: boolean;
 }
 
 type LogType = "command" | "response" | "outgoing" | "packet";
@@ -40,11 +39,8 @@ interface ResponseMessage extends BaseMessage {
 const SystemLogsBox = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [visibleLogTypes, setVisibleLogTypes] = useState<Set<LogType>>(new Set(["command", "response", "outgoing", "packet"]));
-  const [showUnknownPackets, setShowUnknownPackets] = useState<boolean>(true);
-  const [showUnknownOutgoing, setShowUnknownOutgoing] = useState<boolean>(true);
   const [selectedPacketTypes, setSelectedPacketTypes] = useState<Set<string>>(new Set());
   const [selectedOutgoingTypes, setSelectedOutgoingTypes] = useState<Set<string>>(new Set());
-  const [definedPacketTypes, setDefinedPacketTypes] = useState<string[]>([]);
   const [autoScroll, setAutoScroll] = useState<boolean>(() => {
     const savedSetting = localStorage.getItem('log-auto-scroll');
     return savedSetting !== null ? savedSetting === 'true' : true;
@@ -108,42 +104,12 @@ const SystemLogsBox = () => {
   }, [hiddenLogTypes, visibleLogTypes]);
 
   useEffect(() => {
-    const loadPacketDefinitions = async () => {
-      if (packetDefsLoaded.current) return;
-      
-      try {
-        if (!PacketManager.isInitialized()) {
-          console.log("Initializing packet manager from UnifiedLog...");
-          await PacketManager.initialize();
-        }
-        
-        const response = await fetch('/shared/packet_definitions.json');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const packetDefs = await response.json();
-        
-        const packetTypes = Object.keys(packetDefs.packets || {});
-        
-        const allPacketTypes = packetTypes;
-        
-        setDefinedPacketTypes(allPacketTypes);
-        
-        setSelectedPacketTypes(new Set(allPacketTypes));
-        
-        setSelectedOutgoingTypes(new Set(allPacketTypes));
-        
-        packetDefsLoaded.current = true;
-        
-        console.log("Loaded packet types from definitions:", allPacketTypes);
-      } catch (error) {
-        console.error('Failed to load packet definitions:', error);
-      }
-    };
-    
-    loadPacketDefinitions();
+    // No longer loading packet definitions - packet types will be discovered from actual logs
+    if (!PacketManager.isInitialized()) {
+      console.log("Initializing packet manager from UnifiedLog...");
+      PacketManager.initialize();
+    }
+    packetDefsLoaded.current = true;
   }, []);
 
   const packetTypes = useMemo(() => {
@@ -153,10 +119,8 @@ const SystemLogsBox = () => {
         typesFromLogs.add(log.packetType);
       }
     });
-    
-    const allTypes = new Set([...definedPacketTypes, ...typesFromLogs]);
-    return Array.from(allTypes).sort();
-  }, [logs, definedPacketTypes]);
+    return Array.from(typesFromLogs).sort();
+  }, [logs]);
 
   const outgoingTypes = useMemo(() => {
     const typesFromLogs = new Set<string>();
@@ -165,10 +129,8 @@ const SystemLogsBox = () => {
         typesFromLogs.add(log.packetType);
       }
     });
-    
-    const allTypes = new Set([...definedPacketTypes, ...typesFromLogs]);
-    return Array.from(allTypes).sort();
-  }, [logs, definedPacketTypes]);
+    return Array.from(typesFromLogs).sort();
+  }, [logs]);
 
   const addLogs = (newLogs: LogEntry[], replace = false) => {
     if (clearCooldownRef.current) {
@@ -243,28 +205,26 @@ const SystemLogsBox = () => {
         type: packetInfo.type,
         data: packetInfo.data
       });
-      
-      const isUnknown = !PacketManager.isKnownPacketType(packetInfo.type);
-      
+
       let logType: "command" | "response" | "packet" = "packet";
-      
-      if (packetInfo.type === "COMMAND" || 
-          (packetInfo.data && (packetInfo.data.command || 
+
+      if (packetInfo.type === "COMMAND" ||
+          (packetInfo.data && (packetInfo.data.command ||
           (Array.isArray(packetInfo.data.commands) && packetInfo.data.commands.length > 0)))) {
         logType = "command";
       }
-      else if (packetInfo.type === "RESPONSE" || 
-               packetInfo.type === "COMMAND_RESULT" || 
+      else if (packetInfo.type === "RESPONSE" ||
+               packetInfo.type === "COMMAND_RESULT" ||
                packetInfo.type === "ERROR" ||
                packetInfo.type === "RESPONSE_LOG_RESPONSE" ||
                (packetInfo.data && (packetInfo.data.response || packetInfo.data.message ||
                (Array.isArray(packetInfo.data.responses) && packetInfo.data.responses.length > 0)))) {
         logType = "response";
       }
-      
+
       let messageContent: string;
       if (logType === "command") {
-        messageContent = packetInfo.data && packetInfo.data.command 
+        messageContent = packetInfo.data && packetInfo.data.command
           ? packetInfo.data.command
           : rawPacket;
       } else if (logType === "response") {
@@ -274,30 +234,27 @@ const SystemLogsBox = () => {
       } else {
         messageContent = rawPacket;
       }
-      
+
       const newEntry: LogEntry = {
         timestamp: new Date(packetInfo.timestamp).toLocaleString(),
         message: messageContent,
         type: logType,
         rawData: packetInfo.data,
         size: packetInfo.size,
-        packetType: packetInfo.type,
-        isUnknown
+        packetType: packetInfo.type
       };
-      
-      const packetKey = `${logType}-${packetInfo.type}-${packetInfo.timestamp}`;
-      
-      const isDuplicate = logs.some(log => 
-        log.type === logType && 
-        log.packetType === packetInfo.type && 
+
+      const isDuplicate = logs.some(log =>
+        log.type === logType &&
+        log.packetType === packetInfo.type &&
         log.timestamp === newEntry.timestamp
       );
-      
+
       if (!isDuplicate) {
         setLogs(prevLogs => {
           const newLogs = [...prevLogs, newEntry];
-          return newLogs.length > MAX_LOG_ENTRIES 
-            ? newLogs.slice(newLogs.length - MAX_LOG_ENTRIES) 
+          return newLogs.length > MAX_LOG_ENTRIES
+            ? newLogs.slice(newLogs.length - MAX_LOG_ENTRIES)
             : newLogs;
         });
       }
@@ -312,56 +269,51 @@ const SystemLogsBox = () => {
     const handleOutgoingMessage = (event: CustomEvent) => {
       const message = event.detail;
       const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
-      
+
       let messageType = "";
-      let isUnknown = false;
-      
+
       try {
         if (typeof message === 'object' && message.type) {
           messageType = message.type;
-          isUnknown = !definedPacketTypes.includes(messageType);
         } else if (typeof message === 'string') {
           try {
             const parsed = JSON.parse(message);
             if (parsed && parsed.type) {
               messageType = parsed.type;
-              isUnknown =  
-        !definedPacketTypes.includes(messageType);
             }
           } catch {
-            isUnknown = true;
+            // No type found
           }
         }
       } catch (e) {
-        isUnknown = true;
+        // No type found
       }
-      
+
       const newEntry: LogEntry = {
         timestamp: new Date().toLocaleString(),
         message: messageStr,
         type: "outgoing",
-        packetType: messageType,
-        isUnknown
+        packetType: messageType
       };
-      
+
       setLogs(prevLogs => {
         const newLogs = [...prevLogs, newEntry];
-        return newLogs.length > MAX_LOG_ENTRIES 
-          ? newLogs.slice(newLogs.length - MAX_LOG_ENTRIES) 
+        return newLogs.length > MAX_LOG_ENTRIES
+          ? newLogs.slice(newLogs.length - MAX_LOG_ENTRIES)
           : newLogs;
       });
-      
+
       if (autoScroll) {
         scrollToBottom();
       }
     };
 
     window.addEventListener('outgoingMessage' as any, handleOutgoingMessage);
-    
+
     return () => {
       window.removeEventListener('outgoingMessage' as any, handleOutgoingMessage);
     };
-  }, [definedPacketTypes, autoScroll]);
+  }, [autoScroll]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -404,30 +356,22 @@ const SystemLogsBox = () => {
       if (!visibleLogTypes.has(log.type) || hiddenLogTypes.has(log.type)) {
         return false;
       }
-      
+
       if (log.type === "packet" && log.packetType) {
-        if (!showUnknownPackets && log.isUnknown) {
-          return false;
-        }
-        
         if (selectedPacketTypes.size > 0 && !selectedPacketTypes.has(log.packetType)) {
           return false;
         }
       }
-      
+
       if (log.type === "outgoing" && log.packetType) {
-        if (!showUnknownOutgoing && log.isUnknown) {
-          return false;
-        }
-        
         if (selectedOutgoingTypes.size > 0 && !selectedOutgoingTypes.has(log.packetType)) {
           return false;
         }
       }
-      
+
       return true;
     });
-  }, [logs, visibleLogTypes, hiddenLogTypes, showUnknownPackets, showUnknownOutgoing, selectedPacketTypes, selectedOutgoingTypes]);
+  }, [logs, visibleLogTypes, hiddenLogTypes, selectedPacketTypes, selectedOutgoingTypes]);
 
   const getLogTypeColor = (type: "command" | "response" | "outgoing" | "packet") => {
     switch (type) {
@@ -616,193 +560,198 @@ const SystemLogsBox = () => {
 
   return (
     <div className="unified-log h-full flex flex-col">
-      <div className="log-controls p-2 bg-gray-100 rounded mb-2 overflow-visible">
-        <div className="log-type-filters flex flex-col gap-2 mb-3">
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="command-logs"
-              checked={visibleLogTypes.has("command")}
-              onChange={() => toggleLogType("command")}
-              className="mr-2"
-            />
-            <label htmlFor="command-logs" className="text-sm cursor-pointer flex items-center">
-              <span className="w-3 h-3 inline-block mr-1 rounded-sm" style={{ backgroundColor: getLogTypeColor("command") }}></span>
-              Commands
-            </label>
-          </div>
-          
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="response-logs"
-              checked={visibleLogTypes.has("response")}
-              onChange={() => toggleLogType("response")}
-              className="mr-2"
-            />
-            <label htmlFor="response-logs" className="text-sm cursor-pointer flex items-center">
-              <span className="w-3 h-3 inline-block mr-1 rounded-sm" style={{ backgroundColor: getLogTypeColor("response") }}></span>
-              Responses
-            </label>
-          </div>
-          
-          <div className="flex flex-col">
+      <div className="log-controls p-2 bg-gray-100 rounded mb-2">
+        {/* Compact filter row with all checkboxes in a single line */}
+        <div className="flex items-center gap-2 flex-wrap w-full">
+          {/* Left group: filters */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="command-logs"
+                checked={visibleLogTypes.has("command")}
+                onChange={() => toggleLogType("command")}
+                className="mr-1"
+              />
+              <label htmlFor="command-logs" className="text-xs cursor-pointer flex items-center whitespace-nowrap">
+                <span className="w-2 h-2 inline-block mr-1 rounded-sm" style={{ backgroundColor: getLogTypeColor("command") }}></span>
+                Cmd
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="response-logs"
+                checked={visibleLogTypes.has("response")}
+                onChange={() => toggleLogType("response")}
+                className="mr-1"
+              />
+              <label htmlFor="response-logs" className="text-xs cursor-pointer flex items-center whitespace-nowrap">
+                <span className="w-2 h-2 inline-block mr-1 rounded-sm" style={{ backgroundColor: getLogTypeColor("response") }}></span>
+                Resp
+              </label>
+            </div>
+
+            <div className="flex items-center relative">
               <input
                 type="checkbox"
                 id="outgoing-logs"
                 checked={visibleLogTypes.has("outgoing")}
                 onChange={() => toggleLogType("outgoing")}
-                className="mr-2"
+                className="mr-1"
               />
-              <label htmlFor="outgoing-logs" className="text-sm cursor-pointer flex items-center">
-                <span className="w-3 h-3 inline-block mr-1 rounded-sm" style={{ backgroundColor: getLogTypeColor("outgoing") }}></span>
-                Outgoing
+              <label htmlFor="outgoing-logs" className="text-xs cursor-pointer flex items-center whitespace-nowrap">
+                <span className="w-2 h-2 inline-block mr-1 rounded-sm" style={{ backgroundColor: getLogTypeColor("outgoing") }}></span>
+                Out
               </label>
-              
+
               {visibleLogTypes.has("outgoing") && (
-                <button 
+                <button
                   data-dropdown="outgoing"
                   onClick={() => {
                     const outgoingFilterElem = document.getElementById('outgoing-filter-options');
                     if (outgoingFilterElem) {
                       outgoingFilterElem.classList.toggle('hidden');
-                      
+
                       const packetFilterElem = document.getElementById('packet-filter-options');
                       if (packetFilterElem && !packetFilterElem.classList.contains('hidden')) {
                         packetFilterElem.classList.add('hidden');
                       }
                     }
                   }}
-                  className="ml-4 text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded flex items-center"
+                  className="ml-1 text-xs bg-gray-200 hover:bg-gray-300 px-1 py-0.5 rounded"
+                  title="Filter Options"
                 >
-                  Filter Options
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  ▼
                 </button>
               )}
-            </div>
-            
-            {visibleLogTypes.has("outgoing") && (
-              <div id="outgoing-filter-options" className="hidden ml-6 mt-2 p-2 bg-gray-50 rounded border border-gray-200 z-10 absolute shadow-md">
-                {outgoingTypes.length > 0 && (
-                  <div className="mt-2">
-                    <div className="text-sm font-medium mb-1">Filter by Type:</div>
-                    <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto pr-1 thin-scrollbar">
-                      {outgoingTypes.map(type => (
-                        <div key={type} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id={`outgoing-type-${type}`}
-                            checked={selectedOutgoingTypes.has(type)}
-                            onChange={() => toggleOutgoingType(type)}
-                            className="mr-1"
-                          />
-                          <label htmlFor={`outgoing-type-${type}`} className="text-sm cursor-pointer truncate">
-                            {type}
-                          </label>
-                        </div>
-                      ))}
+
+              {visibleLogTypes.has("outgoing") && (
+                <div id="outgoing-filter-options" className="hidden mt-2 p-2 bg-white rounded border border-gray-300 z-50 absolute top-full left-0 shadow-lg min-w-[200px]">
+                  {outgoingTypes.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium mb-1">Filter by Type:</div>
+                      <div className="grid grid-cols-2 gap-1 max-h-32 overflow-y-auto pr-1 thin-scrollbar">
+                        {outgoingTypes.map(type => (
+                          <div key={type} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`outgoing-type-${type}`}
+                              checked={selectedOutgoingTypes.has(type)}
+                              onChange={() => toggleOutgoingType(type)}
+                              className="mr-1"
+                            />
+                            <label htmlFor={`outgoing-type-${type}`} className="text-xs cursor-pointer truncate">
+                              {type}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-                
-                <div className="mt-3 border-t border-gray-200 pt-2">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="unknown-outgoing"
-                      checked={showUnknownOutgoing}
-                      onChange={() => setShowUnknownOutgoing(!showUnknownOutgoing)}
-                      className="mr-1"
-                    />
-                    <label htmlFor="unknown-outgoing" className="text-sm cursor-pointer">
-                      Unknown Outgoing
-                    </label>
-                  </div>
+                  )}
                 </div>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex flex-col">
-            <div className="flex items-center">
+              )}
+            </div>
+
+            <div className="flex items-center relative">
               <input
                 type="checkbox"
                 id="packet-logs"
                 checked={visibleLogTypes.has("packet")}
                 onChange={() => toggleLogType("packet")}
-                className="mr-2"
+                className="mr-1"
               />
-              <label htmlFor="packet-logs" className="text-sm cursor-pointer flex items-center">
-                <span className="w-3 h-3 inline-block mr-1 rounded-sm" style={{ backgroundColor: getLogTypeColor("packet") }}></span>
-                Packets
+              <label htmlFor="packet-logs" className="text-xs cursor-pointer flex items-center whitespace-nowrap">
+                <span className="w-2 h-2 inline-block mr-1 rounded-sm" style={{ backgroundColor: getLogTypeColor("packet") }}></span>
+                Pkt
               </label>
-              
+
               {visibleLogTypes.has("packet") && (
-                <button 
+                <button
                   data-dropdown="packet"
                   onClick={() => {
                     const packetFilterElem = document.getElementById('packet-filter-options');
                     if (packetFilterElem) {
                       packetFilterElem.classList.toggle('hidden');
-                      
+
                       const outgoingFilterElem = document.getElementById('outgoing-filter-options');
                       if (outgoingFilterElem && !outgoingFilterElem.classList.contains('hidden')) {
                         outgoingFilterElem.classList.add('hidden');
                       }
                     }
                   }}
-                  className="ml-4 text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded flex items-center"
+                  className="ml-1 text-xs bg-gray-200 hover:bg-gray-300 px-1 py-0.5 rounded"
+                  title="Filter Options"
                 >
-                  Filter Options
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  ▼
                 </button>
               )}
-            </div>
-            
-            {visibleLogTypes.has("packet") && (
-              <div id="packet-filter-options" className="hidden ml-6 mt-2 p-2 bg-gray-50 rounded border border-gray-200 z-10 absolute shadow-md">
-                {packetTypes.length > 0 && (
-                  <div className="mt-2">
-                    <div className="text-sm font-medium mb-1">Filter by Packet Type:</div>
-                    <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto pr-1 thin-scrollbar">
-                      {packetTypes.map(type => (
-                        <div key={type} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id={`packet-type-${type}`}
-                            checked={selectedPacketTypes.has(type)}
-                            onChange={() => togglePacketType(type)}
-                            className="mr-1"
-                          />
-                          <label htmlFor={`packet-type-${type}`} className="text-sm cursor-pointer truncate">
-                            {type}
-                          </label>
-                        </div>
-                      ))}
+
+              {visibleLogTypes.has("packet") && (
+                <div id="packet-filter-options" className="hidden mt-2 p-2 bg-white rounded border border-gray-300 z-50 absolute top-full left-0 shadow-lg min-w-[200px]">
+                  {packetTypes.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium mb-1">Filter by Type:</div>
+                      <div className="grid grid-cols-2 gap-1 max-h-32 overflow-y-auto pr-1 thin-scrollbar">
+                        {packetTypes.map(type => (
+                          <div key={type} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`packet-type-${type}`}
+                              checked={selectedPacketTypes.has(type)}
+                              onChange={() => togglePacketType(type)}
+                              className="mr-1"
+                            />
+                            <label htmlFor={`packet-type-${type}`} className="text-xs cursor-pointer truncate">
+                              {type}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-                
-                <div className="mt-3 border-t border-gray-200 pt-2">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="unknown-packets"
-                      checked={showUnknownPackets}
-                      onChange={() => setShowUnknownPackets(!showUnknownPackets)}
-                      className="mr-1"
-                    />
-                    <label htmlFor="unknown-packets" className="text-sm cursor-pointer">
-                      Unknown Packets
-                    </label>
-                  </div>
+                  )}
                 </div>
-              </div>
+              )}
+            </div>
+          </div>
+
+          {/* Spacer to push actions to the right */}
+          <div className="flex-1 min-w-[10px]"></div>
+
+          {/* Right group: actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={clearLogs}
+              className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-0.5 rounded whitespace-nowrap"
+            >
+              Clear
+            </button>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="auto-scroll"
+                checked={autoScroll}
+                onChange={() => setAutoScroll(!autoScroll)}
+                className="mr-1"
+              />
+              <label htmlFor="auto-scroll" className="text-xs cursor-pointer whitespace-nowrap">
+                Auto
+              </label>
+            </div>
+
+            {!autoScroll && (
+              <button
+                onClick={() => {
+                  if (logContentRef.current) {
+                    logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
+                  }
+                }}
+                className="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-0.5 rounded whitespace-nowrap"
+              >
+                ↓
+              </button>
             )}
           </div>
         </div>
@@ -842,11 +791,6 @@ const SystemLogsBox = () => {
                         ({log.size} bytes)
                       </span>
                     )}
-                    {log.isUnknown && (
-                      <span className="log-unknown text-xs ml-2 text-red-500 font-bold">
-                        UNKNOWN
-                      </span>
-                    )}
                   </div>
                   <div className="log-message mt-1 pl-2 font-mono text-xs overflow-x-auto">
                     {log.message}
@@ -856,50 +800,9 @@ const SystemLogsBox = () => {
             </ul>
           )}
         </div>
-        
-        <div className="text-xs text-gray-500 p-2 bg-gray-50 border-t border-gray-200 flex-shrink-0 flex justify-between items-center">
-          <div className="button-controls flex gap-2">
-            
-            <button 
-              onClick={clearLogs}
-              className="clear-button text-sm bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded"
-            >
-              Clear
-            </button>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="auto-scroll"
-                checked={autoScroll}
-                onChange={() => setAutoScroll(!autoScroll)}
-                className="mr-2"
-              />
-              <label htmlFor="auto-scroll" className="text-sm cursor-pointer">
-                Auto-scroll
-              </label>
-              
-              {/* Manual scroll button when auto-scroll is disabled */}
-              {!autoScroll && (
-                <button 
-                  onClick={() => {
-                    if (logContentRef.current) {
-                      logContentRef.current.scrollTop = logContentRef.current.scrollHeight;
-                    }
-                  }}
-                  className="ml-2 text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded"
-                >
-                  Scroll to Bottom
-                </button>
-              )}
-            </div>
-            
-            <div>
-              Showing {filteredLogs.length} of {logs.length} logs (max: {MAX_LOG_ENTRIES})
-            </div>
-          </div>
+
+        <div className="text-xs text-gray-500 p-1 bg-gray-50 border-t border-gray-200 flex-shrink-0 text-center">
+          {filteredLogs.length} / {logs.length} logs (max: {MAX_LOG_ENTRIES})
         </div>
       </div>
     </div>

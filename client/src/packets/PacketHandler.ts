@@ -21,32 +21,19 @@ type ResponseLogListener = (entry: ResponseLogEntry) => void;
 
 export class PacketManager {
   private static handlers: Map<string, PacketHandler> = new Map();
-  private static packetDefs: any;
   private static trafficListeners: PacketTrafficListener[] = [];
   private static commandLogListeners: CommandLogListener[] = [];
   private static responseLogListeners: ResponseLogListener[] = [];
   private static lastRawMessage: string | null = null;
 
   static async initialize() {
-    try {
-      console.log("Loading packet definitions...");
-      const response = await fetch('/shared/packet_definitions.json');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      console.log("Response:", response.json);
-      this.packetDefs = await response.json();
-      console.log("Successfully loaded packet definitions:", this.packetDefs);
-      
-      return this.packetDefs;
-    } catch (error) {
-      console.error('Failed to load packet definitions:', error);
-      return {};
-    }
+    // No longer loading packet definitions - using decorator-based handlers only
+    console.log("PacketManager initialized (decorator-based handlers only)");
+    return Promise.resolve({});
   }
 
   static isInitialized(): boolean {
-    return this.packetDefs !== undefined;
+    return true; // Always initialized since we don't need to load definitions
   }
 
   static setLastRawMessage(message: string | null) {
@@ -67,24 +54,25 @@ export class PacketManager {
   static handlePacket(packet: any) {
     try {
       const type = packet.type;
-      
+
       const timestamp = Date.now();
       const size = estimatePacketSize(packet);
-      
-      this.notifyTrafficListeners({ 
-        type, 
-        data: packet,
-        timestamp, 
-        size,
-        rawData: this.lastRawMessage 
-      });
-      
-      if (!this.validatePacket(type, packet)) {
-        throw new Error(`Invalid packet data for type ${type}`);
-      }
 
-      const handler = this.handlers.get(type) || this.defaultHandler;
-      handler(packet);
+      this.notifyTrafficListeners({
+        type,
+        data: packet,
+        timestamp,
+        size,
+        rawData: this.lastRawMessage
+      });
+
+      // Check if we have a registered handler for this packet type
+      const handler = this.handlers.get(type);
+      if (handler) {
+        handler(packet);
+      } else {
+        this.defaultHandler(packet);
+      }
     } catch (error) {
       console.error('Error handling packet:', error);
     }
@@ -94,63 +82,9 @@ export class PacketManager {
     console.log('Received unhandled packet:', data);
   }
 
-  private static validatePacket(type: string, packet: any): boolean {
-    
-    const packetDef = this.packetDefs?.packets[type];
-    if (!packetDef) return true;
-
-    const fields = packetDef.fields;
-    
-    for (const [field, expectedType] of Object.entries(fields)) {
-      if (field === 'type') continue;
-      if (!(field in packet)) {
-        console.warn(`Missing field ${field} in packet of type ${type}`);
-        return false;
-      }
-
-      const value = packet[field];
-      
-      switch (expectedType) {
-        case 'bool':
-          if (typeof value !== 'boolean') {
-            console.warn(`Field ${field} should be boolean but got ${typeof value}`);
-            return false;
-          }
-          break;
-        case 'int':
-          if (typeof value !== 'number' || !Number.isInteger(value)) {
-            console.warn(`Field ${field} should be integer but got ${typeof value}`);
-            return false;
-          }
-          break;
-        case 'float':
-          if (typeof value !== 'number') {
-            console.warn(`Field ${field} should be number but got ${typeof value}`);
-            return false;
-          }
-          break;
-        case 'string':
-          if (typeof value !== 'string') {
-            console.warn(`Field ${field} should be string but got ${typeof value}`);
-            return false;
-          }
-          break;
-      }
-    }
-
-    return true;
-  }
-
   static isKnownPacketType(type: string): boolean {
-    if (this.handlers.has(type)) {
-      return true;
-    }
-    
-    if (this.packetDefs?.packets && type in this.packetDefs.packets) {
-      return true;
-    }
-    return false;
-
+    // Simply check if we have a registered handler for this type
+    return this.handlers.has(type);
   }
 
   static registerTrafficListener(listener: PacketTrafficListener) {
