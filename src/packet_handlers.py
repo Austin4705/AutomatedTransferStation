@@ -83,7 +83,7 @@ class PacketHandlers:
                 }
             }
         }
-        # Logger.log(f"Sending state: {message}")
+        Logger.log(f"Sending state: {message}")
         Socket_Manager.send_all_json(message)
 
     @packet_handler("PAUSE_EXECUTION")

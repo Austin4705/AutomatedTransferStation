@@ -5,6 +5,9 @@ from queue import Queue
 import time
 import os
 
+from logger import Logger
+
+
 class TransferStationPrior(Transfer_Station):
     def __init__(self):
         super().__init__()
@@ -92,6 +95,7 @@ class CommandServer:
             if wait_response:
                 try:
                     response = self.response_queue.get(timeout=timeout)
+                    # Logger.log(f'CommandServer: Response: {response}')
                     return response
                 except:
                     print(f'CommandServer: Timeout waiting for response to: {command}')
