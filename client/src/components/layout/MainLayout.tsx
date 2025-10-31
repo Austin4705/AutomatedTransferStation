@@ -1,10 +1,16 @@
 import { Outlet } from 'react-router-dom';
 import ConnectionStatus from './ConnectionStatus';
 import HeaderPositionDisplay from './HeaderPositionDisplay';
-import Navigation from './Navigation';
 import HostConfigInput from './HostConfigInput';
 
 const MainLayout = () => {
+  const resetLayout = () => {
+    if (window.confirm('Are you sure you want to reset the dashboard layout to default?')) {
+      localStorage.removeItem('gridstack-layout');
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -19,12 +25,17 @@ const MainLayout = () => {
           </div>
           <HostConfigInput />
           <HeaderPositionDisplay />
+          <button
+            onClick={resetLayout}
+            className="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm"
+            title="Reset dashboard layout to default"
+          >
+            Reset Layout
+          </button>
         </div>
         <ConnectionStatus />
       </header>
-      
-      <Navigation />
-      
+
       <main className="app-content flex-1 p-4">
         <Outlet />
       </main>

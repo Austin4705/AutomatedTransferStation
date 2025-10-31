@@ -1,129 +1,168 @@
-import CameraBox from '../components/dashboard/CameraBox';
+import IndependentCameraBox from '../components/dashboard/IndependentCameraBox';
 import SystemLogsBox from '../components/dashboard/SystemLogsBox';
 import CommandInputBox from '../components/dashboard/CommandInputBox';
 import PacketInputBox from '../components/dashboard/PacketInputBox';
-import ActionsBox from '../components/dashboard/ActionsBox';
 import TraceOverBox from '../components/dashboard/TraceOverBox';
 import ScanFlakesBox from '../components/dashboard/ScanFlakesBox';
 import TransferStationCommandsBox from '../components/dashboard/TransferStationCommandsBox';
-import { useState } from 'react';
-
-type CameraType = 'primary' | 'secondary';
+import GridstackLayout from '../components/layout/GridstackLayout';
+import GridstackWidget from '../components/layout/GridstackWidget';
 
 const DashboardPage = () => {
-  const [showBothCameras, setShowBothCameras] = useState(true);
-  const [activeCamera, setActiveCamera] = useState<CameraType>('primary');
-
-  const toggleCameraView = () => {
-    setShowBothCameras(!showBothCameras);
-  };
-
-  const switchToCamera = (camera: CameraType) => {
-    setActiveCamera(camera);
-    setShowBothCameras(false);
-  };
 
   return (
-    <div className="dashboard-page">
-      <div className="camera-section" style={{ height: showBothCameras ? '350px' : '450px' }}>
-        {showBothCameras ? (
-          // Show both cameras side by side
-          <>
-            <div className="camera-container primary flex flex-col h-full">
-              <h2 className="mb-2">Primary Camera</h2>
-              <div className="flex-grow overflow-hidden">
-                <CameraBox />
-              </div>
-            </div>
-            <div className="camera-container secondary flex flex-col h-full">
-              <h2 className="mb-2">Secondary Camera</h2>
-              <div className="flex-grow overflow-hidden">
-                <CameraBox />
-              </div>
-            </div>
-          </>
-        ) : (
-          // Show single camera
-          <div className="camera-container flex flex-col h-full" style={{ width: '100%' }}>
-            <h2 className="mb-2">{activeCamera === 'primary' ? 'Primary' : 'Secondary'} Camera</h2>
-            <div className="flex-grow overflow-hidden">
-              <CameraBox />
+    <div className="dashboard-page" style={{ padding: '1rem', minHeight: 'calc(100vh - 80px)' }}>
+      <GridstackLayout>
+        {/* Camera 1 */}
+        <GridstackWidget
+          id="camera-1"
+          x={0}
+          y={0}
+          w={6}
+          h={6}
+          minW={4}
+          minH={5}
+        >
+          <div className="h-full flex flex-col">
+            <h2 className="dashboard-box-header bg-gray-50 p-2 rounded-t font-semibold text-gray-800">
+              Camera View 1
+            </h2>
+            <div className="flex-grow overflow-auto">
+              <IndependentCameraBox cameraId="camera-1" defaultCamera={0} />
             </div>
           </div>
-        )}
-      </div>
-      
-      <div className="dashboard-lower-section">
-        <div className="dashboard-boxes">
-          <div className="trace-over-container">
+        </GridstackWidget>
+
+        {/* Camera 2 */}
+        <GridstackWidget
+          id="camera-2"
+          x={6}
+          y={0}
+          w={6}
+          h={6}
+          minW={4}
+          minH={5}
+        >
+          <div className="h-full flex flex-col">
+            <h2 className="dashboard-box-header bg-gray-50 p-2 rounded-t font-semibold text-gray-800">
+              Camera View 2
+            </h2>
+            <div className="flex-grow overflow-auto">
+              <IndependentCameraBox cameraId="camera-2" defaultCamera={1} />
+            </div>
+          </div>
+        </GridstackWidget>
+
+        {/* Trace Over Box */}
+        <GridstackWidget
+          id="trace-over"
+          x={0}
+          y={6}
+          w={6}
+          h={5}
+          minW={4}
+          minH={4}
+        >
+          <div className="trace-over-container h-full overflow-auto p-4">
+            <h2 className="dashboard-box-header mb-2 font-semibold text-gray-800">
+              Trace Over
+            </h2>
             <TraceOverBox />
           </div>
-          
-          <div className="scan-flakes-container">
+        </GridstackWidget>
+
+        {/* Scan Flakes Box */}
+        <GridstackWidget
+          id="scan-flakes"
+          x={6}
+          y={6}
+          w={6}
+          h={5}
+          minW={4}
+          minH={3}
+        >
+          <div className="h-full overflow-auto p-4">
+            <h2 className="dashboard-box-header mb-2 font-semibold text-gray-800">
+              Scan Flakes
+            </h2>
             <ScanFlakesBox />
           </div>
-        </div>
-        
-        <div className="dashboard-controls-and-logs">
-          <div className="control-section">
-            <div className="action-container">
-              <div className="flex justify-between items-center mb-4">
-                <h2>Actions</h2>
-                <div className="camera-toggle-buttons flex gap-2">
-                  {showBothCameras ? (
-                    <>
-                      <button 
-                        onClick={() => switchToCamera('primary')}
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                      >
-                        Show Only Primary
-                      </button>
-                      <button 
-                        onClick={() => switchToCamera('secondary')}
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                      >
-                        Show Only Secondary
-                      </button>
-                    </>
-                  ) : (
-                    <button 
-                      onClick={toggleCameraView}
-                      className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                    >
-                      Show Both Cameras
-                    </button>
-                  )}
-                </div>
-              </div>
-              <ActionsBox />
-            </div>
-            
-            <div className="input-container">
-              <div className="command-input">
-                <h2>Command Input</h2>
-                <CommandInputBox />
-              </div>
-              <div className="ts-command-input">
-                <h2>Transfer Station Commands</h2>
-                <TransferStationCommandsBox />
-              </div>
-              <div className="packet-input">
-                <h2>Packet Input</h2>
-                <PacketInputBox />
-              </div>
+        </GridstackWidget>
+
+        {/* Command Input Box */}
+        <GridstackWidget
+          id="commands"
+          x={0}
+          y={11}
+          w={4}
+          h={4}
+          minW={3}
+          minH={3}
+        >
+          <div className="h-full overflow-auto p-4">
+            <h2 className="dashboard-box-header mb-2 font-semibold text-gray-800">
+              Command Input
+            </h2>
+            <CommandInputBox />
+          </div>
+        </GridstackWidget>
+
+        {/* Transfer Station Commands Box */}
+        <GridstackWidget
+          id="ts-commands"
+          x={4}
+          y={11}
+          w={4}
+          h={4}
+          minW={3}
+          minH={3}
+        >
+          <div className="h-full overflow-auto p-4">
+            <h2 className="dashboard-box-header mb-2 font-semibold text-gray-800">
+              Transfer Station Commands
+            </h2>
+            <TransferStationCommandsBox />
+          </div>
+        </GridstackWidget>
+
+        {/* Packet Input Box */}
+        <GridstackWidget
+          id="packets"
+          x={8}
+          y={11}
+          w={4}
+          h={4}
+          minW={4}
+          minH={3}
+        >
+          <div className="h-full overflow-auto p-4">
+            <h2 className="dashboard-box-header mb-2 font-semibold text-gray-800">
+              Packet Input
+            </h2>
+            <PacketInputBox />
+          </div>
+        </GridstackWidget>
+
+        {/* System Logs Box */}
+        <GridstackWidget
+          id="logs"
+          x={0}
+          y={15}
+          w={12}
+          h={6}
+          minW={6}
+          minH={4}
+        >
+          <div className="log-container h-full flex flex-col p-4">
+            <h2 className="dashboard-box-header mb-2 font-semibold text-gray-800">
+              System Logs
+            </h2>
+            <div className="dashboard-log-wrapper flex-1 overflow-hidden">
+              <SystemLogsBox />
             </div>
           </div>
-          
-          <div className="log-section">
-            <div className="log-container full-width">
-              <h2>System Logs</h2>
-              <div className="dashboard-log-wrapper">
-                <SystemLogsBox />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        </GridstackWidget>
+      </GridstackLayout>
     </div>
   );
 }
