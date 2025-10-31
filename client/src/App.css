@@ -32,45 +32,6 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
-/* Horizontal Navigation */
-.horizontal-navigation {
-  width: 100%;
-  padding: 0.5rem 1rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.horizontal-navigation ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  justify-content: center;
-}
-
-.horizontal-navigation li {
-  margin: 0 0.5rem;
-}
-
-.nav-link {
-  display: block;
-  text-decoration: none;
-  color: white;
-  font-size: 0.9rem;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
-.nav-link:hover {
-  color: #f1f5f9;
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.nav-link.active {
-  color: #60a5fa;
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
 /* Main Content */
 .app-content {
   flex: 1;
@@ -80,80 +41,10 @@
   padding-bottom: 2rem;
 }
 
-/* Dashboard Page */
+/* Dashboard Page - Gridstack Layout */
 .dashboard-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  height: auto;
-  min-height: calc(100vh - 130px);
-  overflow: visible;
-  padding-bottom: 2rem;
-}
-
-.dashboard-page .camera-section {
-  display: flex;
-  gap: 1rem;
-  height: 350px;
   width: 100%;
-}
-
-.dashboard-page .camera-container {
-  flex: 1;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 100%;
-}
-
-.dashboard-page .dashboard-lower-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  overflow: visible;
-  height: auto;
-  width: 100%;
-}
-
-.dashboard-page .dashboard-controls-and-logs {
-  display: flex;
-  gap: 1rem;
-  width: 100%;
-}
-
-.dashboard-page .control-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  overflow-y: auto;
-  width: 50%;
-  align-self: flex-start;
-}
-
-.dashboard-page .log-section {
-  width: 50%;
-  height: auto;
-  overflow: visible;
-  min-height: 400px;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  padding-bottom: 20px;
-}
-
-.dashboard-page .log-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: visible;
-  min-height: 500px;
-  max-height: none;
-  padding-bottom: 80px;
-  position: relative;
+  min-height: calc(100vh - 80px);
 }
 
 .dashboard-log-wrapper {
@@ -177,59 +68,6 @@
   background-color: white;
   z-index: 5;
   border-top: 1px solid #eee;
-}
-
-/* Page-specific styles */
-.camera-page,
-.trace-over-page,
-.system-logs-page,
-.commands-page {
-  width: 100%;
-  height: 100%;
-}
-
-/* Camera Section (updated for camera page) */
-.camera-page .camera-section {
-  display: flex;
-  gap: 1.5rem;
-  height: calc(100vh - 130px);
-}
-
-.camera-page .camera-container {
-  flex: 1;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 100%;
-}
-
-/* Trace Over page (specific adjustments) */
-.trace-over-page .trace-over-container {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  padding: 1rem;
-  height: calc(100vh - 130px);
-  overflow-y: auto;
-}
-
-/* System Logs page */
-.system-logs-page .log-section {
-  height: calc(100vh - 130px);
-}
-
-/* Commands page */
-.commands-page .commands-section {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  padding: 1rem;
-  height: calc(100vh - 130px);
-  overflow-y: auto;
 }
 
 /* Header */
@@ -809,17 +647,100 @@ input:focus, select:focus {
   box-shadow: 0 0 0 2px rgba(229, 62, 62, 0.5);
 }
 
-/* Dashboard-specific trace over container */
-.dashboard-page .trace-over-container {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  padding: 1rem;
-  width: 100%;
-  margin-bottom: 1rem;
-}
-
 /* Ensure buttons are given enough space */
 .dashboard-page .log-container button {
   margin-bottom: 5px;
+}
+
+/* Gridstack Custom Styles */
+.grid-stack {
+  background-color: transparent;
+}
+
+.grid-stack-item {
+  border-radius: 8px;
+}
+
+.grid-stack-item-content {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  padding: 0;
+  overflow: hidden;
+  inset: 0 !important;
+}
+
+/* Remove padding from grid-stack-item-content since components have their own padding */
+.grid-stack-item-content > * {
+  height: 100%;
+  width: 100%;
+}
+
+/* Drag handle styling - use existing dashboard-box-header as drag handle */
+.dashboard-box-header {
+  cursor: move;
+  user-select: none;
+}
+
+/* Resize handle styling */
+.grid-stack-item > .ui-resizable-handle {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.grid-stack-item:hover > .ui-resizable-handle {
+  opacity: 1;
+}
+
+.grid-stack-item > .ui-resizable-se,
+.grid-stack-item > .ui-resizable-sw {
+  background: none;
+}
+
+.grid-stack-item > .ui-resizable-se::after,
+.grid-stack-item > .ui-resizable-sw::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: #3498db;
+  border-radius: 2px;
+  opacity: 0.7;
+}
+
+.grid-stack-item > .ui-resizable-se::after {
+  right: 4px;
+  bottom: 4px;
+}
+
+.grid-stack-item > .ui-resizable-sw::after {
+  left: 4px;
+  bottom: 4px;
+}
+
+/* Placeholder styling during drag */
+.grid-stack-placeholder > .placeholder-content {
+  background-color: rgba(52, 152, 219, 0.2);
+  border: 2px dashed #3498db;
+  border-radius: 8px;
+}
+
+/* Animation for dragging */
+.grid-stack-item.ui-draggable-dragging {
+  opacity: 0.8;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+}
+
+/* Ensure components inside gridstack items maintain proper sizing */
+.grid-stack-item-content .camera-container,
+.grid-stack-item-content .trace-over-container,
+.grid-stack-item-content .action-container,
+.grid-stack-item-content .input-container,
+.grid-stack-item-content .log-container {
+  height: 100%;
+  margin: 0;
+  box-shadow: none;
+  border-radius: 0;
 }

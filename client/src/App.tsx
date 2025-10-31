@@ -13,10 +13,6 @@ import { ReadyState } from "react-use-websocket";
 
 // Layout and Pages
 import MainLayout from "./components/layout/MainLayout";
-import CameraPage from "./pages/CameraPage";
-import TraceOverPage from "./pages/TraceOverPage";
-import SystemLogsPage from "./pages/SystemLogsPage";
-import CommandsPage from "./pages/CommandsPage";
 import DashboardPage from "./pages/DashboardPage";
 
 function App() {
@@ -116,10 +112,6 @@ function App() {
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="camera" element={<CameraPage />} />
-          <Route path="trace-over" element={<TraceOverPage />} />
-          <Route path="system-logs" element={<SystemLogsPage />} />
-          <Route path="commands" element={<CommandsPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
