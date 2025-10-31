@@ -187,7 +187,7 @@ class Transfer_Station():
         return response
 
     def wait(self, seconds):
-        Logger.log(f"Wait for {seconds} seconds-V")
+        # Logger.log(f"Wait for {seconds} seconds-V")
         time.sleep(seconds)
     
     def send_command_history(self, depth = -1):
