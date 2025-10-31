@@ -44,17 +44,22 @@ const createRefreshEvent = (streamType: string, cameraNumber: number) => {
 export class PacketHandlers {
   @PacketManager.registerHandler("STATE")
   static handleState(data: any) {
-    // STATE packet contains nested state with position data
-    if (data.state && data.state.position) {
-      const position = data.state.position;
+    // Handle nested structure: data.data.state.position OR data.state.position
+    let stateData = data;
+
+    // If there's a nested 'data' field, use that instead
+    if (data.data && data.data.state) {
+      stateData = data.data;
+    }
+
+    if (stateData.state && stateData.state.position) {
+      const position = stateData.state.position;
       if (typeof position.x === 'number' && typeof position.y === 'number') {
         // Dispatch custom event for position updates
         const event = new CustomEvent('position-update', {
           detail: { position }
         });
         window.dispatchEvent(event);
-      } else {
-        console.warn("Received invalid position data in STATE:", data);
       }
     }
   }
@@ -164,11 +169,17 @@ export class PacketHandlers {
     }
   }
 
+  @PacketManager.registerHandler("MESSAGE")
+  static handleMessage(data: any) {
+    // Handle generic MESSAGE packets
+    // console.log("Received message:", data.message || data);
+  }
+
   @PacketManager.registerHandler("COMMAND")
   static handleCommand(data: any) {
     // console.log("Received command:", data);
     const timestamp = data.timestamp || new Date().getTime();
-    
+
     const logData = {
       ...data,
       timestamp

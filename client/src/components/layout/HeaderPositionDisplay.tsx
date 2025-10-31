@@ -3,7 +3,7 @@ import { positionSettingsAtom } from "../../state/appState";
 
 const HeaderPositionDisplay = () => {
   const [positionSettings, setPositionSettings] = useRecoilState(positionSettingsAtom);
-  const { autoUpdate, pollRate, currentPosition: position, isLoading } = positionSettings;
+  const { autoUpdate, pollRate, currentPosition: position } = positionSettings;
 
   const setAutoUpdate = (value: boolean) => {
     setPositionSettings(prev => ({ ...prev, autoUpdate: value }));
@@ -63,13 +63,13 @@ const HeaderPositionDisplay = () => {
       <div className="position-values flex items-center text-xs">
         <div className="flex items-center mr-2">
           <span className="font-medium mr-1">X:</span>
-          <span className={`${isLoading ? 'opacity-50' : ''}`}>
+          <span>
             {position ? formatPosition(position.x) : "0.000"}
           </span>
         </div>
         <div className="flex items-center">
           <span className="font-medium mr-1">Y:</span>
-          <span className={`${isLoading ? 'opacity-50' : ''}`}>
+          <span>
             {position ? formatPosition(position.y) : "0.000"}
           </span>
         </div>

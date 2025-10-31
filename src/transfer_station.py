@@ -31,6 +31,9 @@ class Transfer_Station():
         self._last_sent_index = -1  # Track the last sent index that was retrieved
         self.camera_height = 1536
         self.camera_width = 2048
+        self.x=0
+        self.y=0
+        self.z=0
 
     @classmethod
     def create(cls, station_type: str = "virtual"):
@@ -58,24 +61,27 @@ class Transfer_Station():
 
     def moveX(self, X):
         Logger.log("Move X-V")
+        self.x = X
 
     def moveY(self, Y):
         Logger.log("Move Y-V")
+        self.y = Y
 
     def moveZ(self, Z):
         Logger.log("Move Z-V")
-
+        self.z = Z
+        
     def posX(self):
-        # Logger.log("Get X Position-V")
-        return 0
+        # Logger.log(f"Get X Position: {self.x}-V")
+        return self.x
 
     def posY(self):
-        # Logger.log("Get Y Position-V")
-        return 0
+        # Logger.log(f"Get Y Position: {self.y}-V")
+        return self.y
 
     def posZ(self):
-        # Logger.log("Get Z Position-V")
-        return 0
+        # Logger.log(f"Get Z Position: {self.z}-V")
+        return self.z
 
     def led_off(self):
         Logger.log("Turn LED off-V")
