@@ -5,7 +5,8 @@ import { jsonStateAtom } from "../../state/jsonState";
 import { positionSettingsAtom } from "../../state/appState";
 
 interface WaferCoordinates {
-  id: number;
+  key: string; // Stable key for React rendering
+  id: string;  // User-editable wafer ID
   topRight: { x: string; y: string };
   bottomLeft: { x: string; y: string };
 }
@@ -17,7 +18,7 @@ interface Position {
 }
 
 interface PositionUpdateTarget {
-  waferId: number;
+  waferId: string;
   corner: "topRight" | "bottomLeft" | "both";
 }
 
@@ -33,7 +34,8 @@ const TraceOverBox = () => {
   const [waferCount, setWaferCount] = useState<number>(1);
   const [waferCoordinates, setWaferCoordinates] = useState<WaferCoordinates[]>([
     {
-      id: 1,
+      key: "wafer-0",
+      id: "1",
       topRight: { x: "", y: "" },
       bottomLeft: { x: "", y: "" }
     }
@@ -54,11 +56,15 @@ const TraceOverBox = () => {
 
   useEffect(() => {
     if (waferCount > waferCoordinates.length) {
-      const newWafers = Array.from({ length: waferCount - waferCoordinates.length }, (_, index) => ({
-        id: waferCoordinates.length + index + 1,
-        topRight: { x: "", y: "" },
-        bottomLeft: { x: "", y: "" }
-      }));
+      const newWafers = Array.from({ length: waferCount - waferCoordinates.length }, (_, index) => {
+        const waferIndex = waferCoordinates.length + index;
+        return {
+          key: `wafer-${waferIndex}`,
+          id: String(waferIndex + 1),
+          topRight: { x: "", y: "" },
+          bottomLeft: { x: "", y: "" }
+        };
+      });
       setWaferCoordinates([...waferCoordinates, ...newWafers]);
     } else if (waferCount < waferCoordinates.length) {
       setWaferCoordinates(waferCoordinates.slice(0, waferCount));
@@ -78,13 +84,12 @@ const TraceOverBox = () => {
       }
     }));
 
-    const validWafer = wafersArray.find(wafer => 
-      wafer.topRight.x !== null && wafer.topRight.y !== null && 
+    const validWafer = wafersArray.find(wafer =>
+      wafer.topRight.x !== null && wafer.topRight.y !== null &&
       wafer.bottomLeft.x !== null && wafer.bottomLeft.y !== null
     );
 
-    const output: any = {
-      type: "TRACE_OVER",
+    const traceOverConfig = {
       wafers: wafersArray,
       magnification: magnification,
       pics_until_focus: picsUntilFocus,
@@ -92,6 +97,12 @@ const TraceOverBox = () => {
       focus_wait_time: focusWaitTime,
       camera_index: cameraIndex,
       save_images: saveImages
+    };
+
+    const output: any = {
+      type: "EXECUTE_TRANSFER_FUNCTION",
+      transfer_function_name: "RUN_TRACE_OVER",
+      parameters: JSON.stringify([traceOverConfig])
     };
 
     setJsonOutput(JSON.stringify(output, null, 2));
@@ -145,8 +156,7 @@ const TraceOverBox = () => {
       return;
     }
 
-    const data = {
-      type: "TRACE_OVER",
+    const traceOverConfig = {
       wafers: waferCoordinates.map(wafer => ({
         id: wafer.id,
         topRight: {
@@ -166,36 +176,52 @@ const TraceOverBox = () => {
       save_images: saveImages
     };
 
+    const data = {
+      type: "EXECUTE_TRANSFER_FUNCTION",
+      transfer_function_name: "RUN_TRACE_OVER",
+      parameters: JSON.stringify([traceOverConfig])
+    };
+
     sendJson(data);
   };
 
   const handleCoordinateChange = (
-    waferId: number, 
-    corner: "topRight" | "bottomLeft", 
-    axis: "x" | "y", 
+    waferId: string,
+    corner: "topRight" | "bottomLeft",
+    axis: "x" | "y",
     value: string
   ) => {
     if (value !== "" && !/^-?\d*\.?\d*$/.test(value)) {
       return;
     }
 
-    setWaferCoordinates(prev => 
-      prev.map(wafer => 
-        wafer.id === waferId 
-          ? { 
-              ...wafer, 
-              [corner]: { 
-                ...wafer[corner], 
-                [axis]: value 
-              } 
-            } 
+    setWaferCoordinates(prev =>
+      prev.map(wafer =>
+        wafer.id === waferId
+          ? {
+              ...wafer,
+              [corner]: {
+                ...wafer[corner],
+                [axis]: value
+              }
+            }
+          : wafer
+      )
+    );
+  };
+
+  const handleWaferIdChange = (waferKey: string, newId: string) => {
+    setWaferCoordinates(prev =>
+      prev.map(wafer =>
+        wafer.key === waferKey
+          ? { ...wafer, id: newId }
           : wafer
       )
     );
   };
 
   const copyCurrentPosition = (
-    waferId: number, 
+    waferId: string,
     corner: "topRight" | "bottomLeft" | "both"
   ) => {
     const xValue = currentPosition.x.toFixed(3);
@@ -236,15 +262,15 @@ const TraceOverBox = () => {
     }
   };
 
-  const clearWaferCoordinates = (waferId: number) => {
-    setWaferCoordinates(prev => 
-      prev.map(wafer => 
-        wafer.id === waferId 
-          ? { 
-              ...wafer, 
+  const clearWaferCoordinates = (waferId: string) => {
+    setWaferCoordinates(prev =>
+      prev.map(wafer =>
+        wafer.id === waferId
+          ? {
+              ...wafer,
               topRight: { x: "", y: "" },
               bottomLeft: { x: "", y: "" }
-            } 
+            }
           : wafer
       )
     );
@@ -364,14 +390,31 @@ const TraceOverBox = () => {
   const updateFormFromJson = (jsonString: string) => {
     try {
       const parsedJson = JSON.parse(jsonString);
-      
-      if (parsedJson.type !== "TRACE_OVER") {
-        throw new Error("Invalid JSON: not a TRACE_OVER command");
+
+      if (parsedJson.type !== "EXECUTE_TRANSFER_FUNCTION") {
+        throw new Error("Invalid JSON: must be an EXECUTE_TRANSFER_FUNCTION command");
       }
-      
-      if (parsedJson.wafers && Array.isArray(parsedJson.wafers)) {
-        const newWafers = parsedJson.wafers.map((wafer: any, index: number) => ({
-          id: index + 1,
+
+      if (!parsedJson.parameters) {
+        throw new Error("Invalid JSON: missing parameters field");
+      }
+
+      // Extract from parameters
+      const params = typeof parsedJson.parameters === 'string'
+        ? JSON.parse(parsedJson.parameters)
+        : parsedJson.parameters;
+
+      const settings = params[0];
+      if (!settings) {
+        throw new Error("Invalid JSON: parameters array is empty");
+      }
+
+      const wafers = settings.wafers;
+
+      if (wafers && Array.isArray(wafers)) {
+        const newWafers = wafers.map((wafer: any, index: number) => ({
+          key: `wafer-${index}`,  // Add stable key for React rendering
+          id: wafer.id?.toString() || String(index + 1),  // Preserve string/number ID from JSON
           topRight: {
             x: wafer.topRight?.x?.toString() || "",
             y: wafer.topRight?.y?.toString() || ""
@@ -381,33 +424,33 @@ const TraceOverBox = () => {
             y: wafer.bottomLeft?.y?.toString() || ""
           }
         }));
-        
+
         setWaferCount(newWafers.length);
         setWaferCoordinates(newWafers);
       }
-      
-      if (typeof parsedJson.magnification === 'number') {
-        setMagnification(parsedJson.magnification);
+
+      if (typeof settings.magnification === 'number') {
+        setMagnification(settings.magnification);
       }
-      
-      if (typeof parsedJson.pics_until_focus === 'number') {
-        setPicsUntilFocus(parsedJson.pics_until_focus);
+
+      if (typeof settings.pics_until_focus === 'number') {
+        setPicsUntilFocus(settings.pics_until_focus);
       }
-      
-      if (typeof parsedJson.initial_wait_time === 'number') {
-        setInitialWaitTime(parsedJson.initial_wait_time);
+
+      if (typeof settings.initial_wait_time === 'number') {
+        setInitialWaitTime(settings.initial_wait_time);
       }
-      
-      if (typeof parsedJson.focus_wait_time === 'number') {
-        setFocusWaitTime(parsedJson.focus_wait_time);
+
+      if (typeof settings.focus_wait_time === 'number') {
+        setFocusWaitTime(settings.focus_wait_time);
       }
-      
-      if (typeof parsedJson.camera_index === 'number') {
-        setCameraIndex(parsedJson.camera_index);
+
+      if (typeof settings.camera_index === 'number') {
+        setCameraIndex(settings.camera_index);
       }
-      
-      if (typeof parsedJson.save_images === 'boolean') {
-        setSaveImages(parsedJson.save_images);
+
+      if (typeof settings.save_images === 'boolean') {
+        setSaveImages(settings.save_images);
       }
       
     } catch (error) {
@@ -464,15 +507,15 @@ const TraceOverBox = () => {
     return traceOverStatus.success ? "text-green-600" : "text-red-600";
   };
 
-  const switchCoordinates = (waferId: number) => {
-    setWaferCoordinates(prev => 
-      prev.map(wafer => 
-        wafer.id === waferId 
-          ? { 
-              ...wafer, 
+  const switchCoordinates = (waferId: string) => {
+    setWaferCoordinates(prev =>
+      prev.map(wafer =>
+        wafer.id === waferId
+          ? {
+              ...wafer,
               topRight: { ...wafer.bottomLeft },
               bottomLeft: { ...wafer.topRight }
-            } 
+            }
           : wafer
       )
     );
@@ -644,8 +687,16 @@ const TraceOverBox = () => {
             </thead>
             <tbody>
               {waferCoordinates.map((wafer) => (
-                <tr key={wafer.id} className="border-b">
-                  <td className="p-1 font-medium">{wafer.id}</td>
+                <tr key={wafer.key} className="border-b">
+                  <td className="p-1">
+                    <input
+                      type="text"
+                      value={wafer.id}
+                      onChange={(e) => handleWaferIdChange(wafer.key, e.target.value)}
+                      className="p-1 border rounded w-16 text-xs font-medium"
+                      placeholder="ID"
+                    />
+                  </td>
                   <td className="p-1">
                     <input
                       type="text"

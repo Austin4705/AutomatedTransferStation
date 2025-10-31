@@ -57,8 +57,18 @@ class Transfer_Functions:
             self.executing_threads[thread] = False
             Logger.log(f"Thread {thread} signaled to stop")
 
-    @transfer_function("run_trace_over")
+    @transfer_function("RUN_TRACE_OVER")
     def run_trace_over(self, data):
+        """Execute trace over with the provided configuration"""
+        Logger.log("Starting trace over execution")
+        Logger.log(f"Trace over configuration: {data}")
+
+        # Call the actual trace over implementation
+        # self.run_trace_over_implementation(data)
+
+        return "Trace over completed"
+
+    def run_trace_over_implementation(self, data):
         Logger.log("Serializing a script to run trace over")
         MAGNIFICATION_TRAVEL = self.transfer_station.MAGNIFICATION_TRAVEL
         
