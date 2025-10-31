@@ -66,10 +66,8 @@ export interface LogsState {
 
 export interface WaferCoordinates {
   id: number;
-  topRight: { x: string; y: string };
-  topLeft: { x: string; y: string };
-  bottomRight: { x: string; y: string };
-  bottomLeft: { x: string; y: string };
+  start: { x: string; y: string };
+  end: { x: string; y: string };
 }
 
 export interface TraceOverState {
@@ -164,10 +162,8 @@ const DEFAULT_TRACE_OVER_STATE: TraceOverState = {
   waferCoordinates: [
     {
       id: 1,
-      topRight: { x: "", y: "" },
-      topLeft: { x: "", y: "" },
-      bottomRight: { x: "", y: "" },
-      bottomLeft: { x: "", y: "" }
+      start: { x: "", y: "" },
+      end: { x: "", y: "" }
     }
   ],
   magnification: 20,

@@ -73,29 +73,29 @@ class Transfer_Functions:
 
         for wafer in data.get("wafers", [{}]):
             wafer_id = wafer.get("id")
-            bottom_left = wafer.get("bottomLeft", {})
-            bottom_x = float(bottom_left.get("x"))
-            bottom_y = float(bottom_left.get("y"))
-            top_right = wafer.get("topRight", {})
-            top_x = float(top_right.get("x"))
-            top_y = float(top_right.get("y"))
-        
-        
+            start = wafer.get("start", {})
+            start_x = float(start.get("x"))
+            start_y = float(start.get("y"))
+            end = wafer.get("end", {})
+            end_x = float(end.get("x"))
+            end_y = float(end.get("y"))
+
+
             # Calculate number of steps in each direction
-            x_steps = int(abs(top_x - bottom_x) / travel["x"])
-            y_steps = int(abs(top_y - bottom_y) / travel["y"])
+            x_steps = int(abs(end_x - start_x) / travel["x"])
+            y_steps = int(abs(end_y - start_y) / travel["y"])
 
             Logger.log(f"Creating {x_steps+1}x{y_steps+1} = {(x_steps+1)*(y_steps+1)} photos")
         
             # Generate snake-like pattern coordinates
             points = []
             going_right = True
-            current_x = bottom_x
-        
+            current_x = start_x
+
             for y in range(y_steps + 1):
-                row_y = bottom_y + (y * travel["y"])
-                sign = 1 if top_y >= bottom_y else -1
-                row_y = bottom_y + (y * travel["y"] * sign)
+                row_y = start_y + (y * travel["y"])
+                sign = 1 if end_y >= start_y else -1
+                row_y = start_y + (y * travel["y"] * sign)
                 points.append((current_x, row_y))
             
                 # Generate points for this row
@@ -113,7 +113,7 @@ class Transfer_Functions:
             # Generate commands from points
             counter = 1
             # wafer_id = self.image_container.new_wafer()
-            self.transfer_station.moveXY(bottom_x, bottom_y)
+            self.transfer_station.moveXY(start_x, start_y)
             self.transfer_station.wait(initial_wait_time)
             # self.transfer_station.autoFocus()
 
@@ -143,10 +143,10 @@ class Transfer_Functions:
         """Navigate to a specific wafer image location with optional offsets"""
         try:
             directory = data.get("directory")
-            bottomLeftXOffset = data.get("bottomLeftXOffset", 0)
-            bottomLeftYOffset = data.get("bottomLeftYOffset", 0)
-            topRightXOffset = data.get("topRightXOffset", 0)
-            topRightYOffset = data.get("topRightYOffset", 0)
+            startXOffset = data.get("startXOffset", 0)
+            startYOffset = data.get("startYOffset", 0)
+            endXOffset = data.get("endXOffset", 0)
+            endYOffset = data.get("endYOffset", 0)
             waferNumber = data.get("waferNumber")
             imageNumber = data.get("imageNumber")
 
@@ -157,10 +157,10 @@ class Transfer_Functions:
             y = image_data["y"]
 
             Logger.log(f"Goto wafer {waferNumber} image {imageNumber} at {x}, {y}")
-            Logger.log(f"Bottom Left Offset: ({bottomLeftXOffset}, {bottomLeftYOffset})")
-            Logger.log(f"Top Right Offset: ({topRightXOffset}, {topRightYOffset})")
+            Logger.log(f"Start Offset: ({startXOffset}, {startYOffset})")
+            Logger.log(f"End Offset: ({endXOffset}, {endYOffset})")
 
             # Move to the image location with offset
-            self.transfer_station.moveXY(x + bottomLeftXOffset, y + bottomLeftYOffset)
+            self.transfer_station.moveXY(x + startXOffset, y + startYOffset)
         except Exception as e:
             Logger.log_error(f"Error navigating to wafer image: {str(e)}")            
