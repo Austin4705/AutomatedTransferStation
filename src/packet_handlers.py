@@ -47,30 +47,13 @@ class PacketHandlers:
     @packet_handler("EXECUTE_TRANSFER_FUNCTION")
     def handle_execute_transfer_function(packet_type: str, data: dict):
         try:
-            print(f"Executing transfer function: {data}, {packet_type}")
-            if "transfer_function_name" not in data or transfer_function_name not in transfer_functions_dict:
-                Socket_Manager.send_error("Missing or invalid transfer function name")
-                return
-            
-            transfer_function_name = data["transfer_function_name"].strip()
-            transfer_function = transfer_functions_dict[transfer_function_name]
-
-            parameters_str = "[]"
-            if "parameters" in data:
-                parameters_str = data["parameters"].strip()
-                if not parameters_str.startswith('{') and not parameters_str.endswith('}'):
-                    parameters_str = '[' + parameters_str + ']'
-                try:
-                    parameters = json.loads(parameters_str)
-                except json.JSONDecodeError:
-                    parameters = ast.literal_eval(parameters_str)
-                if not isinstance(parameters, list):
-                    parameters = [parameters]
-
+            Logger.log(f"Executing transfer function: {data}, {packet_type}")
+            transfer_function_name = data["transfer_function_name"]
+            parameters = json.loads(data["parameters"])[0]
+            PacketHandlers.transfer_functions.run_command(transfer_function_name, parameters)
         except Exception as e:
-            Socket_Manager.send_error(f"Parameter parsing error: {str(e)}")
+            Logger.log_error(f"Error executing transfer function: {str(e)}")
             return
-        PacketHandlers.transfer_functions.run_command(transfer_function, parameters)
 
     @packet_handler("REQUEST_STATE")
     def handle_request_state(packet_type: str, data: dict):
