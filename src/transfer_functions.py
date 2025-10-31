@@ -98,7 +98,6 @@ class Transfer_Functions:
                 row_y = start_y + (y * travel["y"] * sign)
                 points.append((current_x, row_y))
             
-                # Generate points for this row
                 for x in range(1, x_steps + 1):
                     if going_right:
                         next_x = current_x - travel["x"]
@@ -106,11 +105,8 @@ class Transfer_Functions:
                         next_x = current_x + travel["x"]
                     points.append((next_x, row_y))
                     current_x = next_x
-            
-                # Change direction for next row
                 going_right = not going_right
         
-            # Generate commands from points
             counter = 1
             # wafer_id = self.image_container.new_wafer()
             self.transfer_station.moveXY(start_x, start_y)
