@@ -150,6 +150,7 @@ class Camera:
         except Exception as e:
             Logger.log_error(f"Error saving snapshot: {e}")
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
+        return self.snapshot_image
 
     def snap_image_flake_hunted(self):
         """Take a flake hunted snapshot and store it"""
@@ -164,6 +165,7 @@ class Camera:
         except Exception as e:
             Logger.log_error(f"Error saving flake hunted snapshot: {e}")
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT_FLAKE_HUNTED", "camera": self.camera_id})
+        return self.snapshot_image_flake_hunted
 
 
     def get_single_frame_as_response(self):

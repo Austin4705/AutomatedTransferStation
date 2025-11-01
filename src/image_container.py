@@ -25,9 +25,8 @@ class Image_Container:
     def __init__(self):
         self.connect_to_omero(os.getenv('OMERO_HOST'), os.getenv('OMERO_USERNAME'), os.getenv('OMERO_PASSWORD'))
         self.wafers = {}
-        self.active_chip_id = os.getenv('ACTIVE_CHIP_ID', 1)
-        self.load_chip(self.active_chip_id)
-        # self.create_chip("testing_chip_1")
+        self.wafers["default_location"] = self.load_or_create_chip_by_name("default_location")
+        self.active_chip_id = self.wafers["default_location"]
 
     def connect_to_omero(self, host: str, username: str, password: str, port: int = 4064) -> BlitzGateway:
         logging.getLogger("omero").setLevel(logging.ERROR)
@@ -172,19 +171,22 @@ class Image_Container:
         image = self.conn.getObject("Image", image_id)
 
         if metadata.get('key_value_pairs'):
+            # Convert all values to strings for OMERO MapAnnotation
+            key_value_pairs = [(str(k), str(v)) for k, v in metadata['key_value_pairs'].items()]
+
             existing_map_ann = None
             for ann in image.listAnnotations():
                 if isinstance(ann, omero.gateway.MapAnnotationWrapper):
                     existing_map_ann = ann
                     break
             if existing_map_ann:
-                existing_map_ann.setValue(list(metadata['key_value_pairs'].items()))
+                existing_map_ann.setValue(key_value_pairs)
                 existing_map_ann.save()
             else:
                 map_ann = omero.gateway.MapAnnotationWrapper(self.conn)
                 namespace = omero.constants.metadata.NSCLIENTMAPANNOTATION
                 map_ann.setNs(namespace)
-                map_ann.setValue(list(metadata['key_value_pairs'].items()))
+                map_ann.setValue(key_value_pairs)
                 map_ann.save()
                 image.linkAnnotation(map_ann)
 
@@ -252,6 +254,9 @@ class Image_Container:
             raise ValueError(f"Dataset {dataset_id} not found")
 
         if metadata.get('key_value_pairs'):
+            # Convert all values to strings for OMERO MapAnnotation
+            key_value_pairs = [(str(k), str(v)) for k, v in metadata['key_value_pairs'].items()]
+
             existing_map_ann = None
             for ann in dataset.listAnnotations():
                 if isinstance(ann, omero.gateway.MapAnnotationWrapper):
@@ -259,13 +264,13 @@ class Image_Container:
                     break
 
             if existing_map_ann:
-                existing_map_ann.setValue(list(metadata['key_value_pairs'].items()))
+                existing_map_ann.setValue(key_value_pairs)
                 existing_map_ann.save()
             else:
                 map_ann = omero.gateway.MapAnnotationWrapper(self.conn)
                 namespace = omero.constants.metadata.NSCLIENTMAPANNOTATION
                 map_ann.setNs(namespace)
-                map_ann.setValue(list(metadata['key_value_pairs'].items()))
+                map_ann.setValue(key_value_pairs)
                 map_ann.save()
                 dataset.linkAnnotation(map_ann)
 
@@ -328,3 +333,21 @@ class Image_Container:
 
     def save_flake_hunted_snapshot(self, chip_id: int, snapshot: np.ndarray):
         return self.upload_image(snapshot, self.wafers[chip_id]['dataset_flake_hunted_snapshot_id'])
+
+    def load_or_create_chip_by_name(self, chip_name: str) -> int:
+        for project in self.conn.getObjects("Project"):
+            if project.getName() == chip_name:
+                chip_id = project.getId()
+                if chip_id not in self.wafers:
+                    self.load_chip(chip_id)
+                return chip_id
+
+        # If not found, create a new chip
+        chip_id = self.create_chip(chip_name)
+        return chip_id
+
+    def create_new_collection(self, chip_id: int, collection_name: str="default"):
+        if collection_name == "default":
+            collection_name = f"collection_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        collection_id = self.create_dataset(collection_name, project_id=chip_id)
+        return collection_id
