@@ -110,6 +110,11 @@ class Transfer_Functions:
 
             counter = 1
             for x, y in points:
+                while True:
+                    if Transfer_Functions.execute:
+                        break
+                    time.sleep(0.01)
+                    
                 self.transfer_station.moveXY(x, y)
                 if counter % pics_until_focus == 0:
                     # self.transfer_station.autoFocus(camera_index)
@@ -131,6 +136,7 @@ class Transfer_Functions:
                     self.image_container.apply_metadata_to_image(image_id, image_metadata)
 
                 counter += 1
+                
 
     @transfer_function("goto_wafer_image")
     def goto_wafer_image(self, data: dict):

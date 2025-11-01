@@ -29,6 +29,7 @@ if __name__ == "__main__":
     Logger.log("Detecting and initializing cameras...")
     camera_type = os.getenv('CAMERA_TYPE', os.getenv('CAMERA_TYPE', 'virtual'))
     cameras = Camera.initialize_all_cameras(IMAGE_CONTAINER, camera_type)
+    Logger.log(f"Initialized {len(Camera.global_list)} cameras: {list(Camera.global_list.keys())}")
     
     Logger.log("Initializing Flask server")
     flask_server_thread = threading.Thread(target=web_server.startup_flask_app)
@@ -43,17 +44,11 @@ if __name__ == "__main__":
     socket_manager_thread.daemon = True
     socket_manager_thread.start()
 
-    Logger.log(f"System initialized with {len(Camera.global_list)} cameras: {list(Camera.global_list.keys())}")
-    Logger.log("Press Enter to exit...")
+    Logger.log("System Initialized. Press Enter to exit...")
     input()
-    for thread in threading.enumerate():
-        if thread.daemon:
-            thread.join()
-    for thread in threading.enumerate():
-        print(thread.name)
-        print(thread.daemon)
+    Logger.log("Stopping execution")
+    PacketHandlers.transfer_functions.stop_execution()
     Logger.save_logs()
-    print("Done")
-    quit()
-    # exit(0)
-
+    for camera in list(Camera.global_list.values()):
+        camera.cleanup()
+    sys.exit(0)
