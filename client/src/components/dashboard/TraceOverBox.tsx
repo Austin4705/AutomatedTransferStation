@@ -72,22 +72,28 @@ const TraceOverBox = () => {
   }, [waferCount]);
 
   useEffect(() => {
-    const wafersArray = waferCoordinates.map(wafer => ({
-      id: wafer.id,
-      start: {
-        x: wafer.start.x ? parseFloat(wafer.start.x) : "",
-        y: wafer.start.y ? parseFloat(wafer.start.y) : ""
-      },
-      end: {
-        x: wafer.end.x ? parseFloat(wafer.end.x) : "",
-        y: wafer.end.y ? parseFloat(wafer.end.y) : ""
-      }
-    }));
+    const wafersArray = waferCoordinates.map(wafer => {
+      const waferData: any = {
+        id: wafer.id
+      };
 
-    const validWafer = wafersArray.find(wafer =>
-      wafer.start.x !== "" && wafer.start.y !== "" &&
-      wafer.end.x !== "" && wafer.end.y !== ""
-    );
+      // Only include coordinates if they have values
+      if (wafer.start.x || wafer.start.y) {
+        waferData.start = {
+          x: wafer.start.x ? parseFloat(wafer.start.x) : "",
+          y: wafer.start.y ? parseFloat(wafer.start.y) : ""
+        };
+      }
+
+      if (wafer.end.x || wafer.end.y) {
+        waferData.end = {
+          x: wafer.end.x ? parseFloat(wafer.end.x) : "",
+          y: wafer.end.y ? parseFloat(wafer.end.y) : ""
+        };
+      }
+
+      return waferData;
+    });
 
     const traceOverConfig = {
       wafers: wafersArray,
@@ -99,6 +105,7 @@ const TraceOverBox = () => {
       save_images: saveImages
     };
 
+    // Display format - not stringified parameters for readability
     const output: any = {
       type: "EXECUTE_TRANSFER_FUNCTION",
       transfer_function_name: "RUN_TRACE_OVER",

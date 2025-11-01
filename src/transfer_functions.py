@@ -80,18 +80,12 @@ class Transfer_Functions:
             end_x = float(end.get("x"))
             end_y = float(end.get("y"))
 
-
-            # Calculate number of steps in each direction
             x_steps = int(abs(end_x - start_x) / travel["x"])
             y_steps = int(abs(end_y - start_y) / travel["y"])
-
             Logger.log(f"Creating {x_steps+1}x{y_steps+1} = {(x_steps+1)*(y_steps+1)} photos")
-        
-            # Generate snake-like pattern coordinates
             points = []
             going_right = True
             current_x = start_x
-
             for y in range(y_steps + 1):
                 row_y = start_y + (y * travel["y"])
                 sign = 1 if end_y >= start_y else -1
@@ -107,12 +101,14 @@ class Transfer_Functions:
                     current_x = next_x
                 going_right = not going_right
         
-            counter = 1
-            # wafer_id = self.image_container.new_wafer()
+            if save_images:
+                wafer_folder = self.image_container.load_or_create_chip_by_name(wafer_id)
+                collection_id = self.image_container.create_new_collection(wafer_folder)
             self.transfer_station.moveXY(start_x, start_y)
             self.transfer_station.wait(initial_wait_time)
             # self.transfer_station.autoFocus()
 
+            counter = 1
             for x, y in points:
                 self.transfer_station.moveXY(x, y)
                 if counter % pics_until_focus == 0:
@@ -120,18 +116,20 @@ class Transfer_Functions:
                     pass
 
                 self.transfer_station.wait(wait_time)
-                image = Camera.global_list[camera_index].snap_image()
-                # if save_images:
-                #     image_metadata = {
-                #         "wafer_id": wafer_id,
-                #         "camera_index": camera_index,
-                #         "x": x,
-                #         "y": y,
-                #         "sequence": counter,
-                #         "timestamp": time.time(),
-                #         "magnification": magnification,
-                #     }
-                #     self.image_container.add_image(image, wafer_id, image_metadata)
+                image = Camera.global_list[camera_index].get_frame()
+                if save_images:
+                    image_id = self.image_container.upload_image(image, dataset_id=collection_id, image_name=f"image_{counter}")
+                    image_metadata = {"key_value_pairs": {
+                        "wafer_id": wafer_id,
+                        "camera_index": camera_index,
+                        "x": x,
+                        "y": y,
+                        "sequence": counter,
+                        "timestamp": time.time(),
+                        "magnification": magnification,
+                    }}
+                    self.image_container.apply_metadata_to_image(image_id, image_metadata)
+
                 counter += 1
 
     @transfer_function("goto_wafer_image")
