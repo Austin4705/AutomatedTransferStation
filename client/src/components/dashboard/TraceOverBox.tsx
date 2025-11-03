@@ -555,7 +555,7 @@ const TraceOverBox = () => {
               type="number"
               min="1"
               value={picsUntilFocus}
-              onChange={(e) => setPicsUntilFocus(Math.max(1, parseInt(e.target.value) || 300))}
+              onChange={(e) => setPicsUntilFocus(Math.max(1, parseInt(e.target.value) || 20))}
               className="p-1 border rounded w-16 text-center"
             />
           </div>
