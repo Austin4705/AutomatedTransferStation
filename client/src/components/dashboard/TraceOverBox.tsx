@@ -17,11 +17,6 @@ interface Position {
   [key: string]: number;
 }
 
-interface PositionUpdateTarget {
-  waferId: string;
-  corner: "start" | "end" | "both";
-}
-
 interface TraceOverResult {
   success: boolean;
   message: string;
@@ -41,7 +36,6 @@ const TraceOverBox = () => {
     }
   ]);
   const [jsonOutput, setJsonOutput] = useState<string>("");
-  const positionUpdateTargetRef = useRef<PositionUpdateTarget | null>(null);
   const [traceOverStatus, setTraceOverStatus] = useState<TraceOverResult | null>(null);
   const [magnification, setMagnification] = useState<number>(20);
   const [picsUntilFocus, setPicsUntilFocus] = useState<number>(300);
@@ -528,47 +522,6 @@ const TraceOverBox = () => {
     );
   };
 
-  const handleCancelExecution = () => {
-    sendJson({
-      type: "CANCEL_EXECUTION"
-    });
-        
-    setTimeout(() => {
-      setTraceOverStatus(null);
-    }, 3000);
-  };
-
-  const handleEnableTraceOverExecution = () => {
-    sendJson({
-      type: "EXECUTE_TRACE_OVER",
-      state: true
-    });
-    
-    setTraceOverStatus({
-      success: true,
-      message: "Trace over execution enabled"
-    });
-    
-    setTimeout(() => {
-      setTraceOverStatus(null);
-    }, 3000);
-  };
-
-  const handleDisableTraceOverExecution = () => {
-    sendJson({
-      type: "EXECUTE_TRACE_OVER",
-      state: false
-    });
-    
-    setTraceOverStatus({
-      success: true,
-      message: "Trace over execution paused"
-    });
-    
-    setTimeout(() => {
-      setTraceOverStatus(null);
-    }, 3000);
-  };
 
   return (
     <div className="trace-over-box">
@@ -831,30 +784,12 @@ const TraceOverBox = () => {
           </div>
         )}
 
-        <div className="trace-actions mt-4 flex space-x-2">
-          <button 
+        <div className="trace-actions mt-4">
+          <button
             className="trace-button px-4 py-2 rounded text-white bg-green-600 hover:bg-green-700"
             onClick={handleTraceOver}
           >
             Send Trace Over Command
-          </button>
-          <button 
-            className="trace-button px-4 py-2 rounded text-white bg-red-600 hover:bg-red-700"
-            onClick={handleCancelExecution}
-          >
-            Cancel Execution
-          </button>
-          <button 
-            className="trace-button px-4 py-2 rounded text-white bg-green-500 hover:bg-green-600"
-            onClick={handleEnableTraceOverExecution}
-          >
-            Enable Trace Over Execution
-          </button>
-          <button 
-            className="trace-button px-4 py-2 rounded text-white bg-orange-500 hover:bg-orange-600"
-            onClick={handleDisableTraceOverExecution}
-          >
-            Disable Trace Over Execution
           </button>
         </div>
       </div>
