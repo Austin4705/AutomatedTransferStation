@@ -249,8 +249,15 @@ class Transfer_Functions:
         Logger.log("Auto Focus")
     # def blank(self, data: dict):
         """Auto focus the camera at the current position"""
+
         original_z_pos = transfer_station.posZ()
-        original_edge_count = Autofocus.get_edge_count(camera.get_frame())
+        frame = camera.get_frame()
+
+        if not Autofocus.exist_color_features(frame):
+            Logger.log("No color features exist")
+            return
+
+        original_edge_count = Autofocus.get_edge_count(frame)
 
         def scan_z_range(original_z_pos, z_range, n_samples, break_if_found):
             edge_counts = []
@@ -260,11 +267,11 @@ class Transfer_Functions:
             for i in range(n_samples):
                 z_step = z_range / n_samples
                 transfer_station.moveZRel(z_step)
-                transfer_station.wait(0.03)
+                transfer_station.wait(0.01)
                 edge_count = Autofocus.get_edge_count(camera.get_frame())
                 edge_counts.append((edge_count, original_z_pos-z_range/2 + (i * z_step)))
                 Logger.log(f"i: {i}, Z: {original_z_pos-z_range/2 + (i * z_step)}, Edge Count: {edge_count}")
-                if break_if_found and edge_count > 100:
+                if break_if_found and edge_count > 10:
                     break
 
             best_focus = max(edge_counts, key=lambda x: x[0] if isinstance(x, tuple) else x)
@@ -282,10 +289,10 @@ class Transfer_Functions:
             Logger.log(f"Original edge count is at ({original_edge_count})")
             best_focus = scan_z_range(original_z_pos, 0.5, 20, True)
             transfer_station.wait(0.5)
-            scan_z_range(best_focus[1], 0.1, 10, False)
+            scan_z_range(best_focus[1], 0.1, 20, False)
         else:
             Logger.log(f"Original edge count is greater than 0 ({original_edge_count})")
-            scan_z_range(original_z_pos, 0.1, 10, False)
+            scan_z_range(original_z_pos, 0.1, 20, False)
 
     #Takes Seconds
     def time_stamp():
