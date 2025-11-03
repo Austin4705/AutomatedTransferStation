@@ -87,16 +87,9 @@ class Image_Container:
         )
 
         img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB)
-
-        # Debug: Print a sample pixel before transpose
-        print(f"Before transpose - pixel [500,500]: {img_array[500, 500]}")
-
         img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
         size_c, size_y, size_x = img_array.shape
         size_z, size_t = 1, 1
-
-        # Debug: Print channel values at same location after transpose
-        print(f"After transpose - channels at [500,500]: R={img_array[0, 500, 500]}, G={img_array[1, 500, 500]}, B={img_array[2, 500, 500]}")
 
         img_copy = np.ascontiguousarray(img_array)
         def plane_gen():
@@ -119,7 +112,26 @@ class Image_Container:
         if metadata:
             self.add_metadata(image_id, metadata)
 
+        # Set rendering settings to use full 0-255 range for all channels
+        self.set_rendering_settings(image_id)
+
         return image_id
+
+    def set_rendering_settings(self, image_id: int):
+        """Set rendering settings for an image to use full 0-255 range for all channels"""
+        image = self.conn.getObject("Image", image_id)
+        if not image:
+            raise ValueError(f"Image {image_id} not found")
+
+        # Set rendering settings for each channel
+        image.setActiveChannels(list(range(1, image.getSizeC() + 1)))
+        for idx, channel in enumerate(image.getChannels()):
+            # Set the rendering window to 0-255 for each channel
+            channel.setWindowStart(0.0)
+            channel.setWindowEnd(255.0)
+
+        # Save the rendering settings
+        image.saveDefaults()
     
     def download_image(self, image_id: int) -> np.ndarray:
         """
@@ -140,7 +152,8 @@ class Image_Container:
         for c in range(sizeC):
             plane = pixels.getPlane(0, c, 0)
             data[:, :, c] = plane
-        return cv2.cvtColor(np.ascontiguousarray(data), cv2.COLOR_BGR2RGB)
+        # Data from Omero is in RGB format, convert to BGR for OpenCV
+        return cv2.cvtColor(np.ascontiguousarray(data), cv2.COLOR_RGB2BGR)
        
     
     def metadata_serialize(self, image_id: int) -> Dict:
