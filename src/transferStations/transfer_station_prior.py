@@ -4,6 +4,7 @@ import threading
 from queue import Queue
 import time
 import os
+import re
 
 from logger import Logger
 
@@ -21,6 +22,23 @@ class TransferStationPrior(Transfer_Station):
         return int(x * 100000)
 
     def _output_to_internal(self, x):
+        if x is None:
+            raise ValueError("No response received from Prior stage")
+
+        if isinstance(x, bytes):
+            x = x.decode('ascii', errors='ignore')
+
+        if isinstance(x, str):
+            x = x.strip()
+            for delimiter in ("\r", "\n"):
+                if delimiter in x:
+                    x = x.split(delimiter, 1)[0]
+            match = re.search(r"-?\d+(?:\.\d+)?", x)
+            if match:
+                x = match.group(0)
+            else:
+                raise ValueError(f"Unable to parse numeric value from response: {x!r}")
+
         return float(x) / 100000
 
     def moveX(self, X):
@@ -34,6 +52,18 @@ class TransferStationPrior(Transfer_Station):
 
     def moveXY(self, x, y):
         self._send_command(f"G {self._internal_to_output(x)} {self._internal_to_output(y)}")
+
+    def moveXRel(self, X):
+        self._send_command(f"GR {self._internal_to_output(X)} 0")
+
+    def moveYRel(self, Y):
+        self._send_command(f"GR 0 {self._internal_to_output(Y)}")
+
+    def moveZRel(self, Z):
+        self._send_command(f"GR 0 0 {self._internal_to_output(Z)}")
+
+    def moveXYRel(self, X, Y):
+        self._send_command(f"GR {self._internal_to_output(X)} {self._internal_to_output(Y)}")
 
     def posX(self):
         return self._output_to_internal(self._send_command("PX"))

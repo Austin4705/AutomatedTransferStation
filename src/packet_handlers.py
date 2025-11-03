@@ -62,7 +62,8 @@ class PacketHandlers:
             "state": {
                 "position": {
                     "x": PacketHandlers.transfer_station.posX(),
-                    "y": PacketHandlers.transfer_station.posY()
+                    "y": PacketHandlers.transfer_station.posY(),
+                    "z": PacketHandlers.transfer_station.posZ(),
                 }
             }
         }

@@ -134,11 +134,11 @@ class Camera:
     def get_black_frame(self):
         return np.zeros((480, 640, 3), dtype=np.uint8)
 
-    def save_image(self, frame):
+    def save_image(frame):
         """Save an image to disk"""
         try:
             cv2.imwrite(
-                f"../{Camera.IMAGE_REPO_NAME}/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.jpg",
+                f"../Photos/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.jpg",
                 frame,
             )
         except Exception as e:

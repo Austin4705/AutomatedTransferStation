@@ -136,6 +136,7 @@ class Transfer_Functions:
                 self.transfer_station.wait(wait_time)
                 image = Camera.global_list[camera_index].get_frame()
                 if save_images:
+                    Camera.save_image(image)
                     image_id = self.image_container.upload_image(image, dataset_id=collection_id, image_name=f"image_{counter}")
                     image_metadata = {"key_value_pairs": {
                         "wafer_id": wafer_id,
@@ -181,55 +182,61 @@ class Transfer_Functions:
     @transfer_function("MOVEX")
     def move_x(self, data: dict):
         """Move to absolute X position"""
-        try:
-            x = data.get("x")
-            if x is None:
-                Logger.log_error("moveX: Missing 'x' parameter")
-                return
-            Logger.log(f"Moving to X: {x}")
-            self.transfer_station.moveX(x)
-        except Exception as e:
-            Logger.log_error(f"Error moving X: {str(e)}")
+        x = data.get("x")
+        Logger.log(f"Moving to X: {x}")
+        self.transfer_station.moveX(x)
 
     @transfer_function("MOVEY")
     def move_y(self, data: dict):
         """Move to absolute Y position"""
-        try:
-            y = data.get("y")
-            if y is None:
-                Logger.log_error("moveY: Missing 'y' parameter")
-                return
-            Logger.log(f"Moving to Y: {y}")
-            self.transfer_station.moveY(y)
-        except Exception as e:
-            Logger.log_error(f"Error moving Y: {str(e)}")
+        y = data.get("y")
+        Logger.log(f"Moving to Y: {y}")
+        self.transfer_station.moveY(y)
 
     @transfer_function("MOVEZ")
     def move_z(self, data: dict):
         """Move to absolute Z position"""
-        try:
-            z = data.get("z")
-            if z is None:
-                Logger.log_error("moveZ: Missing 'z' parameter")
-                return
-            Logger.log(f"Moving to Z: {z}")
-            self.transfer_station.moveZ(z)
-        except Exception as e:
-            Logger.log_error(f"Error moving Z: {str(e)}")
+        z = data.get("z")
+        Logger.log(f"Moving to Z: {z}")
+        self.transfer_station.moveZ(z)
 
     @transfer_function("MOVEXY")
     def move_xy(self, data: dict):
         """Move to absolute XY position"""
-        try:
-            x = data.get("x")
-            y = data.get("y")
-            if x is None or y is None:
-                Logger.log_error("moveXY: Missing 'x' or 'y' parameter")
-                return
-            Logger.log(f"Moving to XY: ({x}, {y})")
-            self.transfer_station.moveXY(x, y)
-        except Exception as e:
-            Logger.log_error(f"Error moving XY: {str(e)}")
+        x = data.get("x")
+        y = data.get("y")
+        Logger.log(f"Moving to XY: ({x}, {y})")
+        self.transfer_station.moveXY(x, y)
+
+    @transfer_function("MOVEXREL")
+    def move_x_rel(self, data: dict):
+        """Move relative X position"""
+        x = data.get("x")
+        Logger.log(f"Moving relative X: {x}")
+        self.transfer_station.moveXRel(x)
+
+    @transfer_function("MOVEYREL")
+    def move_y_rel(self, data: dict):
+        """Move relative Y position"""
+        y = data.get("y")
+        Logger.log(f"Moving relative Y: {y}")
+        self.transfer_station.moveYRel(y)
+
+    @transfer_function("MOVEZREL")
+    def move_z_rel(self, data: dict):
+        """Move relative Z position"""
+        z = data.get("z")
+        Logger.log(f"Moving relative Z: {z}")
+        self.transfer_station.moveZRel(z)
+
+    @transfer_function("MOVEXYREL")
+    def move_xy_rel(self, data: dict):
+        """Move relative XY position"""
+        x = data.get("x")
+        y = data.get("y")
+        Logger.log(f"Moving relative XY: ({x}, {y})")
+        self.transfer_station.moveXYRel(x, y)
+
     
     @transfer_function("AUTO_FOCUS")
     def auto_focus(self, data: dict):
@@ -240,73 +247,43 @@ class Transfer_Functions:
         camera = Camera.global_list[camera_index]
         transfer_station = self.transfer_station
         Logger.log("Auto Focus-V")
-        original_pos_z = transfer_station.posZ()
-        current_frame = camera.get_frame()
-        # Logger.log(Autofocus.get_color_features(current_frame))
-        # Logger.log(Autofocus.exist_color_features(current_frame))
-        if not Autofocus.exist_color_features(current_frame):
-            Logger.log("Not enough edges to auto focus")
-            return
-        # Sample points on either side of current Z position
-        n_samples = 20
-        z_range = 0.75
-        z_step = z_range / n_samples
-        
-        edge_counts = []
-        # Sample points above current position
-        def initial_scan():
-            prev_z_pos = transfer_station.posZ()
-            for i in range(n_samples):
-                z = prev_z_pos + (i * z_step)
-                transfer_station.moveZ(z)
-                transfer_station.wait(0.03)
+        original_z_pos = transfer_station.posZ()
+        original_edge_count = Autofocus.get_edge_count(camera.get_frame())
 
-                frame = camera.get_frame()
-                edge_count = Autofocus.get_edge_count(frame)
-                edge_counts.append((z, edge_count))
+        def scan_z_range(original_z_pos, z_range, n_samples, break_if_found):
+            edge_counts = []
+            print(f"Moving to Z: {original_z_pos}")
+            transfer_station.moveZ(original_z_pos-z_range/2)
             transfer_station.wait(0.1)
-        
-        #Go above and below 
-        initial_scan()
-        z_step = -z_step
-        initial_scan()
-        initial_scan()
-        z_step = -z_step
-        initial_scan()
-        z_step = -z_step
+            for i in range(n_samples):
+                z_step = z_range / n_samples
+                transfer_station.moveZRel(z_step)
+                transfer_station.wait(0.03)
+                edge_count = Autofocus.get_edge_count(camera.get_frame())
+                edge_counts.append((edge_count, original_z_pos-z_range/2 + (i * z_step)))
+                Logger.log(f"i: {i}, Z: {original_z_pos-z_range/2 + (i * z_step)}, Edge Count: {edge_count}")
+                if break_if_found and edge_count > 100:
+                    break
 
-        # Find highest and lowest nonzero focus positions
-        nonzero_scores = [(z, score) for z, score in edge_counts if score > 0]
-        if not nonzero_scores:
-            Logger.log("No good focus scores found")
-            return
-        highest_z = max(nonzero_scores, key=lambda x: x[0])[0]
-        lowest_z = min(nonzero_scores, key=lambda x: x[0])[0]
+            best_focus = max(edge_counts, key=lambda x: x[0] if isinstance(x, tuple) else x)
+            Logger.log(f"Best focus i: {i}, Z: {best_focus[0]}, Edge count: {best_focus[1]}")
+            transfer_station.wait(0.1)
+            if(best_focus[0] == 0):
+                Logger.log("Best focus is at 0")
+                transfer_station.moveZ(original_z_pos)
+                return (0, original_z_pos)
+            else:
+                transfer_station.moveZ(best_focus[1])
+                return best_focus
 
-        Logger.log(edge_counts)
-        self.wait(2)
-
-        # Sweep from highest to lowest with finer resolution
-        fine_z_step = 0.001  # 0.001 mm resolution
-        fine_edge_counts = []
-        
-        current_z = highest_z
-        while current_z >= lowest_z:
-            transfer_station.moveZ(current_z)
-            transfer_station.wait(0.01)
-            frame = camera.get_frame()
-            edge_count = Autofocus.get_edge_count(frame)
-            fine_edge_counts.append((current_z, edge_count))
-            current_z -= fine_z_step
-
-        Logger.log(fine_edge_counts)
-            
-        # Find z position with highest focus score
-        best_z = max(fine_edge_counts, key=lambda x: x[1])[0]
-            
-        # Move to position with best focus
-        transfer_station.moveZ(best_z)
-        transfer_station.wait(0.1)
+        if(original_edge_count == 0):
+            Logger.log(f"Original edge count is at ({original_edge_count})")
+            best_focus = scan_z_range(original_z_pos, 0.5, 20, True)
+            transfer_station.wait(0.5)
+            scan_z_range(best_focus[1], 0.1, 10, False)
+        else:
+            Logger.log(f"Original edge count is greater than 0 ({original_edge_count})")
+            scan_z_range(original_z_pos, 0.1, 10, False)
 
     #Takes Seconds
     def time_stamp():

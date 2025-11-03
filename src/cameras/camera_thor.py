@@ -59,7 +59,7 @@ class Camera_Thor(Camera):
             
             self.frame_width = self.cam.image_width_pixels
             self.frame_height = self.cam.image_height_pixels
-            self.cam.exposure_time_us = os.getenv('CAMERA_EXPOSURE_TIME_US', 10000)
+            self.cam.exposure_time_us = os.getenv('CAMERA_EXPOSURE_TIME_US', 5000)
             self.cam.image_poll_timeout_ms = 1000
             self.cam.frames_per_trigger_zero_for_unlimited = 0
             self.cam.arm(2)
@@ -117,10 +117,10 @@ class Camera_Thor(Camera):
                 self.fps_update_time = current_time
             height, width = color_image.shape[:2]
             color_image = cv2.resize(color_image, (int(width/2), int(height/2)), interpolation=cv2.INTER_AREA)
-            cv2.putText(color_image, f"FPS: {self.fps_display:.1f}", (10, 30),
-            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(color_image, f"Frame: {self.frame_count}", (10, 70),
-            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            # cv2.putText(color_image, f"FPS: {self.fps_display:.1f}", (10, 30),
+            # cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            # cv2.putText(color_image, f"Frame: {self.frame_count}", (10, 70),
+            # cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             # print(f"FPS: {self.fps_display:.1f}, Frame: {self.frame_count}")
 
             return True, color_image
