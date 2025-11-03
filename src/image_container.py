@@ -67,7 +67,7 @@ class Image_Container:
 
 
         
-    def upload_image(self, img_array: np.ndarray | list | tuple, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None, include_time_name: bool = True, max_dimension: int = 2048) -> int:
+    def upload_image(self, img_array: np.ndarray | list | tuple, dataset_id: Optional[int] = None, image_name: str = "image", metadata: Optional[Dict] = None, include_time_name: bool = True, max_dimension: int = 2048, save_locally: bool = False) -> int:
 
         height, width = img_array.shape[:2]
         if max_dimension is not None and max(height, width) > max_dimension:
@@ -81,10 +81,11 @@ class Image_Container:
         if include_time_name:
             image_name = f"{image_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         
-        cv2.imwrite(
-            f"../Photos/{image_name}.png",
-            img_array,
-        )
+        if save_locally:
+            cv2.imwrite(
+                f"../Photos/{image_name}.png",
+                img_array,
+            )
 
         img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB)
         img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
