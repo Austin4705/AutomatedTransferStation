@@ -79,7 +79,7 @@ class Camera:
         self.snapshot_image = self.get_black_frame()
         self.snapshot_image_flake_hunted = self.get_black_frame()
         self.capture_thread = None
-        self.whitebalance_enabled = True
+        self.whitebalance_enabled = False
 
         start_time = time.time()
         self.frame_count = 0

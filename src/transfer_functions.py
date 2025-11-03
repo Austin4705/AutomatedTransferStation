@@ -98,7 +98,7 @@ class Transfer_Functions:
             y_steps = int(abs(end_y - start_y) / travel["y"])
             Logger.log(f"Creating {x_steps+1}x{y_steps+1} = {(x_steps+1)*(y_steps+1)} photos")
             points = []
-            going_right = True
+            going_right = start_x >= end_x
             current_x = start_x
             for y in range(y_steps + 1):
                 row_y = start_y + (y * travel["y"])
@@ -124,6 +124,7 @@ class Transfer_Functions:
 
             counter = 1
             for x, y in points:
+                Logger.log(f"Transfer Functions executing: {Transfer_Functions.execute}")
                 while True:
                     if Transfer_Functions.execute:
                         break
@@ -136,6 +137,10 @@ class Transfer_Functions:
 
                 self.transfer_station.wait(wait_time)
                 image = camera.get_frame()
+                if Autofocus.exist_color_features(image) and Autofocus.get_edge_count(image) < 10:
+                    self.auto_focus(camera, self.transfer_station)
+                    pass
+
                 if save_images:
                     image_id = self.image_container.upload_image(image, dataset_id=collection_id, image_name=f"image_{counter}")
                     image_metadata = {"key_value_pairs": {
@@ -236,7 +241,6 @@ class Transfer_Functions:
         y = data.get("y")
         Logger.log(f"Moving relative XY: ({x}, {y})")
         self.transfer_station.moveXYRel(x, y)
-
     
     @transfer_function("AUTO_FOCUS")
     def auto_focus_caller(self, data: dict):
@@ -259,28 +263,29 @@ class Transfer_Functions:
 
         original_edge_count = Autofocus.get_edge_count(frame)
 
-        def scan_z_range(original_z_pos, z_range, n_samples, break_if_found):
+        def scan_z_range(center_z_pos, z_range, n_samples, break_if_found):
             edge_counts = []
-            print(f"Moving to Z: {original_z_pos}")
-            transfer_station.moveZ(original_z_pos-z_range/2)
+            print(f"Moving from {center_z_pos} to Scanning Z range from {center_z_pos-z_range/2} to {center_z_pos+z_range/2}")
+            transfer_station.moveZ(center_z_pos-z_range/2)
             transfer_station.wait(0.1)
             for i in range(n_samples):
                 z_step = z_range / n_samples
                 transfer_station.moveZRel(z_step)
-                transfer_station.wait(0.01)
+                transfer_station.wait(0.005)
                 edge_count = Autofocus.get_edge_count(camera.get_frame())
-                edge_counts.append((edge_count, original_z_pos-z_range/2 + (i * z_step)))
-                Logger.log(f"i: {i}, Z: {original_z_pos-z_range/2 + (i * z_step)}, Edge Count: {edge_count}")
+                z_pos = center_z_pos-z_range/2 + (i * z_step)
+                edge_counts.append((edge_count, z_pos))
+                Logger.log(f"i: {i}, Z: {z_pos}, Edge Count: {edge_count}")
                 if break_if_found and edge_count > 10:
                     break
 
-            best_focus = max(edge_counts, key=lambda x: x[0] if isinstance(x, tuple) else x)
-            Logger.log(f"Best focus i: {i}, Z: {best_focus[0]}, Edge count: {best_focus[1]}")
+            best_focus = max(edge_counts, key=lambda x: x[0])
+            Logger.log(f"Best focus i: {i}, Z: {best_focus[1]}, Edge count: {best_focus[0]}")
             transfer_station.wait(0.1)
             if(best_focus[0] == 0):
                 Logger.log("Best focus is at 0")
-                transfer_station.moveZ(original_z_pos)
-                return (0, original_z_pos)
+                transfer_station.moveZ(center_z_pos)
+                return (0, center_z_pos)
             else:
                 transfer_station.moveZ(best_focus[1])
                 return best_focus
@@ -288,7 +293,6 @@ class Transfer_Functions:
         if(original_edge_count == 0):
             Logger.log(f"Original edge count is at ({original_edge_count})")
             best_focus = scan_z_range(original_z_pos, 0.5, 20, True)
-            transfer_station.wait(0.5)
             scan_z_range(best_focus[1], 0.1, 20, False)
         else:
             Logger.log(f"Original edge count is greater than 0 ({original_edge_count})")
