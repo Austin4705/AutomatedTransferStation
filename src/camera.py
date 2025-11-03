@@ -119,8 +119,8 @@ class Camera:
                 if not ret: 
                     continue
                 with self.frame_lock:
-                    # self.current_frame = CV_Functions.whitebalance(frame)
-                    self.current_frame = frame
+                    self.current_frame = CV_Functions.whitebalance(frame)
+                    # self.current_frame = frame
                 time.sleep(0.01)
                 
             except Exception as e:
