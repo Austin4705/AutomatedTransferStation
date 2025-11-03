@@ -104,6 +104,9 @@ class Camera:
         self.is_active = True
         pass
 
+    def set_exposure_time(self, exposure_time: int):
+        Logger.log(f"Setting exposure time for camera {self.camera_id} to {exposure_time}")
+
     def read_frame(self):
         return True, self.get_black_frame()
 

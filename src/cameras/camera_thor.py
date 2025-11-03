@@ -129,6 +129,9 @@ class Camera_Thor(Camera):
             self.is_active = False
             return False, None
 
+    def set_exposure_time(self, exposure_time: int):
+        self.cam.exposure_time_us = exposure_time
+
     def get_black_frame(self):
         return np.zeros((480, 640, 3), dtype=np.uint8)
 
