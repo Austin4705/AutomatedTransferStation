@@ -10,6 +10,7 @@ from logger import Logger
 from autofocus import Autofocus
 from socket_manager import Socket_Manager
 from image_container import Image_Container
+from cv_functions import CV_Functions
 
 class Camera:
     image_container: Image_Container = None
@@ -118,7 +119,7 @@ class Camera:
                 if not ret: 
                     continue
                 with self.frame_lock:
-                    self.current_frame = frame
+                    self.current_frame = CV_Functions.whitebalance(frame)
                 time.sleep(0.01)
                 
             except Exception as e:
