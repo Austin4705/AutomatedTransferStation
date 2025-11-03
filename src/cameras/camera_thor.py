@@ -74,12 +74,6 @@ class Camera_Thor(Camera):
             self.mono_to_color_processor.output_format = FORMAT.BGR_PIXEL
             self.cam.issue_software_trigger()
             
-            start_time = time.time()
-            self.frame_count = 0
-            self.last_fps_frame_count = 0
-            self.fps_update_time = start_time
-            self.start_time = start_time
-            self.fps_display = 0
             self.is_active = True
             print(f"ThorLabs camera {self.camera_id} initialized successfully, is-active: {self.is_active}, frame-width: {self.frame_width}, frame-height: {self.frame_height}")
             
@@ -108,20 +102,8 @@ class Camera_Thor(Camera):
             )
             color_image = color_image_flat.reshape(self.frame_height, self.frame_width, 3)
 
-            self.frame_count += 1
-            current_time = time.time()
-            if current_time - self.fps_update_time >= 1.0:
-                elapsed = current_time - self.fps_update_time
-                self.fps_display = (self.frame_count - self.last_fps_frame_count) / elapsed
-                self.last_fps_frame_count = self.frame_count
-                self.fps_update_time = current_time
             height, width = color_image.shape[:2]
             color_image = cv2.resize(color_image, (int(width/2), int(height/2)), interpolation=cv2.INTER_AREA)
-            # cv2.putText(color_image, f"FPS: {self.fps_display:.1f}", (10, 30),
-            # cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            # cv2.putText(color_image, f"Frame: {self.frame_count}", (10, 70),
-            # cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            # print(f"FPS: {self.fps_display:.1f}, Frame: {self.frame_count}")
 
             return True, color_image
         except Exception as e:

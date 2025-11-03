@@ -4,7 +4,7 @@ import ast
 import threading
 from threading import Thread
 
-import camera
+from camera import Camera
 from transfer_functions import transfer_functions_dict, Transfer_Functions
 from image_container import Image_Container
 from transfer_station import Transfer_Station 
@@ -70,6 +70,26 @@ class PacketHandlers:
         # Logger.log(f"Sending state: {message}")
         Socket_Manager.send_all_json(message)
 
+    @packet_handler("TOGGLE_WHITEBALANCE")
+    def handle_toggle_whitebalance(packet_type: str, data: dict):
+        state = json.loads(data["state"])
+        camera = Camera.global_list[int(data.get("camera_index", 0))]
+        if state == "ON":
+            camera.whitebalance_enabled = True
+        else:
+            camera.whitebalance_enabled = False
+        Logger.log("Whitebalance toggled")
+
+    @packet_handler("TOGGLE_FPS_COUNTER")
+    def handle_toggle_fps_counter(packet_type: str, data: dict):
+        state = json.loads(data["state"])
+        camera = Camera.global_list[int(data.get("camera_index", 0))]
+        if state == "ON":
+            camera.set_fps_counter_enabled = True
+        else:
+            camera.set_fps_counter_enabled = False
+        Logger.log("FPS counter toggled")
+
     @packet_handler("PAUSE_EXECUTION")
     def handle_pause_execution(packet_type: str, data: dict):
         PacketHandlers.transfer_functions.pause_execution()
@@ -87,7 +107,7 @@ class PacketHandlers:
 
     @packet_handler("SNAP_SHOT")
     def handle_snap_shot(packet_type: str, data: dict):
-        camera.Camera.global_list[data["camera"]].snap_image()
+        Camera.global_list[data["camera"]].snap_image()
         Socket_Manager.send_all_json({
             "type": "REFRESH_SNAPSHOT",
             "camera": data["camera"]
@@ -95,7 +115,7 @@ class PacketHandlers:
 
     @packet_handler("SNAP_SHOT_FLAKE_HUNTED")
     def handle_snap_shot_flake_hunted(packet_type: str, data: dict):
-        camera.Camera.global_list[data["camera"]].snap_image_flake_hunted()
+        Camera.global_list[data["camera"]].snap_image_flake_hunted()
         Socket_Manager.send_all_json({
             "type": "REFRESH_SNAPSHOT_FLAKE_HUNTED",
             "camera": data["camera"]

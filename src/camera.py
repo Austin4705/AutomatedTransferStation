@@ -79,6 +79,15 @@ class Camera:
         self.snapshot_image = self.get_black_frame()
         self.snapshot_image_flake_hunted = self.get_black_frame()
         self.capture_thread = None
+        self.whitebalance_enabled = True
+
+        start_time = time.time()
+        self.frame_count = 0
+        self.last_fps_frame_count = 0
+        self.fps_update_time = start_time
+        self.start_time = start_time
+        self.fps_display = 0
+        self.fps_counter_enabled = True
         
         self.initialize_camera()
 
@@ -106,7 +115,7 @@ class Camera:
         pass
 
     def set_exposure_time(self, exposure_time_us: int):
-        Logger.log(f"Setting exposure time for camera {self.camera_id} to {exposure_time}")
+        Logger.log(f"Setting exposure time for camera {self.camera_id} to {exposure_time_us}")
 
     def read_frame(self):
         return True, self.get_black_frame()
@@ -119,9 +128,25 @@ class Camera:
                 if not ret: 
                     continue
                 with self.frame_lock:
-                    self.current_frame = CV_Functions.whitebalance(frame)
-                    # self.current_frame = frame
-                time.sleep(0.01)
+                    if self.whitebalance_enabled:
+                        self.current_frame = CV_Functions.whitebalance(frame)
+                    else:
+                        self.current_frame = frame
+
+                    self.frame_count += 1
+                    current_time = time.time()
+                    if current_time - self.fps_update_time >= 1.0:
+                        elapsed = current_time - self.fps_update_time
+                        self.fps_display = (self.frame_count - self.last_fps_frame_count) / elapsed
+                        self.last_fps_frame_count = self.frame_count
+                        self.fps_update_time = current_time
+                    if self.fps_counter_enabled:
+                        cv2.putText(self.current_frame, f"FPS: {self.fps_display:.1f}", (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        cv2.putText(self.current_frame, f"Frame: {self.frame_count}", (10, 70),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                        # print(f"FPS: {self.fps_display:.1f}, Frame: {self.frame_count}")
+                        time.sleep(0.01)
                 
             except Exception as e:
                 print(f"Error in capture thread for camera {self.camera_id}: {e}")

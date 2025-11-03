@@ -105,9 +105,27 @@ const ControlPanel = () => {
     sendJson({
       type: "EXECUTE_TRANSFER_FUNCTION",
       transfer_function_name: "AUTO_FOCUS",
-      parameters: JSON.stringify([{
-        camera_index: cameraIndex
-      }])
+      parameters: JSON.stringify([
+        {
+          camera_index: cameraIndex
+        }
+      ])
+    });
+  };
+
+  const handleWhiteBalanceToggle = (enable: boolean) => {
+    sendJson({
+      type: "TOGGLE_WHITEBALANCE",
+      camera_index: cameraIndex,
+      state: enable ? "on" : "off"
+    });
+  };
+
+  const handleFpsToggle = (enable: boolean) => {
+    sendJson({
+      type: "TOGGLE_FPS_COUNTER",
+      camera_index: cameraIndex,
+      state: enable ? "on" : "off"
     });
   };
 
@@ -307,6 +325,38 @@ const ControlPanel = () => {
             >
               Auto Focus
             </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <span className="text-sm font-medium">White Balance:</span>
+              <button
+                onClick={() => handleWhiteBalanceToggle(true)}
+                className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+              >
+                On
+              </button>
+              <button
+                onClick={() => handleWhiteBalanceToggle(false)}
+                className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+              >
+                Off
+              </button>
+            </div>
+            <div className="flex gap-2 items-center">
+              <span className="text-sm font-medium">FPS Counter:</span>
+              <button
+                onClick={() => handleFpsToggle(true)}
+                className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
+              >
+                On
+              </button>
+              <button
+                onClick={() => handleFpsToggle(false)}
+                className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+              >
+                Off
+              </button>
+            </div>
           </div>
         </div>
       </div>

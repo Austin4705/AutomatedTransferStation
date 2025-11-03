@@ -49,7 +49,7 @@ class Socket_Manager:
         except Exception as e:
             Logger.log(f"Socket error: {e}")
         finally:
-            Socket_Manager.CONNECTIONS.remove(websocket)
+            Socket_Manager.CONNECTIONS.discard(websocket)
             Logger.log(f"Connection removed {websocket}")
 
     def handle_packet(message: str):
@@ -73,17 +73,15 @@ class Socket_Manager:
 
 
     async def _send_all_async(msg: str):
-        for websocket in Socket_Manager.CONNECTIONS:
+        for websocket in list(Socket_Manager.CONNECTIONS):
             try:
                 await websocket.send(msg)
             except websockets.exceptions.ConnectionClosed:
                 if websocket in Socket_Manager.CONNECTIONS:
-                    Socket_Manager.CONNECTIONS.remove(websocket)
+                    Socket_Manager.CONNECTIONS.discard(websocket)
                     Logger.log(f"Removed closed connection {websocket}")
             except Exception as e:
                 Logger.log(f"Error sending message to {websocket}: {e}")
-            except Exception as e:
-                Logger.log(f"Error in _send_all_async: {e}")
 
     def send_all_json(json_data: dict):
         try:
