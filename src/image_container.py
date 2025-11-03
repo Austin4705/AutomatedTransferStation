@@ -86,10 +86,17 @@ class Image_Container:
             img_array,
         )
 
-        img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB) 
+        img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB)
+
+        # Debug: Print a sample pixel before transpose
+        print(f"Before transpose - pixel [500,500]: {img_array[500, 500]}")
+
         img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
         size_c, size_y, size_x = img_array.shape
         size_z, size_t = 1, 1
+
+        # Debug: Print channel values at same location after transpose
+        print(f"After transpose - channels at [500,500]: R={img_array[0, 500, 500]}, G={img_array[1, 500, 500]}, B={img_array[2, 500, 500]}")
 
         img_copy = np.ascontiguousarray(img_array)
         def plane_gen():
