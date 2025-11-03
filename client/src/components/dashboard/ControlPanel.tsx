@@ -101,6 +101,16 @@ const ControlPanel = () => {
     });
   };
 
+  const handleAutoFocus = () => {
+    sendJson({
+      type: "EXECUTE_TRANSFER_FUNCTION",
+      transfer_function_name: "AUTO_FOCUS",
+      parameters: JSON.stringify([{
+        camera_index: cameraIndex
+      }])
+    });
+  };
+
   return (
     <div className="control-panel flex flex-col gap-4">
       {/* Execution Controls */}
@@ -285,6 +295,14 @@ const ControlPanel = () => {
               className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
             >
               Set
+            </button>
+          </div>
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={handleAutoFocus}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium w-full"
+            >
+              Auto Focus
             </button>
           </div>
         </div>

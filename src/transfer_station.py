@@ -2,7 +2,6 @@ import time
 
 import camera
 from datetime import datetime
-from autofocus import Autofocus
 from logger import Logger
 # The abstract class for a transfer station instance
 class Transfer_Station():
@@ -100,91 +99,6 @@ class Transfer_Station():
             self.led_on()
         else:
             self.led_off()
-
-    def autoFocus(self, camera_index=0):
-        Logger.log("Auto Focus-V")
-        original_pos_z = self.posZ()
-        current_frame = camera.Camera.global_list[camera_index].get_frame()
-        # Logger.log(Autofocus.get_color_features(current_frame))
-        # Logger.log(Autofocus.exist_color_features(current_frame))
-        if not Autofocus.exist_color_features(current_frame):
-            Logger.log("Not enough edges to auto focus")
-            return
-        # Sample points on either side of current Z position
-        n_samples = 20
-        z_range = 0.75
-        z_step = z_range / n_samples
-        
-        edge_counts = []
-        # Sample points above current position
-        def initial_scan():
-            prev_z_pos = self.posZ()
-            for i in range(n_samples):
-                z = prev_z_pos + (i * z_step)
-                self.moveZ(z)
-                self.wait(0.03)
-
-                frame = camera.Camera.global_list[camera_index].get_frame()
-                edge_count = Autofocus.get_edge_count(frame)
-                edge_counts.append((z, edge_count))
-            self.wait(0.1)
-        
-        #Go above and below 
-        initial_scan()
-        z_step = -z_step
-        initial_scan()
-        initial_scan()
-        z_step = -z_step
-        initial_scan()
-        z_step = -z_step
-
-        # Find highest and lowest nonzero focus positions
-        nonzero_scores = [(z, score) for z, score in edge_counts if score > 0]
-        if not nonzero_scores:
-            Logger.log("No good focus scores found")
-            return
-        highest_z = max(nonzero_scores, key=lambda x: x[0])[0]
-        lowest_z = min(nonzero_scores, key=lambda x: x[0])[0]
-
-        Logger.log(edge_counts)
-        self.wait(2)
-
-        # Sweep from highest to lowest with finer resolution
-        fine_z_step = 0.001  # 0.001 mm resolution
-        fine_edge_counts = []
-        
-        current_z = highest_z
-        while current_z >= lowest_z:
-            self.moveZ(current_z)
-            self.wait(0.01)
-            frame = camera.Camera.global_list[camera_index].get_frame()
-            edge_count = Autofocus.get_edge_count(frame)
-            fine_edge_counts.append((current_z, edge_count))
-            current_z -= fine_z_step
-
-        Logger.log(fine_edge_counts)
-            
-        # Find z position with highest focus score
-        best_z = max(fine_edge_counts, key=lambda x: x[1])[0]
-         
-        # Move to position with best focus
-        self.moveZ(best_z)
-        self.wait(0.1)
-
-    #Takes Seconds
-    def time_stamp():
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]     
-    
-    def send_command(self, command):
-        response = self._send_command(command)
-        if(response is not None):
-            self.add_response(response) 
-        self.send_command_history.append({
-            'timestamp': Transfer_Station.time_stamp(),
-            'command': command,
-            'response': response
-        })
-        return response
 
     def wait(self, seconds):
         # Logger.log(f"Wait for {seconds} seconds-V")
