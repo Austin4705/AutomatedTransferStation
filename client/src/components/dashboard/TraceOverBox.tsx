@@ -525,7 +525,6 @@ const TraceOverBox = () => {
 
   return (
     <div className="trace-over-box">
-      <h2>Trace Over</h2>
       <div className="trace-container">
         <div className="trace-settings flex flex-wrap gap-3 mb-4 bg-gray-50 p-3 rounded border">
           <h3 className="w-full text-sm font-medium mb-2 text-gray-700">Trace Settings:</h3>

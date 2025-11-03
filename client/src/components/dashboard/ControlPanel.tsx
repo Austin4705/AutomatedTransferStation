@@ -160,25 +160,24 @@ const ControlPanel = () => {
       <div className="movement-controls">
         <h3 className="text-sm font-medium mb-2">Movement Controls</h3>
 
-        {/* Distance Selector */}
-        <div className="flex items-center gap-2 mb-3">
-          <label className="text-sm font-medium">Distance per click:</label>
-          <select
-            value={distance}
-            onChange={(e) => setDistance(parseFloat(e.target.value))}
-            className="p-1 border rounded text-sm"
-          >
-            <option value="0.001">0.001</option>
-            <option value="0.01">0.01</option>
-            <option value="0.05">0.05</option>
-            <option value="0.1">0.1</option>
-            <option value="0.5">0.5</option>
-            <option value="1">1</option>
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
+        {/* Distance Selector - Toggle Buttons */}
+        <div className="mb-3">
+          <label className="text-sm font-medium mb-2 block">Distance per click:</label>
+          <div className="flex gap-1 flex-wrap">
+            {[0.001, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 50, 100].map((dist) => (
+              <button
+                key={dist}
+                onClick={() => setDistance(dist)}
+                className={`px-2 py-1 text-xs rounded transition-colors ${
+                  distance === dist
+                    ? 'bg-blue-500 text-white font-semibold'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {dist}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex gap-4">
@@ -255,109 +254,99 @@ const ControlPanel = () => {
           </div>
         </div>
 
-        {/* Current Position Display */}
-        <div className="text-xs text-gray-600 mt-2">
-          Current Position: X: {position?.x?.toFixed(3) || '0.000'}, Y: {position?.y?.toFixed(3) || '0.000'}, Z: {position?.z?.toFixed(3) || '0.000'}
+        {/* Current Position and Goto XY - Combined */}
+        <div className="mt-2 space-y-1">
+          <div className="text-xs text-gray-600">
+            Current Position: X: {position?.x?.toFixed(3) || '0.000'}, Y: {position?.y?.toFixed(3) || '0.000'}, Z: {position?.z?.toFixed(3) || '0.000'}
+          </div>
+          <div className="flex gap-2 items-center">
+            <span className="text-xs font-medium">Goto XY:</span>
+            <input
+              type="text"
+              value={gotoX}
+              onChange={(e) => setGotoX(e.target.value)}
+              placeholder="X"
+              className="p-1 border rounded w-20 text-xs"
+            />
+            <input
+              type="text"
+              value={gotoY}
+              onChange={(e) => setGotoY(e.target.value)}
+              placeholder="Y"
+              className="p-1 border rounded w-20 text-xs"
+            />
+            <button
+              onClick={handleGotoXY}
+              className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+            >
+              Go
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Goto XY */}
-      <div className="goto-xy">
-        <h3 className="text-sm font-medium mb-2">Goto XY</h3>
-        <div className="flex gap-2 items-center">
+      {/* Camera Settings */}
+      <div className="camera-settings-control">
+        <h3 className="text-sm font-medium mb-2">Camera Settings</h3>
+        {/* All Camera Settings - Wraps if needed */}
+        <div className="flex gap-2 items-center flex-wrap">
+          <label className="text-sm font-medium">Cam:</label>
           <input
-            type="text"
-            value={gotoX}
-            onChange={(e) => setGotoX(e.target.value)}
-            placeholder="X"
-            className="p-1 border rounded w-24 text-sm"
+            type="number"
+            min="0"
+            value={cameraIndex}
+            onChange={(e) => setCameraIndex(Math.max(0, parseInt(e.target.value) || 0))}
+            className="p-1 border rounded w-16 text-sm"
           />
+          <span className="text-gray-300">|</span>
+          <span className="text-sm font-medium">WB:</span>
+          <button
+            onClick={() => handleWhiteBalanceToggle(true)}
+            className="px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-xs"
+          >
+            On
+          </button>
+          <button
+            onClick={() => handleWhiteBalanceToggle(false)}
+            className="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
+          >
+            Off
+          </button>
+          <span className="text-gray-300">|</span>
+          <span className="text-sm font-medium">FPS:</span>
+          <button
+            onClick={() => handleFpsToggle(true)}
+            className="px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-xs"
+          >
+            On
+          </button>
+          <button
+            onClick={() => handleFpsToggle(false)}
+            className="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
+          >
+            Off
+          </button>
+          <span className="text-gray-300">|</span>
+          <label className="text-sm font-medium">Exp (ms):</label>
           <input
-            type="text"
-            value={gotoY}
-            onChange={(e) => setGotoY(e.target.value)}
-            placeholder="Y"
-            className="p-1 border rounded w-24 text-sm"
+            type="number"
+            min="1"
+            value={exposureTime}
+            onChange={(e) => setExposureTime(Math.max(1, parseInt(e.target.value) || 100))}
+            className="p-1 border rounded w-20 text-sm"
           />
           <button
-            onClick={handleGotoXY}
-            className="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+            onClick={handleSetExposure}
+            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
           >
-            Go
+            Set
           </button>
-        </div>
-      </div>
-
-      {/* Exposure Time */}
-      <div className="exposure-control">
-        <h3 className="text-sm font-medium mb-2">Camera Settings</h3>
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2 items-center">
-            <label className="text-sm font-medium">Camera Index:</label>
-            <input
-              type="number"
-              min="0"
-              value={cameraIndex}
-              onChange={(e) => setCameraIndex(Math.max(0, parseInt(e.target.value) || 0))}
-              className="p-1 border rounded w-20 text-sm"
-            />
-          </div>
-          <div className="flex gap-2 items-center">
-            <label className="text-sm font-medium">Exposure (ms):</label>
-            <input
-              type="number"
-              min="1"
-              value={exposureTime}
-              onChange={(e) => setExposureTime(Math.max(1, parseInt(e.target.value) || 100))}
-              className="p-1 border rounded w-24 text-sm"
-            />
-            <button
-              onClick={handleSetExposure}
-              className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-            >
-              Set
-            </button>
-          </div>
-          <div className="flex gap-2 items-center">
-            <button
-              onClick={handleAutoFocus}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium w-full"
-            >
-              Auto Focus
-            </button>
-          </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2 items-center">
-              <span className="text-sm font-medium">White Balance:</span>
-              <button
-                onClick={() => handleWhiteBalanceToggle(true)}
-                className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
-              >
-                On
-              </button>
-              <button
-                onClick={() => handleWhiteBalanceToggle(false)}
-                className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
-              >
-                Off
-              </button>
-            </div>
-            <div className="flex gap-2 items-center">
-              <span className="text-sm font-medium">FPS Counter:</span>
-              <button
-                onClick={() => handleFpsToggle(true)}
-                className="px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm"
-              >
-                On
-              </button>
-              <button
-                onClick={() => handleFpsToggle(false)}
-                className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
-              >
-                Off
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={handleAutoFocus}
+            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium"
+          >
+            Auto Focus
+          </button>
         </div>
       </div>
     </div>

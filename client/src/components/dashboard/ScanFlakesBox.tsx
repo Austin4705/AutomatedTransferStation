@@ -195,8 +195,6 @@ const ScanFlakesBox = () => {
 
   return (
     <div className="scan-flakes-box p-4 bg-white rounded-lg shadow-md">
-      <h2 className="text-lg font-semibold mb-4">Scan Flakes</h2>
-      
       <div className="flex flex-col space-y-4">
         <div className="flex items-center space-x-2">
           <button

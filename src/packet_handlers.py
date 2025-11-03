@@ -72,23 +72,33 @@ class PacketHandlers:
 
     @packet_handler("TOGGLE_WHITEBALANCE")
     def handle_toggle_whitebalance(packet_type: str, data: dict):
-        state = json.loads(data["state"])
-        camera = Camera.global_list[int(data.get("camera_index", 0))]
-        if state == "ON":
-            camera.whitebalance_enabled = True
-        else:
-            camera.whitebalance_enabled = False
-        Logger.log("Whitebalance toggled")
+        Logger.log(f"TOGGLE_WHITEBALANCE received data: {data}")
+        state = data.get("state", "off").lower()
+        camera_index = int(data.get("camera_index", 0))
+        Logger.log(f"Camera index: {camera_index}, State: {state}, Available cameras: {list(Camera.global_list.keys())}")
+
+        if camera_index not in Camera.global_list:
+            Logger.log_error(f"Camera {camera_index} not found in global list")
+            return
+
+        camera = Camera.global_list[camera_index]
+        camera.whitebalance_enabled = (state == "on")
+        Logger.log(f"Whitebalance set to {camera.whitebalance_enabled} for camera {camera_index}")
 
     @packet_handler("TOGGLE_FPS_COUNTER")
     def handle_toggle_fps_counter(packet_type: str, data: dict):
-        state = json.loads(data["state"])
-        camera = Camera.global_list[int(data.get("camera_index", 0))]
-        if state == "ON":
-            camera.set_fps_counter_enabled = True
-        else:
-            camera.set_fps_counter_enabled = False
-        Logger.log("FPS counter toggled")
+        Logger.log(f"TOGGLE_FPS_COUNTER received data: {data}")
+        state = data.get("state", "off").lower()
+        camera_index = int(data.get("camera_index", 0))
+        Logger.log(f"Camera index: {camera_index}, State: {state}, Available cameras: {list(Camera.global_list.keys())}")
+
+        if camera_index not in Camera.global_list:
+            Logger.log_error(f"Camera {camera_index} not found in global list")
+            return
+
+        camera = Camera.global_list[camera_index]
+        camera.fps_counter_enabled = (state == "on")
+        Logger.log(f"FPS counter set to {camera.fps_counter_enabled} for camera {camera_index}")
 
     @packet_handler("PAUSE_EXECUTION")
     def handle_pause_execution(packet_type: str, data: dict):
