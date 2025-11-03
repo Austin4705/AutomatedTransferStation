@@ -8,7 +8,7 @@ const ControlPanel = () => {
   const [distance, setDistance] = useState<number>(1);
   const [gotoX, setGotoX] = useState<string>("");
   const [gotoY, setGotoY] = useState<string>("");
-  const [exposureTime, setExposureTime] = useState<number>(100);
+  const [exposureTime, setExposureTime] = useState<number>(5);
   const [cameraIndex, setCameraIndex] = useState<number>(0);
   const positionSettings = useRecoilValue(positionSettingsAtom);
   const position = positionSettings.currentPosition;
