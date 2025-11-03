@@ -119,7 +119,8 @@ class Camera:
                 if not ret: 
                     continue
                 with self.frame_lock:
-                    self.current_frame = CV_Functions.whitebalance(frame)
+                    # self.current_frame = CV_Functions.whitebalance(frame)
+                    self.current_frame = frame
                 time.sleep(0.01)
                 
             except Exception as e:
@@ -133,16 +134,6 @@ class Camera:
 
     def get_black_frame(self):
         return np.zeros((480, 640, 3), dtype=np.uint8)
-
-    def save_image(frame):
-        """Save an image to disk"""
-        try:
-            cv2.imwrite(
-                f"../Photos/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.jpg",
-                frame,
-            )
-        except Exception as e:
-            print(f"Error saving image: {e}")
 
     def snap_image(self):
         """Take a snapshot and store it"""

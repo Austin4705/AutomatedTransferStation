@@ -81,7 +81,12 @@ class Image_Container:
         if include_time_name:
             image_name = f"{image_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         
-        # img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB) 
+        cv2.imwrite(
+            f"../Photos/{image_name}.png",
+            img_array,
+        )
+
+        img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB) 
         img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
         size_c, size_y, size_x = img_array.shape
         size_z, size_t = 1, 1

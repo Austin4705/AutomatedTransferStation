@@ -136,7 +136,6 @@ class Transfer_Functions:
                 self.transfer_station.wait(wait_time)
                 image = Camera.global_list[camera_index].get_frame()
                 if save_images:
-                    Camera.save_image(image)
                     image_id = self.image_container.upload_image(image, dataset_id=collection_id, image_name=f"image_{counter}")
                     image_metadata = {"key_value_pairs": {
                         "wafer_id": wafer_id,
