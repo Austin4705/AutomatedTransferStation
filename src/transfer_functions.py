@@ -82,6 +82,7 @@ class Transfer_Functions:
         initial_wait_time = float(data.get("initial_wait_time", 8))
         focus_wait_time = float(data.get("focus_wait_time", 8))
         camera_index = int(data.get("camera_index", 0))
+        camera = Camera.global_list[camera_index]
         save_images = data.get("save_images", True)
 
         for wafer in data.get("wafers", [{}]):
@@ -119,7 +120,7 @@ class Transfer_Functions:
                 collection_id = self.image_container.create_new_collection(wafer_folder)
             self.transfer_station.moveXY(start_x, start_y)
             self.transfer_station.wait(initial_wait_time)
-            # self.transfer_station.autoFocus()
+            self.auto_focus(camera, self.transfer_station)
 
             counter = 1
             for x, y in points:
@@ -130,11 +131,11 @@ class Transfer_Functions:
                     
                 self.transfer_station.moveXY(x, y)
                 if counter % pics_until_focus == 0:
-                    # self.transfer_station.autoFocus(camera_index)
+                    self.auto_focus(camera, self.transfer_station)
                     pass
 
                 self.transfer_station.wait(wait_time)
-                image = Camera.global_list[camera_index].get_frame()
+                image = camera.get_frame()
                 if save_images:
                     image_id = self.image_container.upload_image(image, dataset_id=collection_id, image_name=f"image_{counter}")
                     image_metadata = {"key_value_pairs": {
@@ -238,14 +239,16 @@ class Transfer_Functions:
 
     
     @transfer_function("AUTO_FOCUS")
-    def auto_focus(self, data: dict):
-        Logger.log("Auto Focus")
-    # def blank(self, data: dict):
-        """Auto focus the camera at the current position"""
+    def auto_focus_caller(self, data: dict):
         camera_index = int(data.get("camera_index", 0))
         camera = Camera.global_list[camera_index]
         transfer_station = self.transfer_station
-        Logger.log("Auto Focus-V")
+        self.auto_focus(camera, transfer_station)
+
+    def auto_focus(self, camera, transfer_station):
+        Logger.log("Auto Focus")
+    # def blank(self, data: dict):
+        """Auto focus the camera at the current position"""
         original_z_pos = transfer_station.posZ()
         original_edge_count = Autofocus.get_edge_count(camera.get_frame())
 
@@ -293,7 +296,7 @@ class Transfer_Functions:
         if(response is not None):
             self.add_response(response) 
         self.send_command_history.append({
-            'timestamp': Transfer_Station.time_stamp(),
+            'timestamp': Transfer_Functions.time_stamp(),
             'command': command,
             'response': response
         })
