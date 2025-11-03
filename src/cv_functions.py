@@ -13,26 +13,65 @@ class CV_Functions:
         # self.mockImage = np.zeros((512, 512, 3), dtype=np.uint8)
         # CV_Functions.matGMM2DTransform(self.mockImage)
 
-    def whitebalance(image):
+    def whitebalance_greyworld2(image):
         """
         White balance using gray world assumption.
         """
-        result = image.astype(np.float32)
-        avg_r = np.mean(result[:, :, 0])
-        avg_g = np.mean(result[:, :, 1])
-        avg_b = np.mean(result[:, :, 2])
-        avg_gray = (avg_r + avg_g + avg_b) / 3.0
-
-        scale_r = avg_gray / avg_r if avg_r > 0 else 1.0
-        scale_g = avg_gray / avg_g if avg_g > 0 else 1.0
-        scale_b = avg_gray / avg_b if avg_b > 0 else 1.0
+        # return image
+        pixels = image.reshape(-1, 3)
+        brightness = pixels.sum(axis=1)
+        mask = brightness > 30  # Exclude pixels with sum < 30 (very dark)
+        pixels = pixels[mask]
+        
+        unique_colors, counts = np.unique(pixels, axis=0, return_counts=True)
+        most_common_idx = np.argmax(counts)
+        color = unique_colors[most_common_idx].astype(np.float32)
+        
+        avg= (color[0] + color[1] + color[2]) / 3.0
+        scale_r = avg / color[0] if color[0] > 0 else 1.0
+        scale_g = avg / color[1] if color[1] > 0 else 1.0
+        scale_b = avg / color[2] if color[2] > 0 else 1.0
 
         result[:, :, 0] *= scale_r
         result[:, :, 1] *= scale_g
         result[:, :, 2] *= scale_b
 
         result = np.clip(result, 0, 255)
+        print(f"Scale factors: R={scale_r:.3f}, G={scale_g:.3f}, B={scale_b:.3f}")
         return result.astype(np.uint8)
+
+    def whitebalance(image):
+        # return image
+        result = image.astype(np.float32)
+        quantized = (image // 8) * 8
+        brightness = quantized.sum(axis=2)
+        mask = brightness > 30
+        filtered = quantized[mask]
+        
+        colors_as_int = (filtered[:, 0].astype(np.int32) << 16) | (filtered[:, 1].astype(np.int32) << 8) | filtered[:, 2].astype(np.int32)
+        
+        counts = np.bincount(colors_as_int)
+        most_common_int = np.argmax(counts)
+        
+        color = np.array([
+            (most_common_int >> 16) & 0xFF,
+            (most_common_int >> 8) & 0xFF,
+            most_common_int & 0xFF
+        ], dtype=np.float32)
+        
+        avg_gray = (color[0] + color[1] + color[2]) / 3.0
+        scale_r = avg_gray / color[0] if color[0] > 0 else 1.0
+        scale_g = avg_gray / color[1] if color[1] > 0 else 1.0
+        scale_b = avg_gray / color[2] if color[2] > 0 else 1.0
+        # print(f"Most common color: RGB({color[0]}, {color[1]}, {color[2]})")
+        # print(f"Scale factors: R={scale_r:.3f}, G={scale_g:.3f}, B={scale_b:.3f}")
+        result[:, :, 0] *= scale_r
+        result[:, :, 1] *= scale_g
+        result[:, :, 2] *= scale_b
+
+        result = np.clip(result, 0, 255)
+        return result.astype(np.uint8)
+
 
     def whitebalance_greyworld(image):
         # Grayworld method

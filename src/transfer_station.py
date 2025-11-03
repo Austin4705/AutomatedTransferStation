@@ -69,7 +69,24 @@ class Transfer_Station():
     def moveZ(self, Z):
         Logger.log("Move Z-V")
         self.z = Z
-        
+
+    def moveXRel(self, X):
+        Logger.log("Move X Rel-V")
+        self.x += X
+
+    def moveYRel(self, Y):
+        Logger.log("Move Y Rel-V")
+        self.y += Y
+
+    def moveZRel(self, Z):
+        Logger.log("Move Z Rel-V")
+        self.z += Z
+
+    def moveXYRel(self, X, Y):
+        Logger.log("Move XY Rel-V")
+        self.x += X
+        self.y += Y
+
     def posX(self):
         # Logger.log(f"Get X Position: {self.x}-V")
         return self.x
@@ -88,12 +105,12 @@ class Transfer_Station():
     def led_off(self):
         Logger.log("Turn LED off-V")
 
-    #Functions NOT TO REIMPLEMENT
     def moveXY(self, x, y):
         Logger.log(f"Move XY to {x}, {y}-V")
         self.moveX(x)
         self.moveY(y)
 
+    #Functions NOT TO REIMPLEMENT
     def setLED(self, status):
         if status:
             self.led_on()

@@ -75,13 +75,13 @@ class Image_Container:
             new_width = int(width * scale)
             new_height = int(height * scale)
             img_array = cv2.resize(img_array, (new_width, new_height), interpolation=cv2.INTER_AREA)
-            # print(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+            Logger.log(f"Resized image from {width}x{height} to {new_width}x{new_height}")
             height, width = new_height, new_width
         
         if include_time_name:
             image_name = f"{image_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         
-        img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB) 
+        # img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB) 
         img_array = np.transpose(img_array, (2, 0, 1))  # Convert to (3, Y, X)
         size_c, size_y, size_x = img_array.shape
         size_z, size_t = 1, 1

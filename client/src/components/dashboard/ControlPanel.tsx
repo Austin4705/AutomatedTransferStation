@@ -45,20 +45,20 @@ const ControlPanel = () => {
     if (axis === 'x') {
       sendJson({
         type: "EXECUTE_TRANSFER_FUNCTION",
-        transfer_function_name: "MOVEX",
-        parameters: JSON.stringify([{ x: currentPos.x + delta }])
+        transfer_function_name: "MOVEXREL",
+        parameters: JSON.stringify([{ x: delta }])
       });
     } else if (axis === 'y') {
       sendJson({
         type: "EXECUTE_TRANSFER_FUNCTION",
-        transfer_function_name: "MOVEY",
-        parameters: JSON.stringify([{ y: currentPos.y + delta }])
+        transfer_function_name: "MOVEYREL",
+        parameters: JSON.stringify([{ y: delta }])
       });
     } else if (axis === 'z') {
       sendJson({
         type: "EXECUTE_TRANSFER_FUNCTION",
-        transfer_function_name: "MOVEZ",
-        parameters: JSON.stringify([{ z: currentPos.z + delta }])
+        transfer_function_name: "MOVEZREL",
+        parameters: JSON.stringify([{ z: delta }])
       });
     }
   };
@@ -150,6 +150,9 @@ const ControlPanel = () => {
             onChange={(e) => setDistance(parseFloat(e.target.value))}
             className="p-1 border rounded text-sm"
           >
+            <option value="0.001">0.001</option>
+            <option value="0.01">0.01</option>
+            <option value="0.05">0.05</option>
             <option value="0.1">0.1</option>
             <option value="0.5">0.5</option>
             <option value="1">1</option>
