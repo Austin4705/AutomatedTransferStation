@@ -36,18 +36,30 @@ class Transfer_Functions:
         thread.daemon = True
         thread.start()
 
+    @transfer_function("EXECUTE_COMMAND")
     def execute_command(self, command: str, data: dict):
         result = transfer_functions_dict[command](self, data)
         if result is not None:
             Logger.log(f"Transfer Function executed: {command}")
 
+    @transfer_function("SET_EXPOSURE_TIME")
+    def set_exposure_time(self, data: dict):
+        camera_index = int(data.get("camera_index", 0))
+        exposure_time_us = int(data.get("exposure_time_us", 10000))
+        Logger.log(f"Setting exposure time for camera {camera_index} to {exposure_time_us} us")
+        Camera.global_list[camera_index].set_exposure_time(exposure_time_us)
+        Logger.log(f"Exposure time set for camera {camera_index} to {exposure_time_us} us")
+
+    @transfer_function("PAUSE_EXECUTION")
     def pause_execution(self):
         self.execute = False
 
+    @transfer_function("RESUME_EXECUTION")
     def resume_execution(self):
         self.execute = True
 
-    def stop_execution(self):
+    @transfer_function("CANCEL_EXECUTION")
+    def cancel_execution(self):
         self.execute = False
         for thread in self.executing_threads:
             self.executing_threads[thread] = False
