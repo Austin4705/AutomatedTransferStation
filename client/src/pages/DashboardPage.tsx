@@ -4,7 +4,7 @@ import CommandInputBox from '../components/dashboard/CommandInputBox';
 import PacketInputBox from '../components/dashboard/PacketInputBox';
 import TraceOverBox from '../components/dashboard/TraceOverBox';
 import ScanFlakesBox from '../components/dashboard/ScanFlakesBox';
-import TransferStationCommandsBox from '../components/dashboard/TransferStationCommandsBox';
+import ControlPanel from '../components/dashboard/ControlPanel';
 import GridstackLayout from '../components/layout/GridstackLayout';
 import GridstackWidget from '../components/layout/GridstackWidget';
 
@@ -107,21 +107,21 @@ const DashboardPage = () => {
           </div>
         </GridstackWidget>
 
-        {/* Transfer Station Commands Box */}
+        {/* Control Panel */}
         <GridstackWidget
-          id="ts-commands"
+          id="control-panel"
           x={4}
           y={11}
           w={4}
-          h={4}
+          h={6}
           minW={3}
-          minH={3}
+          minH={5}
         >
           <div className="h-full overflow-auto p-4">
             <h2 className="dashboard-box-header mb-2 font-semibold text-gray-800">
-              Transfer Station Commands
+              Control Panel
             </h2>
-            <TransferStationCommandsBox />
+            <ControlPanel />
           </div>
         </GridstackWidget>
 

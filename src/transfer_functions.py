@@ -175,4 +175,57 @@ class Transfer_Functions:
             # Move to the image location with offset
             self.transfer_station.moveXY(x + startXOffset, y + startYOffset)
         except Exception as e:
-            Logger.log_error(f"Error navigating to wafer image: {str(e)}")            
+            Logger.log_error(f"Error navigating to wafer image: {str(e)}")
+
+    @transfer_function("MOVEX")
+    def move_x(self, data: dict):
+        """Move to absolute X position"""
+        try:
+            x = data.get("x")
+            if x is None:
+                Logger.log_error("moveX: Missing 'x' parameter")
+                return
+            Logger.log(f"Moving to X: {x}")
+            self.transfer_station.moveX(x)
+        except Exception as e:
+            Logger.log_error(f"Error moving X: {str(e)}")
+
+    @transfer_function("MOVEY")
+    def move_y(self, data: dict):
+        """Move to absolute Y position"""
+        try:
+            y = data.get("y")
+            if y is None:
+                Logger.log_error("moveY: Missing 'y' parameter")
+                return
+            Logger.log(f"Moving to Y: {y}")
+            self.transfer_station.moveY(y)
+        except Exception as e:
+            Logger.log_error(f"Error moving Y: {str(e)}")
+
+    @transfer_function("MOVEZ")
+    def move_z(self, data: dict):
+        """Move to absolute Z position"""
+        try:
+            z = data.get("z")
+            if z is None:
+                Logger.log_error("moveZ: Missing 'z' parameter")
+                return
+            Logger.log(f"Moving to Z: {z}")
+            self.transfer_station.moveZ(z)
+        except Exception as e:
+            Logger.log_error(f"Error moving Z: {str(e)}")
+
+    @transfer_function("MOVEXY")
+    def move_xy(self, data: dict):
+        """Move to absolute XY position"""
+        try:
+            x = data.get("x")
+            y = data.get("y")
+            if x is None or y is None:
+                Logger.log_error("moveXY: Missing 'x' or 'y' parameter")
+                return
+            Logger.log(f"Moving to XY: ({x}, {y})")
+            self.transfer_station.moveXY(x, y)
+        except Exception as e:
+            Logger.log_error(f"Error moving XY: {str(e)}")
