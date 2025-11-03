@@ -99,6 +99,14 @@ conda init powershell
 
 &Camera.save_image(Camera.matGMM2DTransform(Camera.global_list[0].get_frame()))
 &Camera.save_image(Camera.global_list[0].get_frame())
+
+{
+  "type": "EXECUTE_TRANSFER_FUNCTION",
+  "data": {
+    "transfer_function_name": "SET_EXPOSURE_TIME",
+    "parameters": "[{\"camera_index\": 0, \"exposure_time_us\": 5000}]"
+  }
+}
 ```
 
 cd src ; conda activate automatedTransfer ; main.py 

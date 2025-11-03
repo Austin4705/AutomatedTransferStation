@@ -81,7 +81,7 @@ class PacketHandlers:
 
     @packet_handler("CANCEL_EXECUTION")
     def handle_cancel_execution(packet_type: str, data: dict):
-        PacketHandlers.transfer_functions.stop_execution()
+        PacketHandlers.transfer_functions.cancel_execution()
         Logger.log("All operations cancelled")
 
     @packet_handler("SNAP_SHOT")
