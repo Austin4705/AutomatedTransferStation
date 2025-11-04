@@ -130,6 +130,7 @@ class Transfer_Functions:
                         break
                     time.sleep(0.01)
                     
+                    
                 self.transfer_station.moveXY(x, y)
                 if counter % pics_until_focus == 0:
                     self.auto_focus(camera, self.transfer_station)
@@ -249,6 +250,25 @@ class Transfer_Functions:
         transfer_station = self.transfer_station
         self.auto_focus(camera, transfer_station)
 
+    def auto_focus2(self, camera, transfer_station):
+        original_z_pos = transfer_station.posZ()
+        frame = camera.get_frame()
+        original_edge_count = Autofocus.get_edge_count(frame),
+        if not Autofocus.exist_color_features(frame):
+            Logger.log("No color features exist")
+            return
+        z_range = 0.5
+        def func():
+            timestamp = time.time()
+            while time.time() - timestamp < 2:
+                Logger.log(f"Z: {transfer_station.posZ()}")
+        transfer_station.moveZRel(-z_range/2)
+        func()
+        transfer_station.moveZRel(z_range)
+        func()
+        transfer_station.moveZRel(-z_range/2)
+        func()
+
     def auto_focus(self, camera, transfer_station):
         Logger.log("Auto Focus")
     # def blank(self, data: dict):
@@ -263,40 +283,38 @@ class Transfer_Functions:
 
         original_edge_count = Autofocus.get_edge_count(frame)
 
-        def scan_z_range(center_z_pos, z_range, n_samples, break_if_found):
+        def scan_z_range(center_z_pos, z_range, n_samples):
             edge_counts = []
             print(f"Moving from {center_z_pos} to Scanning Z range from {center_z_pos-z_range/2} to {center_z_pos+z_range/2}")
-            transfer_station.moveZ(center_z_pos-z_range/2)
+            transfer_station.moveZRel(-z_range/2)
             transfer_station.wait(0.1)
             for i in range(n_samples):
                 z_step = z_range / n_samples
                 transfer_station.moveZRel(z_step)
                 transfer_station.wait(0.005)
                 edge_count = Autofocus.get_edge_count(camera.get_frame())
-                z_pos = center_z_pos-z_range/2 + (i * z_step)
+                z_pos = -z_range/2 + (i * z_step)
                 edge_counts.append((edge_count, z_pos))
                 Logger.log(f"i: {i}, Z: {z_pos}, Edge Count: {edge_count}")
-                if break_if_found and edge_count > 10:
-                    break
 
             best_focus = max(edge_counts, key=lambda x: x[0])
             Logger.log(f"Best focus i: {i}, Z: {best_focus[1]}, Edge count: {best_focus[0]}")
             transfer_station.wait(0.1)
             if(best_focus[0] == 0):
                 Logger.log("Best focus is at 0")
-                transfer_station.moveZ(center_z_pos)
+                transfer_station.moveZRel(-z_range/2)
                 return (0, center_z_pos)
             else:
-                transfer_station.moveZ(best_focus[1])
+                transfer_station.moveZRel(-z_range/2+best_focus[1])
                 return best_focus
 
         if(original_edge_count == 0):
             Logger.log(f"Original edge count is at ({original_edge_count})")
-            best_focus = scan_z_range(original_z_pos, 0.5, 20, True)
-            scan_z_range(best_focus[1], 0.1, 20, False)
+            best_focus = scan_z_range(original_z_pos, 0.5, 20)
+            scan_z_range(best_focus[1], 0.1, 20)
         else:
             Logger.log(f"Original edge count is greater than 0 ({original_edge_count})")
-            scan_z_range(original_z_pos, 0.1, 20, False)
+            scan_z_range(original_z_pos, 0.1, 20)
 
     #Takes Seconds
     def time_stamp():
