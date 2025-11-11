@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useRecoilValue, useRecoilState } from "recoil";
 import { jsonStateAtom } from "../../state/jsonState";
 import { isConsoleMessage } from "../../state/consoleState";
@@ -27,65 +27,79 @@ const CameraBox = () => {
 
   const { selectedCamera, error, imageKey, isRefreshing, lastSelectedCamera } = cameraState;
 
-  const updateCameraState = (updates: Partial<typeof cameraState>) => {
+  const updateCameraState = useCallback((updates: Partial<typeof cameraState>) => {
     setCameraState(prev => ({ ...prev, ...updates }));
-  };
+  }, [setCameraState]);
+
+  const refreshStream = useCallback(() => {
+    setCameraState(prev => ({ ...prev, isRefreshing: true }));
+    const newTimestamp = Date.now();
+    setCameraState(prev => ({ ...prev, imageKey: newTimestamp }));
+
+    if (imgRef.current) {
+      const isVideoFeed = selectedCamera.startsWith("video_feed");
+
+      if (isVideoFeed) {
+        // For video feeds, directly update src to maintain streaming connection
+        imgRef.current.src = `${baseUrl}${selectedCamera}?nocache=${newTimestamp}`;
+        setTimeout(() => {
+          setCameraState(prev => ({ ...prev, error: null, isRefreshing: false }));
+        }, 500);
+      } else {
+        // For snapshots, use preloading to check if image loads successfully
+        const preloadImg = new Image();
+
+        const timeoutId = setTimeout(() => {
+          setCameraState(prev => ({
+            ...prev,
+            error: "Camera feed load timeout. The server might be slow or unresponsive.",
+            isRefreshing: false
+          }));
+        }, 5000);
+
+        preloadImg.onload = () => {
+          clearTimeout(timeoutId);
+          setCameraState(prev => ({ ...prev, error: null, isRefreshing: false }));
+
+          if (imgRef.current) {
+            imgRef.current.src = `${baseUrl}${selectedCamera}?nocache=${newTimestamp}`;
+          }
+        };
+
+        preloadImg.onerror = () => {
+          clearTimeout(timeoutId);
+          setCameraState(prev => ({
+            ...prev,
+            error: "Failed to load camera feed. Please check if the camera server is running.",
+            isRefreshing: false
+          }));
+        };
+
+        preloadImg.src = `${baseUrl}${selectedCamera}?nocache=${newTimestamp}`;
+      }
+    } else {
+      setTimeout(() => {
+        setCameraState(prev => ({ ...prev, isRefreshing: false }));
+      }, 1000);
+    }
+  }, [baseUrl, selectedCamera, setCameraState]);
 
   useEffect(() => {
     if (selectedCamera !== lastSelectedCamera) {
       updateCameraState({ lastSelectedCamera: selectedCamera });
       refreshStream();
     }
-  }, [selectedCamera]);
+  }, [selectedCamera, lastSelectedCamera, updateCameraState, refreshStream]);
 
   useEffect(() => {
     if (
-      isConsoleMessage(jsonState.lastJsonMessage) && 
-      jsonState.lastJsonMessage.message === "snapped" && 
+      isConsoleMessage(jsonState.lastJsonMessage) &&
+      jsonState.lastJsonMessage.message === "snapped" &&
       (selectedCamera.startsWith("snapshot_feed") || selectedCamera.startsWith("snapshot_flake_hunted"))
     ) {
       refreshStream();
     }
-  }, [jsonState.lastJsonMessage, selectedCamera, baseUrl]);
-
-  const refreshStream = () => {
-    updateCameraState({ isRefreshing: true });
-    const newTimestamp = Date.now();
-    updateCameraState({ imageKey: newTimestamp });
-    if (imgRef.current) {
-      const preloadImg = new Image();
-      
-      const timeoutId = setTimeout(() => {
-        updateCameraState({
-          error: "Camera feed load timeout. The server might be slow or unresponsive.",
-          isRefreshing: false
-        });
-      }, 5000);
-      
-      preloadImg.onload = () => {
-        clearTimeout(timeoutId);
-        updateCameraState({ error: null, isRefreshing: false });
-        
-        if (imgRef.current) {
-          imgRef.current.src = `${baseUrl}${selectedCamera}?nocache=${newTimestamp}`;
-        }
-      };
-      
-      preloadImg.onerror = () => {
-        clearTimeout(timeoutId);
-        updateCameraState({
-          error: "Failed to load camera feed. Please check if the camera server is running.",
-          isRefreshing: false
-        });
-      };
-      
-      preloadImg.src = `${baseUrl}${selectedCamera}?nocache=${newTimestamp}`;
-    } else {
-      setTimeout(() => {
-        updateCameraState({ isRefreshing: false });
-      }, 1000);
-    }
-  };
+  }, [jsonState.lastJsonMessage, selectedCamera, refreshStream]);
 
   const handleImageError = () => {
     updateCameraState({
@@ -124,7 +138,7 @@ const CameraBox = () => {
       window.removeEventListener('refresh-camera-stream', handleRefreshStream as EventListener);
       window.removeEventListener('refresh-all-camera-streams', handleRefreshAllStreams);
     };
-  }, [selectedCamera]);
+  }, [selectedCamera, refreshStream]);
 
   return (
     <div className="camera-display h-full flex flex-col">

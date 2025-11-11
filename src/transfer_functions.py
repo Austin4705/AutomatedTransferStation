@@ -93,6 +93,7 @@ class Transfer_Functions:
             start = wafer.get("start", {})
             start_x = float(start.get("x"))
             start_y = float(start.get("y"))
+            start_z = float(start.get("z"))
             end = wafer.get("end", {})
             end_x = float(end.get("x"))
             end_y = float(end.get("y"))
@@ -150,6 +151,7 @@ class Transfer_Functions:
                     
                     
                 self.transfer_station.moveXY(x, y)
+                self.transfer_station.moveZ(start_z)
                 if counter % pics_until_focus == 0:
                     self.auto_focus(camera, self.transfer_station)
                     pass

@@ -7,13 +7,14 @@ import { positionSettingsAtom } from "../../state/appState";
 interface WaferCoordinates {
   key: string; // Stable key for React rendering
   id: string;  // User-editable wafer ID
-  start: { x: string; y: string };
+  start: { x: string; y: string; z: string };
   end: { x: string; y: string };
 }
 
 interface Position {
   x: number;
   y: number;
+  z: number;
   [key: string]: number;
 }
 
@@ -31,7 +32,7 @@ const TraceOverBox = () => {
     {
       key: "wafer-0",
       id: "1",
-      start: { x: "", y: "" },
+      start: { x: "", y: "", z: "" },
       end: { x: "", y: "" }
     }
   ]);
@@ -44,7 +45,7 @@ const TraceOverBox = () => {
   const [cameraIndex, setCameraIndex] = useState<number>(0);
   const [saveImages, setSaveImages] = useState<boolean>(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
+  const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0, z: 0 });
   const positionSettings = useRecoilValue(positionSettingsAtom);
   const position = positionSettings.currentPosition;
 
@@ -55,7 +56,7 @@ const TraceOverBox = () => {
         return {
           key: `wafer-${waferIndex}`,
           id: String(waferIndex + 1),
-          start: { x: "", y: "" },
+          start: { x: "", y: "", z: "" },
           end: { x: "", y: "" }
         };
       });
@@ -72,10 +73,11 @@ const TraceOverBox = () => {
       };
 
       // Only include coordinates if they have values
-      if (wafer.start.x || wafer.start.y) {
+      if (wafer.start.x || wafer.start.y || wafer.start.z) {
         waferData.start = {
           x: wafer.start.x ? parseFloat(wafer.start.x) : "",
-          y: wafer.start.y ? parseFloat(wafer.start.y) : ""
+          y: wafer.start.y ? parseFloat(wafer.start.y) : "",
+          z: wafer.start.z ? parseFloat(wafer.start.z) : ""
         };
       }
 
@@ -118,7 +120,8 @@ const TraceOverBox = () => {
       if (typeof message.x === 'number' && typeof message.y === 'number') {
         setCurrentPosition({
           x: message.x,
-          y: message.y
+          y: message.y,
+          z: typeof message.z === 'number' ? message.z : 0
         });
       }
     }
@@ -142,14 +145,15 @@ const TraceOverBox = () => {
     if (position) {
       setCurrentPosition({
         x: position.x,
-        y: position.y
+        y: position.y,
+        z: position.z || 0
       });
     }
   }, [position]);
 
   const handleTraceOver = () => {
     const isValid = waferCoordinates.every(wafer =>
-      wafer.start.x && wafer.start.y && wafer.end.x && wafer.end.y
+      wafer.start.x && wafer.start.y && wafer.start.z && wafer.end.x && wafer.end.y
     );
 
     if (!isValid) {
@@ -162,7 +166,8 @@ const TraceOverBox = () => {
         id: wafer.id,
         start: {
           x: parseFloat(wafer.start.x),
-          y: parseFloat(wafer.start.y)
+          y: parseFloat(wafer.start.y),
+          z: parseFloat(wafer.start.z)
         },
         end: {
           x: parseFloat(wafer.end.x),
@@ -189,7 +194,7 @@ const TraceOverBox = () => {
   const handleCoordinateChange = (
     waferId: string,
     corner: "start" | "end",
-    axis: "x" | "y",
+    axis: "x" | "y" | "z",
     value: string
   ) => {
     if (value !== "" && !/^-?\d*\.?\d*$/.test(value)) {
@@ -227,6 +232,7 @@ const TraceOverBox = () => {
   ) => {
     const xValue = currentPosition.x.toFixed(3);
     const yValue = currentPosition.y.toFixed(3);
+    const zValue = currentPosition.z.toFixed(3);
 
     if (corner === "both") {
       setWaferCoordinates(prev =>
@@ -236,11 +242,27 @@ const TraceOverBox = () => {
                 ...wafer,
                 start: {
                   x: xValue,
-                  y: yValue
+                  y: yValue,
+                  z: zValue
                 },
                 end: {
                   x: xValue,
                   y: yValue
+                }
+              }
+            : wafer
+        )
+      );
+    } else if (corner === "start") {
+      setWaferCoordinates(prev =>
+        prev.map(wafer =>
+          wafer.id === waferId
+            ? {
+                ...wafer,
+                start: {
+                  x: xValue,
+                  y: yValue,
+                  z: zValue
                 }
               }
             : wafer
@@ -269,7 +291,7 @@ const TraceOverBox = () => {
         wafer.id === waferId
           ? {
               ...wafer,
-              start: { x: "", y: "" },
+              start: { x: "", y: "", z: "" },
               end: { x: "", y: "" }
             }
           : wafer
@@ -418,7 +440,8 @@ const TraceOverBox = () => {
           id: wafer.id?.toString() || String(index + 1),  // Preserve string/number ID from JSON
           start: {
             x: wafer.start?.x?.toString() || "",
-            y: wafer.start?.y?.toString() || ""
+            y: wafer.start?.y?.toString() || "",
+            z: wafer.start?.z?.toString() || ""
           },
           end: {
             x: wafer.end?.x?.toString() || "",
@@ -514,7 +537,7 @@ const TraceOverBox = () => {
         wafer.id === waferId
           ? {
               ...wafer,
-              start: { ...wafer.end },
+              start: { ...wafer.end, z: wafer.start.z },
               end: { ...wafer.start }
             }
           : wafer
@@ -616,7 +639,7 @@ const TraceOverBox = () => {
         </div>
 
         <div className="current-position mb-2 text-xs text-gray-600">
-          Current Position: X: {currentPosition.x.toFixed(3)}, Y: {currentPosition.y.toFixed(3)}
+          Current Position: X: {currentPosition.x.toFixed(3)}, Y: {currentPosition.y.toFixed(3)}, Z: {currentPosition.z.toFixed(3)}
         </div>
 
         <div className="wafer-coordinates-container overflow-x-auto">
@@ -626,6 +649,7 @@ const TraceOverBox = () => {
                 <th className="p-1 text-left">Wafer</th>
                 <th className="p-1 text-left">Start X</th>
                 <th className="p-1 text-left">Start Y</th>
+                <th className="p-1 text-left">Start Z</th>
                 <th className="p-1 text-left">End X</th>
                 <th className="p-1 text-left">End Y</th>
                 <th className="p-1 text-left">Actions</th>
@@ -659,6 +683,15 @@ const TraceOverBox = () => {
                       onChange={(e) => handleCoordinateChange(wafer.id, "start", "y", e.target.value)}
                       className="p-1 border rounded w-20 text-xs"
                       placeholder="Y"
+                    />
+                  </td>
+                  <td className="p-1">
+                    <input
+                      type="text"
+                      value={wafer.start.z}
+                      onChange={(e) => handleCoordinateChange(wafer.id, "start", "z", e.target.value)}
+                      className="p-1 border rounded w-20 text-xs"
+                      placeholder="Z"
                     />
                   </td>
                   <td className="p-1">
