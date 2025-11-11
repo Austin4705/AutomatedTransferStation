@@ -1,12 +1,11 @@
 import time 
 
-import camera
 from datetime import datetime
 from logger import Logger
 # The abstract class for a transfer station instance
 class Transfer_Station():
     # Static list to track subclass instances
-    _subclass_instances = []
+    subclass_instances = None
 
     MAGNIFICATION_TRAVEL = {
         5: {"x": 1, "y": 1, "wait_time": 1},
@@ -22,7 +21,7 @@ class Transfer_Station():
         self.command_queue = []
         # Add self to the static list if this is a subclass instance
         if self.__class__ != Transfer_Station:
-            Transfer_Station._subclass_instances.append(self)
+            Transfer_Station.subclass_instances = self
         
         self.send_command_history = []
         self.receive_command_history = []
@@ -51,7 +50,7 @@ class Transfer_Station():
     # Class method to get all subclass instances
     @classmethod
     def get_subclass_instances(cls):
-        return cls._subclass_instances
+        return cls.subclass_instances
 
 
     #Functions to reimplement 

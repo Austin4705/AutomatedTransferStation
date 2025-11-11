@@ -30,6 +30,6 @@ class Autofocus:
         return color_ratio
 
     @staticmethod
-    def exist_color_features(image, ratio_threshold=0.01):
+    def exist_color_features(image, ratio_threshold=0.05):
         color_ratio = Autofocus.get_color_features(image)
         return color_ratio >= ratio_threshold

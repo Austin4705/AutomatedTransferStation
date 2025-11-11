@@ -38,7 +38,7 @@ const TraceOverBox = () => {
   const [jsonOutput, setJsonOutput] = useState<string>("");
   const [traceOverStatus, setTraceOverStatus] = useState<TraceOverResult | null>(null);
   const [magnification, setMagnification] = useState<number>(20);
-  const [picsUntilFocus, setPicsUntilFocus] = useState<number>(300);
+  const [picsUntilFocus, setPicsUntilFocus] = useState<number>(30);
   const [initialWaitTime, setInitialWaitTime] = useState<number>(8);
   const [focusWaitTime, setFocusWaitTime] = useState<number>(8);
   const [cameraIndex, setCameraIndex] = useState<number>(0);
@@ -573,20 +573,7 @@ const TraceOverBox = () => {
               className="p-1 border rounded w-16 text-center"
             />
           </div>
-          
-          <div className="setting-control flex items-center">
-            <label className="text-sm font-medium mr-2">
-              Focus Wait (s):
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.5"
-              value={focusWaitTime}
-              onChange={(e) => setFocusWaitTime(Math.max(0, parseFloat(e.target.value) || 8))}
-              className="p-1 border rounded w-16 text-center"
-            />
-          </div>
+
           
           <div className="setting-control flex items-center">
             <label className="text-sm font-medium mr-2">

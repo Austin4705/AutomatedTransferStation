@@ -5,6 +5,9 @@ import time
 import os
 import json
 from datetime import datetime
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.optimize import curve_fit
 
 from autofocus import Autofocus
 from image_container import Image_Container
@@ -78,8 +81,8 @@ class Transfer_Functions:
         wait_time = MAGNIFICATION_TRAVEL[magnification].get("wait_time", 1)
         travel = MAGNIFICATION_TRAVEL[magnification]
 
-        pics_until_focus = int(data.get("pics_until_focus", 300))
-        initial_wait_time = float(data.get("initial_wait_time", 8))
+        pics_until_focus = int(data.get("pics_until_focus", 10))
+        initial_wait_time = float(data.get("initial_wait_time", 25))
         focus_wait_time = float(data.get("focus_wait_time", 8))
         camera_index = int(data.get("camera_index", 0))
         camera = Camera.global_list[camera_index]
@@ -96,7 +99,7 @@ class Transfer_Functions:
 
             x_steps = int(abs(end_x - start_x) / travel["x"])
             y_steps = int(abs(end_y - start_y) / travel["y"])
-            Logger.log(f"Creating {x_steps+1}x{y_steps+1} = {(x_steps+1)*(y_steps+1)} photos")
+            Logger.log(f"Creating {x_steps+1}x{y_steps+1} = {(x_steps+1)*(y_steps+1)} photos with {travel['x']}x {travel['y']}y travel per picture")
             points = []
             going_right = start_x >= end_x
             current_x = start_x
@@ -118,9 +121,24 @@ class Transfer_Functions:
             if save_images:
                 wafer_folder = self.image_container.load_or_create_chip_by_name(wafer_id)
                 collection_id = self.image_container.create_new_collection(wafer_folder)
+                self.image_container.apply_metadata_to_dataset(collection_id, {"key_value_pairs": 
+                    {
+                    "start_x": start_x,
+                    "start_y": start_y,
+                    "end_x": end_x,
+                    "end_y": end_y,
+                    "x_steps": x_steps,
+                    "y_steps": y_steps,
+                    "magnification": magnification,
+                    "pics_until_focus": pics_until_focus,
+                    "initial_wait_time": initial_wait_time,
+                    "focus_wait_time": focus_wait_time,
+                    "camera_index": camera_index,
+                    }
+                })
             self.transfer_station.moveXY(start_x, start_y)
             self.transfer_station.wait(initial_wait_time)
-            self.auto_focus(camera, self.transfer_station)
+            self.auto_focus(camera, self.transfer_station, n_samples_coarse= 80, z_range_coarse=1.5)
 
             counter = 1
             for x, y in points:
@@ -269,7 +287,7 @@ class Transfer_Functions:
         transfer_station.moveZRel(-z_range/2)
         func()
 
-    def auto_focus(self, camera, transfer_station):
+    def auto_focus(self, camera, transfer_station, n_samples_coarse=20, n_samples_fine=20, z_range_coarse=0.5, z_range_fine=0.1):
         Logger.log("Auto Focus")
     # def blank(self, data: dict):
         """Auto focus the camera at the current position"""
@@ -283,38 +301,74 @@ class Transfer_Functions:
 
         original_edge_count = Autofocus.get_edge_count(frame)
 
+        total_edge = []
+
         def scan_z_range(center_z_pos, z_range, n_samples):
             edge_counts = []
             print(f"Moving from {center_z_pos} to Scanning Z range from {center_z_pos-z_range/2} to {center_z_pos+z_range/2}")
             transfer_station.moveZRel(-z_range/2)
-            transfer_station.wait(0.1)
+            transfer_station.wait(1.25)
             for i in range(n_samples):
                 z_step = z_range / n_samples
+
+                # timestamp_move = time.time()
                 transfer_station.moveZRel(z_step)
-                transfer_station.wait(0.005)
+                # Logger.log(f"Time to move: {time.time() - timestamp_move}")
+                # time.sleep(0.1)
+
                 edge_count = Autofocus.get_edge_count(camera.get_frame())
                 z_pos = -z_range/2 + (i * z_step)
                 edge_counts.append((edge_count, z_pos))
+                total_edge.append((edge_count, z_pos))
                 Logger.log(f"i: {i}, Z: {z_pos}, Edge Count: {edge_count}")
 
             best_focus = max(edge_counts, key=lambda x: x[0])
             Logger.log(f"Best focus i: {i}, Z: {best_focus[1]}, Edge count: {best_focus[0]}")
-            transfer_station.wait(0.1)
             if(best_focus[0] == 0):
                 Logger.log("Best focus is at 0")
-                transfer_station.moveZRel(-z_range/2)
-                return (0, center_z_pos)
+                return -z_range/2
             else:
-                transfer_station.moveZRel(-z_range/2+best_focus[1])
-                return best_focus
+                return -z_range/2+best_focus[1]
 
         if(original_edge_count == 0):
             Logger.log(f"Original edge count is at ({original_edge_count})")
-            best_focus = scan_z_range(original_z_pos, 0.5, 20)
-            scan_z_range(best_focus[1], 0.1, 20)
+            best_focus = scan_z_range(original_z_pos, z_range_coarse, n_samples_coarse)
+            transfer_station.moveZRel(best_focus)
         else:
             Logger.log(f"Original edge count is greater than 0 ({original_edge_count})")
-            scan_z_range(original_z_pos, 0.1, 20)
+
+
+        scan_z_range(original_z_pos, z_range_fine, n_samples_fine)
+
+        def fit_gaussian(edges):
+            edge_val_np = np.array([pt[0] for pt in edges])
+            z_val_np = np.array([pt[1] for pt in edges])
+
+            if max(edge_val_np, default=0) == 0:
+                Logger.log("All edge counts in total_edge are 0")
+                return
+
+            def gaussian(x, amp, mean, std):
+                return amp * np.exp(-((x - mean) ** 2) / (2 * std ** 2))
+
+            try:
+                popt, pcov = curve_fit(
+                    gaussian, z_val_np,
+                    edge_val_np,
+                    p0=[edge_val_np.max(), z_val_np[np.argmax(edge_val_np)], 0.05]
+                )
+                Logger.log(f"Fitted parameters: amplitude={popt[0]:.2f}, mean={popt[1]:.5f}, std={popt[2]:.5f}")
+                if popt[1] is not None:
+                    return popt[1]
+                else:
+                    return 0
+            except Exception as e:
+                Logger.log_error(f"Error fitting Gaussian: {e}")
+                return 0
+        best_focus = fit_gaussian(total_edge)
+        offset = -z_range_fine/2+1*z_range_fine/n_samples_fine
+        transfer_station.moveZRel(best_focus+offset)
+        print(total_edge)
 
     #Takes Seconds
     def time_stamp():
@@ -330,3 +384,8 @@ class Transfer_Functions:
             'response': response
         })
         return response
+    
+    @transfer_function("TEST_COMMAND")
+    def test_command(self, data: dict):
+        Logger.log("Test Command")
+        Logger.log(data)
