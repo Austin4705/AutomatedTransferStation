@@ -21,8 +21,8 @@ def startup_flask_app():
     atexit.register(cleanup_resources)
 
     # Start the Flask app - use processes=1 to avoid multiprocessing issues
-    port = os.environ.get('FLASK_PORT', '5000')
-    host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    port = int(os.environ.get('FLASK_PORT', '5000'))
+    host = os.environ.get('FLASK_HOST', '0.0.0.0')
     print(f"Starting Flask app on {host}:{port}")
     app.run(host=host, port=port, debug=False, use_reloader=False, threaded=True)
 
