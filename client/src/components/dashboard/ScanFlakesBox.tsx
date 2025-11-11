@@ -1,346 +1,212 @@
 import { useSendJSON } from "../../hooks/useSendJSON";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../../state/jsonState";
-import { positionSettingsAtom } from "../../state/appState";
 
-declare global {
-  interface HTMLInputElement {
-    webkitdirectory: boolean;
-    directory: string;
-  }
-}
-
-interface Position {
-  x: number;
-  y: number;
-}
-
-interface FlakeCoordinates {
-  start: { x: string; y: string };
-  end: { x: string; y: string };
-  waferNumber: string;
-  imageNumber: string;
+interface CollectionConfig {
+  key: string;
+  collection_id: string;
+  apply_whitebalance: boolean;
+  wafer_type: "HBn" | "Graphene";
 }
 
 const ScanFlakesBox = () => {
   const sendJson = useSendJSON();
   const jsonState = useRecoilValue(jsonStateAtom);
-  const [selectedDirectory, setSelectedDirectory] = useState<string>("");
-  const directoryInputRef = useRef<HTMLInputElement>(null);
-  const [currentPosition, setCurrentPosition] = useState<Position>({ x: 0, y: 0 });
-  const [flakeCoordinates, setFlakeCoordinates] = useState<FlakeCoordinates>({
-    start: { x: "0", y: "0" },
-    end: { x: "0", y: "0" },
-    waferNumber: "",
-    imageNumber: ""
-  });
-  const [keepInputs, setKeepInputs] = useState<boolean>(false);
-  const positionSettings = useRecoilValue(positionSettingsAtom);
-  const position = positionSettings.currentPosition;
+  const [collectionCount, setCollectionCount] = useState<number>(1);
+  const [collections, setCollections] = useState<CollectionConfig[]>([
+    {
+      key: "collection-0",
+      collection_id: "",
+      apply_whitebalance: false,
+      wafer_type: "HBn"
+    }
+  ]);
+  const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error", message: string } | null>(null);
 
+  // Update collections array when count changes
   useEffect(() => {
-    if (position) {
-      setCurrentPosition({
-        x: position.x,
-        y: position.y
-      });
-    }
-  }, [position]);
+    setCollections(prev => {
+      const newCollections = [...prev];
 
-  const handleDirectorySelectClick = () => {
-    if (directoryInputRef.current) {
-      directoryInputRef.current.click();
-    }
-  };
-
-  const handleDirectoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-    const directory = files[0].webkitRelativePath.split('/')[0];
-    setSelectedDirectory(directory);
-    event.target.value = '';
-  };
-
-  const handleCoordinateChange = (
-    corner: "start" | "end",
-    axis: "x" | "y",
-    value: string
-  ) => {
-    if (value !== "" && !/^-?\d*\.?\d*$/.test(value)) {
-      return;
-    }
-
-    setFlakeCoordinates(prev => ({
-      ...prev,
-      [corner]: {
-        ...prev[corner],
-        [axis]: value
+      // Add new collections if count increased
+      while (newCollections.length < collectionCount) {
+        newCollections.push({
+          key: `collection-${newCollections.length}`,
+          collection_id: "",
+          apply_whitebalance: false,
+          wafer_type: "HBn"
+        });
       }
-    }));
-  };
-  const handleNumberChange = (field: "waferNumber" | "imageNumber", value: string) => {
-    if (value !== "" && !/^\d*$/.test(value)) {
-      return;
-    }
 
-    setFlakeCoordinates(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const copyCurrentPosition = (corner: "start" | "end") => {
-    // Format the current position values
-    const xValue = currentPosition.x.toFixed(3);
-    const yValue = currentPosition.y.toFixed(3);
-    
-    setFlakeCoordinates(prev => ({
-      ...prev,
-      [corner]: {
-        x: xValue,
-        y: yValue
+      // Remove collections if count decreased
+      while (newCollections.length > collectionCount) {
+        newCollections.pop();
       }
-    }));
+
+      return newCollections;
+    });
+  }, [collectionCount]);
+
+  // Listen for response messages
+  useEffect(() => {
+    if (!jsonState.lastJsonMessage) return;
+
+    const message = jsonState.lastJsonMessage as any;
+
+    if (message.type === "SCAN_FLAKES_RESULT") {
+      if (message.success) {
+        setStatusMessage({
+          type: "success",
+          message: `Successfully scanned ${message.collectionCount || collectionCount} collection(s)`
+        });
+      } else {
+        setStatusMessage({
+          type: "error",
+          message: message.message || "Failed to scan flakes"
+        });
+      }
+
+      setTimeout(() => setStatusMessage(null), 5000);
+    }
+  }, [jsonState.lastJsonMessage, collectionCount]);
+
+  const handleCollectionIdChange = (index: number, value: string) => {
+    setCollections(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], collection_id: value };
+      return updated;
+    });
   };
 
-  const handleGotoFlake = () => {
-    if (!flakeCoordinates.waferNumber || !flakeCoordinates.imageNumber) {
-      alert("Please enter both wafer number and image number");
-      return;
-    }
-    
-    if (!selectedDirectory) {
-      alert("Please select a directory first");
-      return;
-    }
-    
-    const payload = {
-      type: "GOTO_WAFER_IMAGE",
-      directory: selectedDirectory,
-      startXOffset: parseFloat(flakeCoordinates.start.x),
-      startYOffset: parseFloat(flakeCoordinates.start.y),
-      endXOffset: parseFloat(flakeCoordinates.end.x),
-      endYOffset: parseFloat(flakeCoordinates.end.y),
-      waferNumber: parseInt(flakeCoordinates.waferNumber),
-      imageNumber: parseInt(flakeCoordinates.imageNumber)
-    };
-    
-    sendJson(payload);
-    
-    if (!keepInputs) {
-      setFlakeCoordinates(prev => ({
-        ...prev,
-        waferNumber: "",
-        imageNumber: ""
-      }));
-    }
+  const handleWhitebalanceChange = (index: number, checked: boolean) => {
+    setCollections(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], apply_whitebalance: checked };
+      return updated;
+    });
+  };
+
+  const handleWaferTypeChange = (index: number, value: "HBn" | "Graphene") => {
+    setCollections(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], wafer_type: value };
+      return updated;
+    });
   };
 
   const handleScanFlakes = () => {
-    if (!selectedDirectory) {
-      alert("Please select a directory first");
-      return;
+    // Validate all collection IDs are filled
+    for (let i = 0; i < collections.length; i++) {
+      if (!collections[i].collection_id) {
+        alert(`Please enter Collection ID for collection ${i + 1}`);
+        return;
+      }
     }
-    
-    const payload: any = {
-      type: "SCAN_FLAKES",
-      directory: selectedDirectory
+
+    // Build config object
+    const scanFlakesConfig = {
+      collections: collections.map(c => ({
+        collection_id: c.collection_id,
+        apply_whitebalance: c.apply_whitebalance,
+        wafer_type: c.wafer_type
+      }))
     };
 
-    if (flakeCoordinates.start.x && flakeCoordinates.start.y) {
-      payload.start = {
-        x: parseFloat(flakeCoordinates.start.x),
-        y: parseFloat(flakeCoordinates.start.y)
-      };
-    }
+    const data = {
+      type: "SCAN_FLAKES",
+      parameters: JSON.stringify(scanFlakesConfig)
+    };
 
-    if (flakeCoordinates.end.x && flakeCoordinates.end.y) {
-      payload.end = {
-        x: parseFloat(flakeCoordinates.end.x),
-        y: parseFloat(flakeCoordinates.end.y)
-      };
-    }
-
-    if (flakeCoordinates.waferNumber) {
-      payload.waferNumber = parseInt(flakeCoordinates.waferNumber);
-    }
-
-    if (flakeCoordinates.imageNumber) {
-      payload.imageNumber = parseInt(flakeCoordinates.imageNumber);
-    }
-    
-    sendJson(payload);
-    
-    if (!keepInputs) {
-      setFlakeCoordinates(prev => ({
-        ...prev,
-        waferNumber: "",
-        imageNumber: ""
-      }));
-    }
-  };
-
-  const handleDrawFlakes = () => {
-    if (!selectedDirectory) {
-      alert("Please select a directory first");
-      return;
-    }
-    
-    sendJson({
-      type: "DRAW_FLAKES",
-      directory: selectedDirectory
-    });
+    sendJson(data);
   };
 
   return (
     <div className="scan-flakes-box p-4 bg-white rounded-lg shadow-md">
-      <div className="flex flex-col space-y-4">
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleDirectorySelectClick}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded"
-          >
-            Select Directory
-          </button>
-          <span className="text-sm text-gray-600 truncate max-w-xs">
-            {selectedDirectory ? selectedDirectory : "No directory selected"}
-          </span>
-          <input
-            type="file"
-            ref={directoryInputRef}
-            onChange={handleDirectoryChange}
-            webkitdirectory=""
-            directory=""
-            className="hidden"
-          />
-        </div>
-       
-        <div className="flex space-x-2">
-          <button
-            onClick={handleScanFlakes}
-            disabled={!selectedDirectory}
-            className={`${
-              selectedDirectory 
-                ? "bg-green-500 hover:bg-green-600" 
-                : "bg-gray-300 cursor-not-allowed"
-            } text-white px-3 py-1 rounded`}
-          >
-            Scan Flakes
-          </button>
-          <button
-            onClick={handleDrawFlakes}
-            disabled={!selectedDirectory}
-            className={`${
-              selectedDirectory 
-                ? "bg-orange-500 hover:bg-orange-600" 
-                : "bg-gray-300 cursor-not-allowed"
-            } text-white px-3 py-1 rounded`}
-          >
-            Draw Flakes
-          </button>
-          <button
-            onClick={handleGotoFlake}
-            disabled={!selectedDirectory || !flakeCoordinates.waferNumber || !flakeCoordinates.imageNumber}
-            className={`${
-              selectedDirectory && flakeCoordinates.waferNumber && flakeCoordinates.imageNumber
-                ? "bg-purple-500 hover:bg-purple-600" 
-                : "bg-gray-300 cursor-not-allowed"
-            } text-white px-3 py-1 rounded`}
-          >
-            Goto Flake
-          </button>
-        </div>        
+      <h3 className="text-lg font-semibold mb-3">Scan Flakes</h3>
 
-        <div className="flake-coordinates mb-2">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">Start Offset:</span>
-            <input
-              type="text"
-              value={flakeCoordinates.start.x}
-              onChange={(e) => handleCoordinateChange("start", "x", e.target.value)}
-              className="p-1 border rounded w-20 text-xs"
-              placeholder="X"
-            />
-            <input
-              type="text"
-              value={flakeCoordinates.start.y}
-              onChange={(e) => handleCoordinateChange("start", "y", e.target.value)}
-              className="p-1 border rounded w-20 text-xs"
-              placeholder="Y"
-            />
-            <button
-              onClick={() => copyCurrentPosition("start")}
-              className="px-2 py-1 bg-blue-500 text-white text-xs rounded"
-              title="Copy current position to Start"
-            >
-              Start
-            </button>
-          </div>
+      {/* Status Message */}
+      {statusMessage && (
+        <div className={`mb-3 p-2 rounded ${
+          statusMessage.type === "success"
+            ? "bg-green-100 text-green-800"
+            : "bg-red-100 text-red-800"
+        }`}>
+          {statusMessage.message}
+        </div>
+      )}
 
-          <div className="flex items-center space-x-2 mt-2">
-            <span className="text-sm font-medium">End Offset:</span>
-            <input
-              type="text"
-              value={flakeCoordinates.end.x}
-              onChange={(e) => handleCoordinateChange("end", "x", e.target.value)}
-              className="p-1 border rounded w-20 text-xs"
-              placeholder="X"
-            />
-            <input
-              type="text"
-              value={flakeCoordinates.end.y}
-              onChange={(e) => handleCoordinateChange("end", "y", e.target.value)}
-              className="p-1 border rounded w-20 text-xs"
-              placeholder="Y"
-            />
-            <button
-              onClick={() => copyCurrentPosition("end")}
-              className="px-2 py-1 bg-blue-500 text-white text-xs rounded"
-              title="Copy current position to End"
-            >
-              End
-            </button>
-          </div>
-        </div>
+      {/* Collection Count */}
+      <div className="mb-4">
+        <label className="text-sm font-medium mr-2">Number of Collections:</label>
+        <input
+          type="number"
+          min="1"
+          value={collectionCount}
+          onChange={(e) => setCollectionCount(Math.max(1, parseInt(e.target.value) || 1))}
+          className="p-1 border rounded w-20 text-sm"
+        />
+      </div>
 
-        <div className="wafer-image-numbers mb-2">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">Wafer Number:</span>
-            <input
-              type="text"
-              value={flakeCoordinates.waferNumber}
-              onChange={(e) => handleNumberChange("waferNumber", e.target.value)}
-              className="p-1 border rounded w-20 text-xs"
-              placeholder="Wafer #"
-            />
-            <span className="text-sm font-medium ml-2">Image Number:</span>
-            <input
-              type="text"
-              value={flakeCoordinates.imageNumber}
-              onChange={(e) => handleNumberChange("imageNumber", e.target.value)}
-              className="p-1 border rounded w-20 text-xs"
-              placeholder="Image #"
-            />
-          </div>
-        </div>
-        
-        {/* Keep Inputs Checkbox */}
-        <div className="keep-inputs-option mb-2">
-          <label className="flex items-center space-x-2 text-sm">
-            <input
-              type="checkbox"
-              checked={keepInputs}
-              onChange={(e) => setKeepInputs(e.target.checked)}
-              className="form-checkbox h-4 w-4 text-blue-500"
-            />
-            <span>Keep inputs after submission</span>
-          </label>
-        </div>
- 
+      {/* Collections Table */}
+      <div className="overflow-x-auto mb-4">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border p-2">#</th>
+              <th className="border p-2">Collection ID</th>
+              <th className="border p-2">Apply Whitebalance</th>
+              <th className="border p-2">Wafer Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            {collections.map((collection, index) => (
+              <tr key={collection.key}>
+                <td className="border p-2 text-center">{index + 1}</td>
+                <td className="border p-2">
+                  <input
+                    type="text"
+                    value={collection.collection_id}
+                    onChange={(e) => handleCollectionIdChange(index, e.target.value)}
+                    className="w-full p-1 border rounded text-xs"
+                    placeholder="Enter collection ID"
+                  />
+                </td>
+                <td className="border p-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={collection.apply_whitebalance}
+                    onChange={(e) => handleWhitebalanceChange(index, e.target.checked)}
+                    className="form-checkbox h-4 w-4"
+                  />
+                </td>
+                <td className="border p-2">
+                  <select
+                    value={collection.wafer_type}
+                    onChange={(e) => handleWaferTypeChange(index, e.target.value as "HBn" | "Graphene")}
+                    className="w-full p-1 border rounded text-xs"
+                  >
+                    <option value="HBn">HBn</option>
+                    <option value="Graphene">Graphene</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Scan Button */}
+      <div className="flex justify-center">
+        <button
+          onClick={handleScanFlakes}
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-medium"
+        >
+          Scan Flakes
+        </button>
       </div>
     </div>
   );
 };
 
-export default ScanFlakesBox; 
+export default ScanFlakesBox;

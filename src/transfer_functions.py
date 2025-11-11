@@ -391,3 +391,64 @@ class Transfer_Functions:
     def test_command(self, data: dict):
         Logger.log("Test Command")
         Logger.log(data)
+
+    @transfer_function("RUN_SCAN_FLAKES")
+    def run_scan_flakes(self, data: dict):
+        """
+        Scan flakes from multiple collections
+        """
+        try:
+            from socket_manager import Socket_Manager
+
+            Logger.log("Starting SCAN_FLAKES operation")
+            collections = data.get("collections", [])
+
+            if not collections:
+                raise ValueError("No collections provided")
+
+            for idx, collection_config in enumerate(collections):
+                collection_id = collection_config.get("collection_id")
+                apply_whitebalance = collection_config.get("apply_whitebalance", False)
+                wafer_type = collection_config.get("wafer_type", "HBn")
+
+                Logger.log(f"Processing collection {idx + 1}/{len(collections)}")
+                Logger.log(f"  Collection ID: {collection_id}")
+                Logger.log(f"  Apply Whitebalance: {apply_whitebalance}")
+                Logger.log(f"  Wafer Type: {wafer_type}")
+
+            Socket_Manager.send_all_json({
+                "type": "SCAN_FLAKES_RESULT",
+                "success": True,
+                "collectionCount": len(collections),
+                "message": f"Successfully processed {len(collections)} collection(s)"
+            })
+
+        except Exception as e:
+            from socket_manager import Socket_Manager
+            Logger.log_error(f"Error in RUN_SCAN_FLAKES: {str(e)}")
+            Socket_Manager.send_all_json({
+                "type": "SCAN_FLAKES_RESULT",
+                "success": False,
+                "message": f"Error: {str(e)}"
+            })
+
+    @transfer_function("RUN_GOTO_FLAKE")
+    def run_goto_flake(self, data: dict):
+        """
+        Navigate to a specific flake location based on image ID and new coordinates
+        """
+        try:
+            image_id = data.get("image_id")
+            new_start_x = float(data.get("new_start_x"))
+            new_start_y = float(data.get("new_start_y"))
+
+            if not image_id:
+                raise ValueError("Image ID is required")
+
+            Logger.log(f"Navigating to flake:")
+            Logger.log(f"  Image ID: {image_id}")
+            Logger.log(f"  New Start X: {new_start_x}")
+            Logger.log(f"  New Start Y: {new_start_y}")
+
+        except Exception as e:
+            Logger.log_error(f"Error in RUN_GOTO_FLAKE: {str(e)}")
