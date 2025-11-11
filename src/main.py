@@ -15,7 +15,7 @@ from socket_manager import Socket_Manager
 from packet_handlers import PacketHandlers
 
 if __name__ == "__main__":
-    Logger.set_socket_manager(Socket_Manager)
+    Logger.init_logger(Socket_Manager)
     load_dotenv("defualt.env")
     load_dotenv(".env", override=True)
 
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     Logger.log("System Initialized. Press Enter to exit...")
     input()
     Logger.log("Stopping execution")
-    PacketHandlers.transfer_functions.stop_execution()
+    PacketHandlers.transfer_functions.cancel_execution()
     Logger.save_logs()
     for camera in list(Camera.global_list.values()):
         camera.cleanup()

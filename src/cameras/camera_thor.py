@@ -12,6 +12,7 @@ from thorlabs_tsi_sdk.tl_mono_to_color_enums import COLOR_SPACE
 from thorlabs_tsi_sdk.tl_color_enums import FORMAT
 
 from camera import Camera
+from logger import Logger
 
 class Camera_Thor(Camera):
 
@@ -50,12 +51,8 @@ class Camera_Thor(Camera):
             self.cam = self.sdk.open_camera(serials[self.camera_id])
             print("Model:", self.cam.model, "SN:", self.cam.serial_number)
             print("Sensor type:", self.cam.camera_sensor_type)
-            
+
             print(f"Max sensor dimensions: {self.cam.image_width_pixels}x{self.cam.image_height_pixels}")
-            desired_dimensitons = (680, 420)
-            offset_x = (self.cam.image_width_pixels - desired_dimensitons[0]) // 2
-            offset_y = (self.cam.image_height_pixels - desired_dimensitons[1]) // 2
-            # self.cam.roi = (offset_x, offset_y, offset_x + desired_dimensitons[0] - 1, offset_y + desired_dimensitons[1] - 1)
             
             self.frame_width = self.cam.image_width_pixels
             self.frame_height = self.cam.image_height_pixels
@@ -88,12 +85,13 @@ class Camera_Thor(Camera):
             return False, None
         
         if self.mono_to_color_processor is None:
-            print("Mono to color processor is None")
+            Logger.log("Mono to color processor is None")
             return False, None
             
         try:
             frame = self.cam.get_pending_frame_or_null()
             if frame is None:
+                Logger.log("Frame is None")
                 return False, None
             
             img = frame.image_buffer
