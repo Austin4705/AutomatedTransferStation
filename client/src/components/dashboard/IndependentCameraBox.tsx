@@ -25,7 +25,7 @@ const IndependentCameraBox = ({ cameraId, defaultCamera = 0 }: IndependentCamera
   const [imageKey, setImageKey] = useState(Date.now());
 
   const imgRef = useRef<HTMLImageElement>(null);
-  const baseUrl = `http://${connection.host}:5000/`;
+  const baseUrl = `http://${connection.host}:3000/`;
 
   // Construct the feed URL based on current selections
   const getFeedUrl = useCallback(() => {

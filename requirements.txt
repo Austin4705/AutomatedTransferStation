@@ -2,6 +2,7 @@ opencv-python
 aiortc
 aiohttp
 flask
+flask-cors
 websockets
 pyserial
 python-dotenv
