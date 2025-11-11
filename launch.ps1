@@ -1,0 +1,185 @@
+# Automated Transfer Station Launcher
+# This script sets up the database, launches the client, and runs the Python environment
+
+# Set error action preference
+$ErrorActionPreference = "Stop"
+
+# Colors for output
+function Write-ColorOutput {
+    param(
+        [string]$Message,
+        [string]$Color = "White"
+    )
+    Write-Host $Message -ForegroundColor $Color
+}
+
+# Function to check if a command exists
+function Test-CommandExists {
+    param($Command)
+    $null = Get-Command $Command -ErrorAction SilentlyContinue
+    return $?
+}
+
+# Function to check if Docker is running
+function Test-DockerRunning {
+    try {
+        docker info > $null 2>&1
+        return $?
+    } catch {
+        return $false
+    }
+}
+
+# Print header
+Write-ColorOutput "`n========================================" "Cyan"
+Write-ColorOutput "  Automated Transfer Station Launcher" "Cyan"
+Write-ColorOutput "========================================`n" "Cyan"
+
+# Step 1: Check prerequisites
+Write-ColorOutput "[1/6] Checking prerequisites..." "Yellow"
+
+if (-not (Test-CommandExists "conda")) {
+    Write-ColorOutput "ERROR: Conda is not installed or not in PATH" "Red"
+    Write-ColorOutput "Please install Miniconda and ensure it's in your PATH" "Red"
+    exit 1
+}
+
+if (-not (Test-CommandExists "docker")) {
+    Write-ColorOutput "ERROR: Docker is not installed or not in PATH" "Red"
+    Write-ColorOutput "Please install Docker Desktop" "Red"
+    exit 1
+}
+
+if (-not (Test-CommandExists "npm")) {
+    Write-ColorOutput "ERROR: npm is not installed or not in PATH" "Red"
+    Write-ColorOutput "Please install Node.js" "Red"
+    exit 1
+}
+
+Write-ColorOutput "All prerequisites met!" "Green"
+
+# Step 2: Check if Docker Desktop is running
+Write-ColorOutput "`n[2/6] Checking Docker Desktop..." "Yellow"
+if (-not (Test-DockerRunning)) {
+    Write-ColorOutput "ERROR: Docker Desktop is not running" "Red"
+    Write-ColorOutput "Please start Docker Desktop and try again" "Red"
+    exit 1
+}
+Write-ColorOutput "Docker Desktop is running!" "Green"
+
+# Step 3: Start OMERO database
+Write-ColorOutput "`n[3/6] Starting OMERO database..." "Yellow"
+try {
+    docker compose up -d
+    if ($LASTEXITCODE -eq 0) {
+        Write-ColorOutput "Database started successfully!" "Green"
+        Write-ColorOutput "OMERO Web UI available at: http://localhost:4080/" "Cyan"
+        Write-ColorOutput "Login credentials - username: root, password: omero" "Cyan"
+    } else {
+        Write-ColorOutput "WARNING: Database may already be running or encountered an issue" "Yellow"
+    }
+} catch {
+    Write-ColorOutput "ERROR: Failed to start database" "Red"
+    Write-ColorOutput $_.Exception.Message "Red"
+    exit 1
+}
+
+# Step 4: Install and start client
+Write-ColorOutput "`n[4/6] Setting up client..." "Yellow"
+Push-Location client
+
+# Check if node_modules exists
+if (-not (Test-Path "node_modules")) {
+    Write-ColorOutput "Installing client dependencies (this may take a while)..." "Yellow"
+    npm install
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorOutput "ERROR: Failed to install client dependencies" "Red"
+        Pop-Location
+        exit 1
+    }
+}
+
+Write-ColorOutput "Starting client development server..." "Yellow"
+$clientProcess = Start-Process -FilePath "npm" -ArgumentList "run", "dev" -PassThru -NoNewWindow
+Write-ColorOutput "Client started with PID: $($clientProcess.Id)" "Green"
+Pop-Location
+
+# Wait a moment for the client to start
+Start-Sleep -Seconds 3
+
+# Step 5: Check conda environment
+Write-ColorOutput "`n[5/6] Checking Python environment..." "Yellow"
+
+# Get conda info
+$condaEnvs = conda env list | Out-String
+
+if ($condaEnvs -notmatch "automatedTransfer") {
+    Write-ColorOutput "ERROR: Conda environment 'automatedTransfer' not found" "Red"
+    Write-ColorOutput "Please create it using:" "Yellow"
+    Write-ColorOutput "  conda create -n automatedTransfer python=3.11.9" "Yellow"
+    Write-ColorOutput "  conda activate automatedTransfer" "Yellow"
+    Write-ColorOutput "  pip install -r requirements.txt" "Yellow"
+
+    # Kill client process before exiting
+    Stop-Process -Id $clientProcess.Id -Force
+    exit 1
+}
+
+Write-ColorOutput "Python environment found!" "Green"
+
+# Step 6: Launch Python application
+Write-ColorOutput "`n[6/6] Launching Python application..." "Yellow"
+Write-ColorOutput "========================================`n" "Cyan"
+
+# Change to src directory and run main.py
+Push-Location src
+
+# Create a script block to run in the conda environment
+$scriptBlock = {
+    param($srcPath)
+    Set-Location $srcPath
+    & conda activate automatedTransfer
+    & python main.py
+}
+
+# Try to run with conda
+try {
+    # Use cmd to activate conda and run python
+    & cmd /c "conda activate automatedTransfer && python main.py"
+} catch {
+    Write-ColorOutput "ERROR: Failed to launch Python application" "Red"
+    Write-ColorOutput $_.Exception.Message "Red"
+
+    # Cleanup
+    Pop-Location
+    Stop-Process -Id $clientProcess.Id -Force
+    exit 1
+} finally {
+    Pop-Location
+}
+
+# Cleanup function
+function Cleanup {
+    Write-ColorOutput "`n`nShutting down..." "Yellow"
+
+    # Kill client process
+    if ($clientProcess -and -not $clientProcess.HasExited) {
+        Write-ColorOutput "Stopping client..." "Yellow"
+        Stop-Process -Id $clientProcess.Id -Force
+    }
+
+    # Optionally stop docker
+    $stopDocker = Read-Host "Stop OMERO database? (y/n)"
+    if ($stopDocker -eq "y") {
+        Write-ColorOutput "Stopping database..." "Yellow"
+        docker compose down
+    }
+
+    Write-ColorOutput "Cleanup complete!" "Green"
+}
+
+# Register cleanup on exit
+Register-EngineEvent PowerShell.Exiting -Action { Cleanup }
+
+# Wait for user to press Enter to exit (this is handled by the Python script)
+# The script will exit when main.py exits

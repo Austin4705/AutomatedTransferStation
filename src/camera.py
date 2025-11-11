@@ -166,6 +166,7 @@ class Camera:
         """Take a snapshot and store it"""
         frame = self.get_frame()
         self.snapshot_image = frame
+        Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
         # Logger.log(self.snapshot_image.shape)
         try:
             image_id = Camera.image_container.save_snapshot(Camera.image_container.active_chip_id, self.snapshot_image)
@@ -176,12 +177,12 @@ class Camera:
             self.image_container.apply_metadata_to_image(image_id, image_metadata)
         except Exception as e:
             Logger.log_error(f"Error saving snapshot: {e}")
-        Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
         return self.snapshot_image
 
     def snap_image_flake_hunted(self):
         """Take a flake hunted snapshot and store it"""
         frame = self.get_frame()
+        Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT_FLAKE_HUNTED", "camera": self.camera_id})
         try:
             # self.snapshot_image_flake_hunted = CV_Functions.matGMM2DTransform(frame)
             self.snapshot_image_flake_hunted = frame
@@ -191,7 +192,6 @@ class Camera:
             Camera.image_container.save_flake_hunted_snapshot(Camera.image_container.active_chip_id, self.snapshot_image_flake_hunted)
         except Exception as e:
             Logger.log_error(f"Error saving flake hunted snapshot: {e}")
-        Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT_FLAKE_HUNTED", "camera": self.camera_id})
         return self.snapshot_image_flake_hunted
 
 

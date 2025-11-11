@@ -6,6 +6,8 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0', // Listen on all network interfaces (allows both localhost and 127.0.0.1)
+    port: 5173,
     // Add static file serving for shared directory
     static: {
       directory: path.resolve(__dirname, '../shared'),
