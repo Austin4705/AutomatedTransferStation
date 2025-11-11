@@ -4,6 +4,7 @@ import websockets
 import inspect
 import threading
 import time
+import os
 from queue import Queue
 from typing import Any, Dict, Callable
 from websockets.asyncio.server import serve
@@ -29,7 +30,10 @@ class Socket_Manager:
         asyncio.set_event_loop(loop)
 
         async def main():
-            server = await serve(Socket_Manager.conn_handler, "localhost", 8765)
+            host = os.environ.get('WEBSOCKET_HOST', '0.0.0.0')
+            port = int(os.environ.get('WEBSOCKET_PORT', '8765'))
+            Logger.log(f"Starting WebSocket server on {host}:{port}")
+            server = await serve(Socket_Manager.conn_handler, host, port)
         
         loop.run_until_complete(main())
         loop.run_forever()

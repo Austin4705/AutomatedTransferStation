@@ -10,10 +10,13 @@ const HostConfigInput = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Save to localStorage before updating state
-    localStorage.setItem('connection-host', inputValue);
+    // Remove trailing slashes to prevent malformed URLs
+    const sanitizedHost = inputValue.replace(/\/+$/, '');
 
-    setConnection(prev => ({ ...prev, host: inputValue }));
+    // Save to localStorage before updating state
+    localStorage.setItem('connection-host', sanitizedHost);
+
+    setConnection(prev => ({ ...prev, host: sanitizedHost }));
     setIsEditing(false);
 
     window.location.reload();
