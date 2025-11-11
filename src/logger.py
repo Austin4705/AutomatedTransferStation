@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+import atexit
 
 class Logger:
     messages = []
@@ -14,6 +15,11 @@ class Logger:
     @staticmethod
     def set_socket_manager(socket_manager):
         Logger.socket_manager = socket_manager
+
+    @staticmethod
+    def init_logger(socket_manager):
+        Logger.set_socket_manager(socket_manager)
+        atexit.register(Logger.save_logs)
 
     @staticmethod
     def save_logs():
@@ -44,9 +50,9 @@ class Logger:
     @staticmethod
     def get_messages(count: int = 0):
         if count > 0:
-            return self.messages[-count:]
+            return Logger.messages[-count:]
         else:
-            return self.messages
+            return Logger.messages
 
     @staticmethod
     def clear_messages():

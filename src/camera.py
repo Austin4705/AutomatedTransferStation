@@ -11,6 +11,7 @@ from autofocus import Autofocus
 from socket_manager import Socket_Manager
 from image_container import Image_Container
 from cv_functions import CV_Functions
+from transfer_station import Transfer_Station
 
 class Camera:
     image_container: Image_Container = None
@@ -81,12 +82,12 @@ class Camera:
         self.capture_thread = None
         self.whitebalance_enabled = False
 
-        start_time = time.time()
+        self.start_time = time.time()
         self.frame_count = 0
         self.last_fps_frame_count = 0
-        self.fps_update_time = start_time
-        self.start_time = start_time
+        self.fps_update_time = self.start_time
         self.fps_display = 0
+        self.fps_total = 0
         self.fps_counter_enabled = True
         
         self.initialize_camera()
@@ -135,13 +136,14 @@ class Camera:
 
                     self.frame_count += 1
                     current_time = time.time()
-                    if current_time - self.fps_update_time >= 1.0:
+                    if current_time - self.fps_update_time >= 3.0:
                         elapsed = current_time - self.fps_update_time
-                        self.fps_display = (self.frame_count - self.last_fps_frame_count) / elapsed
                         self.last_fps_frame_count = self.frame_count
                         self.fps_update_time = current_time
+                        self.fps_display = (self.frame_count - self.last_fps_frame_count) / elapsed
+                        self.fps_total = self.frame_count  / (current_time - self.start_time)
                     if self.fps_counter_enabled:
-                        cv2.putText(self.current_frame, f"FPS: {self.fps_display:.1f}", (10, 30),
+                        cv2.putText(self.current_frame, f"FPS: {self.fps_display:.1f}, Total: {self.fps_total:.1f}", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                         cv2.putText(self.current_frame, f"Frame: {self.frame_count}", (10, 70),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
@@ -166,7 +168,12 @@ class Camera:
         self.snapshot_image = frame
         # Logger.log(self.snapshot_image.shape)
         try:
-            Camera.image_container.save_snapshot(Camera.image_container.active_chip_id, self.snapshot_image)
+            image_id = Camera.image_container.save_snapshot(Camera.image_container.active_chip_id, self.snapshot_image)
+            image_metadata = {"key_value_pairs": {
+                "x": Transfer_Station.subclass_instances.posX(),
+                "y": Transfer_Station.subclass_instances.posY(),
+            }}
+            self.image_container.apply_metadata_to_image(image_id, image_metadata)
         except Exception as e:
             Logger.log_error(f"Error saving snapshot: {e}")
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
