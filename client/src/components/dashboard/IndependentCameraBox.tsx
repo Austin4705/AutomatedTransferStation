@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRecoilValue } from "recoil";
 import { jsonStateAtom } from "../../state/jsonState";
 import { isConsoleMessage } from "../../state/consoleState";
@@ -28,7 +28,7 @@ const IndependentCameraBox = ({ cameraId, defaultCamera = 0 }: IndependentCamera
   const baseUrl = `http://${connection.host}:5000/`;
 
   // Construct the feed URL based on current selections
-  const getFeedUrl = () => {
+  const getFeedUrl = useCallback(() => {
     let feedPath = '';
     switch (feedType) {
       case 'video':
@@ -42,11 +42,11 @@ const IndependentCameraBox = ({ cameraId, defaultCamera = 0 }: IndependentCamera
         break;
     }
     return feedPath;
-  };
+  }, [cameraNumber, feedType]);
 
   const currentFeed = getFeedUrl();
 
-  const refreshStream = () => {
+  const refreshStream = useCallback(() => {
     setIsRefreshing(true);
     setError(null);
 
@@ -61,44 +61,56 @@ const IndependentCameraBox = ({ cameraId, defaultCamera = 0 }: IndependentCamera
     const urlToLoad = `${baseUrl}${feedToLoad}?nocache=${cacheKey}`;
 
     if (imgRef.current) {
-      // Clear the current image source to force reload
-      imgRef.current.src = '';
+      // For video feeds, directly update src to maintain streaming connection
+      // For snapshot feeds, use preloading to verify the image loads
+      if (feedType === 'video') {
+        // Direct assignment for streaming video feeds
+        imgRef.current.src = urlToLoad;
+        // Clear refresh state after a short delay
+        setTimeout(() => {
+          setError(null);
+          setIsRefreshing(false);
+        }, 500);
+      } else {
+        // For snapshots, use preloading to check if image loads successfully
+        imgRef.current.src = '';
 
-      const preloadImg = new Image();
+        const preloadImg = new Image();
 
-      const timeoutId = setTimeout(() => {
-        setError("Camera feed load timeout. The server might be slow or unresponsive.");
-        setIsRefreshing(false);
-      }, 5000);
+        const timeoutId = setTimeout(() => {
+          setError("Camera feed load timeout. The server might be slow or unresponsive.");
+          setIsRefreshing(false);
+        }, 5000);
 
-      preloadImg.onload = () => {
-        clearTimeout(timeoutId);
-        setError(null);
-        setIsRefreshing(false);
+        preloadImg.onload = () => {
+          clearTimeout(timeoutId);
+          setError(null);
+          setIsRefreshing(false);
 
-        if (imgRef.current) {
-          imgRef.current.src = urlToLoad;
-        }
-      };
+          if (imgRef.current) {
+            imgRef.current.src = urlToLoad;
+          }
+        };
 
-      preloadImg.onerror = () => {
-        clearTimeout(timeoutId);
-        setError("Failed to load camera feed. Please check if the camera server is running.");
-        setIsRefreshing(false);
-      };
+        preloadImg.onerror = () => {
+          clearTimeout(timeoutId);
+          setError("Failed to load camera feed. Please check if the camera server is running.");
+          setIsRefreshing(false);
+        };
 
-      preloadImg.src = urlToLoad;
+        preloadImg.src = urlToLoad;
+      }
     } else {
       setTimeout(() => {
         setIsRefreshing(false);
       }, 1000);
     }
-  };
+  }, [baseUrl, getFeedUrl, feedType]);
 
   // Refresh when feed changes
   useEffect(() => {
     refreshStream();
-  }, [cameraNumber, feedType, connection.host]);
+  }, [cameraNumber, feedType, refreshStream]);
 
   // Auto-refresh snapshot/flake_hunted feeds when snap message received
   useEffect(() => {
@@ -109,7 +121,35 @@ const IndependentCameraBox = ({ cameraId, defaultCamera = 0 }: IndependentCamera
     ) {
       refreshStream();
     }
-  }, [jsonState.lastJsonMessage, feedType]);
+  }, [jsonState.lastJsonMessage, feedType, refreshStream]);
+
+  // Listen for REFRESH_SNAPSHOT packets from backend
+  useEffect(() => {
+    const handleRefreshStream = (event: CustomEvent) => {
+      const { streamType, cameraNumber: eventCameraNumber } = event.detail;
+
+      // Check if this event is for our camera
+      if (eventCameraNumber !== cameraNumber) {
+        return;
+      }
+
+      // Check if the stream type matches our current feed type
+      const shouldRefresh =
+        (streamType === 'snapshot_feed' && feedType === 'snapshot') ||
+        (streamType === 'snapshot_flake_hunted' && feedType === 'flake_hunted');
+
+      if (shouldRefresh) {
+        console.log(`IndependentCameraBox refreshing camera ${cameraNumber} for ${streamType}`);
+        refreshStream();
+      }
+    };
+
+    window.addEventListener('refresh-camera-stream', handleRefreshStream as EventListener);
+
+    return () => {
+      window.removeEventListener('refresh-camera-stream', handleRefreshStream as EventListener);
+    };
+  }, [cameraNumber, feedType, refreshStream]);
 
   const handleImageError = () => {
     setError("Failed to load camera feed. Please check if the camera server is running.");
