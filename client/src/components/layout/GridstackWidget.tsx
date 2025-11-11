@@ -45,9 +45,9 @@ export const GridstackWidget: React.FC<GridstackWidgetProps> = ({
       gs-min-h={minH}
       gs-max-w={maxW}
       gs-max-h={maxH}
-      gs-no-resize={noResize}
-      gs-no-move={noMove}
-      gs-locked={locked}
+      {...(noResize && { 'gs-no-resize': 'true' })}
+      {...(noMove && { 'gs-no-move': 'true' })}
+      {...(locked && { 'gs-locked': 'true' })}
     >
       <div className="grid-stack-item-content">
         {children}

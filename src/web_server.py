@@ -1,4 +1,5 @@
 from flask import Flask, render_template, Response, jsonify, request
+from flask_cors import CORS
 from camera import Camera
 import logging
 import threading
@@ -9,6 +10,7 @@ import datetime
 import os
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 active_streams = {}
 stream_lock = threading.Lock()
 
@@ -21,7 +23,7 @@ def startup_flask_app():
     atexit.register(cleanup_resources)
 
     # Start the Flask app - use processes=1 to avoid multiprocessing issues
-    port = int(os.environ.get('FLASK_PORT', '5000'))
+    port = int(os.environ.get('FLASK_PORT', '3000'))
     host = os.environ.get('FLASK_HOST', '0.0.0.0')
     print(f"Starting Flask app on {host}:{port}")
     app.run(host=host, port=port, debug=False, use_reloader=False, threaded=True)

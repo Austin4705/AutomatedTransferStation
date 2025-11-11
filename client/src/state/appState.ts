@@ -20,14 +20,6 @@ export interface Position {
   [key: string]: number | undefined;
 }
 
-export interface CameraState {
-  selectedCamera: string;
-  isRefreshing: boolean;
-  error: string | null;
-  imageKey: number;
-  lastSelectedCamera: string;
-}
-
 export interface ConnectionState {
   host: string;
   readyState: ReadyState;
@@ -107,7 +99,6 @@ export interface ScanFlakesState {
 export interface AppState {
   connection: ConnectionState;
   position: PositionSettings;
-  camera: CameraState;
   logs: LogsState;
   traceOver: TraceOverState;
   scanFlakes: ScanFlakesState;
@@ -116,14 +107,6 @@ export interface AppState {
 // ============================================================================
 // DEFAULT STATE VALUES
 // ============================================================================
-
-const DEFAULT_CAMERA_STATE: CameraState = {
-  selectedCamera: "video_feed0",
-  isRefreshing: false,
-  error: null,
-  imageKey: Date.now(),
-  lastSelectedCamera: "video_feed0",
-};
 
 const DEFAULT_CONNECTION_STATE: ConnectionState = {
   host: typeof window !== 'undefined'
@@ -191,7 +174,6 @@ const DEFAULT_SCAN_FLAKES_STATE: ScanFlakesState = {
 const DEFAULT_APP_STATE: AppState = {
   connection: DEFAULT_CONNECTION_STATE,
   position: DEFAULT_POSITION_SETTINGS,
-  camera: DEFAULT_CAMERA_STATE,
   logs: DEFAULT_LOGS_STATE,
   traceOver: DEFAULT_TRACE_OVER_STATE,
   scanFlakes: DEFAULT_SCAN_FLAKES_STATE,
@@ -217,15 +199,6 @@ export const connectionStateAtom = atom<ConnectionState>({
 export const positionSettingsAtom = atom<PositionSettings>({
   key: "positionSettings",
   default: DEFAULT_POSITION_SETTINGS,
-});
-
-/**
- * Camera State Atom
- * Manages camera selection and display state
- */
-export const cameraStateAtom = atom<CameraState>({
-  key: "cameraState",
-  default: DEFAULT_CAMERA_STATE,
 });
 
 /**
