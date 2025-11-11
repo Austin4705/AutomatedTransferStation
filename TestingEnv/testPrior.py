@@ -1,4 +1,4 @@
-from transfer_station import Transfer_Station
+from ast import Dict
 from serial import Serial
 import threading
 from queue import Queue
@@ -6,81 +6,6 @@ import time
 import os
 import re
 
-from logger import Logger
-
-
-class TransferStationPrior(Transfer_Station):
-    MAGNIFICATION_TRAVEL = {
-        5: {"x": 1, "y": 1, "wait_time": 1},
-        10: {"x": 1, "y": 1, "wait_time": 1},
-        20: {"x": 0.7, "y": 0.5, "wait_time": 1},
-        40: {"x": 1, "y": 1, "wait_time": 1},
-        50: {"x": 1, "y": 1, "wait_time": 1},
-        100: {"x": 1, "y": 1, "wait_time": 1},
-    }
-    def __init__(self):
-        super().__init__()
-        self.type = "prior"
-        self.command_server = CommandServer(port=os.getenv('PRIOR_PORT', 'COM3'), baudrate=9600, timeout=0.1)
-
-    def _send_command(self, command):
-        return self.command_server.send(command)
-
-    def _internal_to_output(self, x):
-        return int(x * 100000)
-
-    def _output_to_internal(self, x):
-        if x is None:
-            raise ValueError("No response received from Prior stage")
-
-        if isinstance(x, bytes):
-            x = x.decode('ascii', errors='ignore')
-
-        if isinstance(x, str):
-            x = x.strip()
-            for delimiter in ("\r", "\n"):
-                if delimiter in x:
-                    x = x.split(delimiter, 1)[0]
-            match = re.search(r"-?\d+(?:\.\d+)?", x)
-            if match:
-                x = match.group(0)
-            else:
-                raise ValueError(f"Unable to parse numeric value from response: {x!r}")
-
-        return float(x) / 100000
-
-    def moveX(self, X):
-        self._send_command(f"GX {self._internal_to_output(X)}")
-
-    def moveY(self, Y):
-        self._send_command(f"GY {self._internal_to_output(Y)}")
-
-    def moveZ(self, Z):
-        self._send_command(f"GZ {self._internal_to_output(Z)}")
-
-    def moveXY(self, x, y):
-        self._send_command(f"G {self._internal_to_output(x)} {self._internal_to_output(y)}")
-
-    def moveXRel(self, X):
-        self._send_command(f"GR {self._internal_to_output(X)} 0")
-
-    def moveYRel(self, Y):
-        self._send_command(f"GR 0 {self._internal_to_output(Y)}")
-
-    def moveZRel(self, Z):
-        self._send_command(f"GR 0 0 {self._internal_to_output(Z)}")
-
-    def moveXYRel(self, X, Y):
-        self._send_command(f"GR {self._internal_to_output(X)} {self._internal_to_output(Y)}")
-
-    def posX(self):
-        return self._output_to_internal(self._send_command("PX"))
-
-    def posY(self):
-       return self._output_to_internal(self._send_command("PY"))
-
-    def posZ(self):
-        return self._output_to_internal(self._send_command("PZ"))
 
 
 class CommandServer:
@@ -165,3 +90,36 @@ class CommandServer:
     def __del__(self):
         self.close()
 
+
+command_server = CommandServer(port='COM3', baudrate=9600)
+start_time = time.time()
+counter = 0
+while time.time() - start_time < 10:
+    response = command_server.send("PZ")
+    counter += 1
+    print(f'Response: {response}, rate: {counter / (time.time() - start_time)}')
+
+# device = Serial(port='COM3', baudrate=9600, timeout=0.1)
+
+# def send(device, command):
+#     device.write(bytes(f"{command}\r\n", 'ascii'))
+#     response = device.readline()
+#     return response
+
+# time.sleep(0.5)
+
+# start_time = time.time()
+# counter = 0
+# while time.time() - start_time < 10:
+#     int
+#     response1 = send(device, "PZ")
+#     # response = send(device, "GR 0 0 10000")
+#     counter += 1
+#     print(f'Response: {response1}, , rate: {counter / (time.time() - start_time)}')
+#     time.sleep(0.3)
+
+# while True:
+#     value = input()
+#     if(input == "exit"):
+#         break
+#     print(send(device, value))
