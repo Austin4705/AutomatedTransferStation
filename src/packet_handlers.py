@@ -139,6 +139,42 @@ class PacketHandlers:
             "messages": messages
         })
 
-    
+    @packet_handler("SCAN_FLAKES")
+    def handle_scan_flakes(packet_type: str, data: dict):
+        try:
+            # Logger.log(f"SCAN_FLAKES received data: {data}")
+            parameters = json.loads(data["parameters"])
+            PacketHandlers.transfer_functions.run_command("RUN_SCAN_FLAKES", parameters)
+        except Exception as e:
+            Logger.log_error(f"Error executing SCAN_FLAKES: {str(e)}")
+            Socket_Manager.send_all_json({
+                "type": "SCAN_FLAKES_RESULT",
+                "success": False,
+                "message": f"Error: {str(e)}"
+            })
 
-        
+    @packet_handler("GOTO_FLAKE")
+    def handle_goto_flake(packet_type: str, data: dict):
+        try:
+            # Logger.log(f"GOTO_FLAKE received data: {data}")
+            image_id = data["image_id"]
+            new_start_x = float(data["new_start_x"])
+            new_start_y = float(data["new_start_y"])
+
+            parameters = {
+                "image_id": image_id,
+                "new_start_x": new_start_x,
+                "new_start_y": new_start_y
+            }
+
+            PacketHandlers.transfer_functions.run_command("RUN_GOTO_FLAKE", parameters)
+        except Exception as e:
+            Logger.log_error(f"Error executing GOTO_FLAKE: {str(e)}")
+            Socket_Manager.send_all_json({
+                "type": "GOTO_FLAKE_RESULT",
+                "success": False,
+                "message": f"Error: {str(e)}"
+            })
+
+
+
