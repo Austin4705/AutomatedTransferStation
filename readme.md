@@ -7,6 +7,11 @@ This platform, developed by Austin Wu for the Yasuda Lab at Cornell, is designed
 - Potential automated stacking algorithms
 - Automated station control
 
+![Automated Transfer Program Screenshot](readmeImage.png)
+
+## How to use
+After installation, define wafers to scan over. Then trace over them and after compute where flakes are.
+
 ## Prerequisites
 - [Miniconda](https://docs.conda.io/en/latest/miniconda.html) (Make sure it's installed and added to your PATH)
 - Python 3.11.9
@@ -40,11 +45,17 @@ git clone https://github.com/Austin4705/2DMatGMM
 pip install -e 2DMatGMM
 ```
 
+### Run
+I have created a file in the main directory `launch.bat`. By clicking it and running it all remaining things should either install or boot up.
+
+### Manually start up Program
+#### If that doesnt work, you'll need to do this to run it:
+
 This project also uses OMERO for storing microscope data. To install, simply run 
 ```bash
 dokcer compose pull
 ```
-once in this directory to instlal it. 
+once in this directory to install it. 
 ### 3. To Launch The Application
 You will need to run three terminals to start up the app. Do the windows ones in powershell. Assume you open the terminal in this directory.
 #### First Terminal
@@ -79,10 +90,8 @@ Create a `.env` file based on `default.env` in the project src directory with th
     - Prior
     - usb
 
-
-### 5.Notes 
-
-- Now if you are using a hq graphene transfer station, do a couple things. Ensure the software is updated to the latest version, it should have the latest version of the command server. Ensure that (the imaging source drivers)[https://www.theimagingsource.com/en-us/support/download/icwdmuvccamtis33u-5.3.0.2793/] are properly installed
+### 5. Notes 
+- Now if you are using a hq graphene transfer station, do a couple things. Ensure the software is updated to the latest version, it should have the latest version of the command server. Ensure that [the imaging source drivers](https://www.theimagingsource.com/en-us/support/download/icwdmuvccamtis33u-5.3.0.2793/)are properly installed
 - If on a hq graphene system ensure that the software is started and then goto file -> run command server 
 - Adjust the port values according to your setup.
 - Well also need to install PYVisa. You can do this at the ni website it is free you just have to make an account
@@ -93,13 +102,7 @@ Set-ExecutionPolicy Unrestricted
 conda init powershell
 ```
 ### Previously Useful Commands
-```python
-&scripts.traceOver(ts, 4, 0.7, 0.7, 2)
-&ts.vaccum_on()
-
-&Camera.save_image(Camera.matGMM2DTransform(Camera.global_list[0].get_frame()))
-&Camera.save_image(Camera.global_list[0].get_frame())
-
+```json
 {
   "type": "EXECUTE_TRANSFER_FUNCTION",
   "data": {
@@ -108,8 +111,6 @@ conda init powershell
   }
 }
 ```
-
-cd src ; conda activate automatedTransfer ; main.py 
 
 ## Contributing
 For questions or contributions, please contact the Yasuda Lab at Cornell or Austin at `austin-wu.com`

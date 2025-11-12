@@ -91,7 +91,7 @@ class Camera_Thor(Camera):
         try:
             frame = self.cam.get_pending_frame_or_null()
             if frame is None:
-                Logger.log("Frame is None")
+                Logger.log("Frame is None. Try closing the program and waiting a few seconds before restarting.")
                 return False, None
             
             img = frame.image_buffer
