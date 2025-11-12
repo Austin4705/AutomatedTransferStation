@@ -20,12 +20,38 @@ function Test-CommandExists {
     return $?
 }
 
-# Function to check if Docker is running
 function Test-DockerRunning {
     try {
-        docker info > $null 2>&1
-        return $?
-    } catch {
+        # Fast path for Windows: check Docker named pipe or DOCKER_HOST pipe
+        $dockerHost = $env:DOCKER_HOST
+        if ([string]::IsNullOrWhiteSpace($dockerHost)) {
+            if (Test-Path '\\.\pipe\docker_engine') {
+                return $true
+            }
+        }
+        elseif ($dockerHost -like 'npipe://*') {
+            $pipePath = $dockerHost -replace '^npipe://', ''
+            if (Test-Path $pipePath) {
+                return $true
+            }
+        }
+
+        # Fall back to probing the daemon via docker CLI with a short wait window
+        $maxWaitSeconds = 60
+        $retryIntervalSeconds = 2
+        $deadline = (Get-Date).AddSeconds($maxWaitSeconds)
+
+        while ((Get-Date) -lt $deadline) {
+            & docker version --format "{{.Server.Version}}" 1>$null 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                return $true
+            }
+            Start-Sleep -Seconds $retryIntervalSeconds
+        }
+
+        return $false
+    }
+    catch {
         return $false
     }
 }
@@ -100,12 +126,12 @@ if (-not (Test-Path "node_modules")) {
 }
 
 Write-ColorOutput "Starting client development server..." "Yellow"
-$clientProcess = Start-Process -FilePath "npm" -ArgumentList "run", "dev" -PassThru -NoNewWindow
+$clientProcess = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "npm run dev" -PassThru -NoNewWindow
 Write-ColorOutput "Client started with PID: $($clientProcess.Id)" "Green"
 Pop-Location
 
 # Wait a moment for the client to start
-Start-Sleep -Seconds 3
+Start-Sleep -Seconds 1
 
 # Step 5: Check conda environment
 Write-ColorOutput "`n[5/6] Checking Python environment..." "Yellow"

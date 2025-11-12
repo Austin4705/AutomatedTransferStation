@@ -56,17 +56,17 @@ class Transfer_Functions:
 
     @transfer_function("PAUSE_EXECUTION")
     def pause_execution(self):
-        self.execute = False
+        Transfer_Functions.execute = False
 
     @transfer_function("RESUME_EXECUTION")
     def resume_execution(self):
-        self.execute = True
+        Transfer_Functions.execute = True
 
     @transfer_function("CANCEL_EXECUTION")
     def cancel_execution(self):
-        self.execute = False
-        for thread in self.executing_threads:
-            self.executing_threads[thread] = False
+        Transfer_Functions.execute = False
+        for thread in Transfer_Functions.executing_threads:
+            Transfer_Functions.executing_threads[thread] = False
             Logger.log(f"Thread {thread} signaled to stop")
 
     @transfer_function("RUN_TRACE_OVER")
@@ -138,6 +138,7 @@ class Transfer_Functions:
                     }
                 })
             self.transfer_station.moveXY(start_x, start_y)
+            self.transfer_station.moveZ(start_z)
             self.transfer_station.wait(initial_wait_time)
             self.auto_focus(camera, self.transfer_station, n_samples_coarse= 80, z_range_coarse=1.5)
 
@@ -147,11 +148,11 @@ class Transfer_Functions:
                 while True:
                     if Transfer_Functions.execute:
                         break
-                    time.sleep(0.01)
+                    time.sleep(0.1)
+                time.sleep(0.01)
                     
                     
                 self.transfer_station.moveXY(x, y)
-                self.transfer_station.moveZ(start_z)
                 if counter % pics_until_focus == 0:
                     self.auto_focus(camera, self.transfer_station)
                     pass
@@ -322,7 +323,7 @@ class Transfer_Functions:
                 z_pos = -z_range/2 + (i * z_step)
                 edge_counts.append((edge_count, z_pos))
                 total_edge.append((edge_count, z_pos))
-                Logger.log(f"i: {i}, Z: {z_pos}, Edge Count: {edge_count}")
+                # Logger.log(f"i: {i}, Z: {z_pos}, Edge Count: {edge_count}")
 
             best_focus = max(edge_counts, key=lambda x: x[0])
             Logger.log(f"Best focus i: {i}, Z: {best_focus[1]}, Edge count: {best_focus[0]}")
@@ -334,21 +335,21 @@ class Transfer_Functions:
 
         if(original_edge_count == 0):
             Logger.log(f"Original edge count is at ({original_edge_count})")
-            best_focus = scan_z_range(original_z_pos, z_range_coarse, n_samples_coarse)
-            transfer_station.moveZRel(best_focus)
+            best_focus_coarse = scan_z_range(original_z_pos, z_range_coarse, n_samples_coarse)
+            transfer_station.moveZRel(best_focus_coarse)
         else:
             Logger.log(f"Original edge count is greater than 0 ({original_edge_count})")
 
 
         scan_z_range(original_z_pos, z_range_fine, n_samples_fine)
 
-        def fit_gaussian(edges):
+        def fit_gaussian(edges) -> float:
             edge_val_np = np.array([pt[0] for pt in edges])
             z_val_np = np.array([pt[1] for pt in edges])
 
             if max(edge_val_np, default=0) == 0:
                 Logger.log("All edge counts in total_edge are 0")
-                return
+                return 0.0
 
             def gaussian(x, amp, mean, std):
                 return amp * np.exp(-((x - mean) ** 2) / (2 * std ** 2))
@@ -361,15 +362,17 @@ class Transfer_Functions:
                 )
                 Logger.log(f"Fitted parameters: amplitude={popt[0]:.2f}, mean={popt[1]:.5f}, std={popt[2]:.5f}")
                 if popt[1] is not None:
-                    return popt[1]
+                    return float(popt[1])
                 else:
-                    return 0
+                    return 0.0
             except Exception as e:
                 Logger.log_error(f"Error fitting Gaussian: {e}")
-                return 0
-        best_focus = fit_gaussian(total_edge)
+                return 0.0
+
+        best_focus_fine = fit_gaussian(total_edge)
         offset = -z_range_fine/2+1*z_range_fine/n_samples_fine
-        transfer_station.moveZRel(best_focus+offset)
+        transfer_station.moveZRel(best_focus_fine+offset)
+        # time.sleep(0.5)
         print(total_edge)
 
     #Takes Seconds
