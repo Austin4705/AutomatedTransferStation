@@ -3,7 +3,7 @@ REM Automated Transfer Station Launcher
 REM This batch file launches the PowerShell script with proper execution policy
 
 echo ========================================
-echo   Automated Transfer Station Launcher
+echo   Automated Transfer Station
 echo ========================================
 echo.
 echo Starting launcher...

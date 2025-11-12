@@ -88,7 +88,7 @@ class Camera:
         self.fps_update_time = self.start_time
         self.fps_display = 0
         self.fps_total = 0
-        self.fps_counter_enabled = True
+        self.fps_counter_enabled = False
         
         self.initialize_camera()
 
