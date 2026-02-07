@@ -129,27 +129,17 @@ class Camera:
                 if not ret: 
                     continue
                 with self.frame_lock:
-                    if self.whitebalance_enabled:
-                        self.current_frame = CV_Functions.whitebalance(frame)
-                    else:
-                        self.current_frame = frame
+                    self.current_frame = frame
 
-                    self.frame_count += 1
-                    current_time = time.time()
-                    if current_time - self.fps_update_time >= 3.0:
-                        elapsed = current_time - self.fps_update_time
-                        self.last_fps_frame_count = self.frame_count
-                        self.fps_update_time = current_time
-                        self.fps_display = (self.frame_count - self.last_fps_frame_count) / elapsed
-                        self.fps_total = self.frame_count  / (current_time - self.start_time)
-                    if self.fps_counter_enabled:
-                        cv2.putText(self.current_frame, f"FPS: {self.fps_display:.1f}, Total: {self.fps_total:.1f}", (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                        cv2.putText(self.current_frame, f"Frame: {self.frame_count}", (10, 70),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                        # print(f"FPS: {self.fps_display:.1f}, Frame: {self.frame_count}")
-                        time.sleep(0.01)
-                
+                self.frame_count += 1
+                current_time = time.time()
+                if current_time - self.fps_update_time >= 3.0:
+                    elapsed = current_time - self.fps_update_time
+                    self.last_fps_frame_count = self.frame_count
+                    self.fps_update_time = current_time
+                    self.fps_display = (self.frame_count - self.last_fps_frame_count) / elapsed
+                    self.fps_total = self.frame_count  / (current_time - self.start_time)
+
             except Exception as e:
                 print(f"Error in capture thread for camera {self.camera_id}: {e}")
                 time.sleep(0.1)
@@ -164,8 +154,10 @@ class Camera:
 
     def snap_image(self):
         """Take a snapshot and store it"""
-        frame = self.get_frame()
-        self.snapshot_image = frame
+        if self.whitebalance_enabled:
+            self.snapshot_image = CV_Functions.whitebalance(self.get_frame().copy())
+        else:
+            self.snapshot_image = self.get_frame()
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
         # Logger.log(self.snapshot_image.shape)
         try:
@@ -198,6 +190,24 @@ class Camera:
     def get_single_frame_as_response(self):
         """Get a single frame formatted as an HTTP response"""
         frame = self.get_frame()
+
+        if self.whitebalance_enabled:
+            frame = CV_Functions.whitebalance(frame.copy())
+
+        if self.fps_counter_enabled:
+            cv2.putText(frame, f"FPS: {self.fps_display:.1f}, Total: {self.fps_total:.1f}", (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, f"Frame: {self.frame_count}", (10, 70),
+            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            # Draw a crosshair in the middle of the frame
+            h, w = frame.shape[:2]
+            center_x, center_y = w // 2, h // 2
+            crosshair_length = 20  # pixels
+            color = (0, 0, 255)  # Red crosshair (BGR)
+            thickness = 2
+            cv2.line( frame, (center_x - crosshair_length, center_y), (center_x + crosshair_length, center_y), color, thickness,)
+            cv2.line( frame, (center_x, center_y - crosshair_length), (center_x, center_y + crosshair_length), color, thickness,)
+            # print(f"FPS: {self.fps_display:.1f}, Frame: {self.frame_count}")
         try:
             ret, png = cv2.imencode(".jpg", frame)
             if not ret:

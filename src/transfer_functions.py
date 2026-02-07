@@ -312,6 +312,9 @@ class Transfer_Functions:
             transfer_station.moveZRel(-z_range/2)
             transfer_station.wait(1.25)
             for i in range(n_samples):
+                while not Transfer_Functions.execute:
+                    time.sleep(0.1)
+
                 z_step = z_range / n_samples
 
                 # timestamp_move = time.time()

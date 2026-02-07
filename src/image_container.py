@@ -155,6 +155,7 @@ class Image_Container:
             data[:, :, c] = plane
         # Data from Omero is in RGB format, convert to BGR for OpenCV
         return cv2.cvtColor(np.ascontiguousarray(data), cv2.COLOR_RGB2BGR)
+        # return np.ascontiguousarray(data)
        
     
     def metadata_serialize(self, image_id: int) -> Dict:

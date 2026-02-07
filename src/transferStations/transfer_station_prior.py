@@ -116,7 +116,7 @@ class CommandServer:
                             self.response_queue.queue[0]["response"] = decoded
                             self.response_queue.queue[0]["processed"] = True
                             self.response_queue.get()
-                time.sleep(0.01)
+                time.sleep(0.05)
                         
             except Exception as e:
                 if self.running:
@@ -150,7 +150,7 @@ class CommandServer:
             while time.time() - current_time < 2.0:
                 if data["processed"]:
                     return data["response"]
-                time.sleep(0.01)
+                time.sleep(0.05)
             
         except Exception as e:
             print(f'CommandServer: Error sending command "{command}": {e}')
