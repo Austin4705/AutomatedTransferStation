@@ -1,3 +1,4 @@
+TestingEnv/CVTesting/FlakeDetection/Dataset/*
 debug/
 target/
 .env

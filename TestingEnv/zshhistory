@@ -1,0 +1,910 @@
+ls
+la
+exit
+python
+exit
+la
+cd nvim
+la
+nvim
+v zshhistory
+v zshhistory
+v
+v
+v
+q
+la
+v
+tmp
+v tmpfile.tex
+la
+quit
+exit
+la
+Dev
+..
+tmp
+ls
+q
+tmp
+ls
+v tmpfile.tex
+v lazyhealth.tex
+la
+v lazyhealth5.tex
+la
+v
+q
+su qcaAccount
+su qcaAccount
+su qcaAccount
+su qcaAccount
+su qcaAccount
+su qcaAccount
+su qcaAccount
+su qcaAccount
+q
+sudo dnf install xdrp
+sudo dnf install xrdp
+sudo systemctl enable xrdp
+sudo systemctl enable start xrdp
+sudo dnf install tigervnc-server   # Fedora\
+
+sudo systemctl start xrdp
+sudo dnf install tigervnc-server
+vncpasswd
+vncserver
+cp /lib/systemd/system/vncserver@.service ~/.config/systemd/user/vncserver@:1.service
+sudo systemctl enable xrdp\
+
+sudo systemctl start xrdp
+sudo systemctl status xrdp
+sudo firewall-cmd --permanent --add-port=3389/tcp\
+sudo firewall-cmd --reload
+su qcaAccount
+su qcaAccount
+sudo v /etc/xrdp/startwm.sh
+v
+v /etc/xrdp/startwm.sh
+v /etc/xrdp/startwm.sh
+sudo nano /etc/xrdp/startwm.sh
+ls -l /etc/systemd/system/display-manager.service
+v ~/.xsession
+echo $XDG_CURRENT_DESKTOP
+echo $XDG_CURRENT_DESKTOP
+v /etc/xrdp/startwm.sh
+sudo nano /etc/xrdp/startwm.sh
+q
+tmux
+q
+btop
+btop
+la
+cd .config
+la
+git fetch origin main
+la
+cd nvim
+la
+lua
+cd lua
+cd plugins
+la
+git fetch origin main
+cd ..
+..
+..
+la
+v README.md
+git fetch origin main
+git checkout main
+git pull origin/main
+git pull origin main
+q
+q
+systemctl status display-manager
+systemctl | grep dm
+echo $XDG_CURRENT_DESKTOP
+logout
+sudo logout
+switchdesk xfce
+sudo dnf install switchdesk
+sudo dnf install switchdesk
+switchdesk gnome
+vsv
+de
+ls
+ls
+ls
+ls
+ls
+lsl
+mkdir rishi
+ls
+cd rishi
+gh
+gh
+sudo install gh
+sudo install gh
+dnf
+dnf install gh
+sudo dnf install gh
+ls
+dnf install
+dnf install github
+su dnf install github
+sudo dnf install github
+dnf --help
+sudo dnf install github -y
+dnf --helpdnf
+ping google.com
+sudo dnf update
+timedatectl status
+sudo timedatectl set-ntp true
+echo | openssl s_client -connect mirrors.fedoraproject.org:443 -servername mirrors.fedoraproject.org 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName\
+
+sudo nmcli con mod "$(nmcli -t -f NAME c show --active)" ipv4.dns "1.1.1.1 8.8.8.8"\
+sudo systemctl restart NetworkManager\
+
+vsv
+switchdesk gnome
+echo $XDG_CURRENT_DESKTOP
+dnf grouplist -v
+dnf install switchdesk-gui
+sudo dnf install switchdesk-gui
+switchdesk-gui
+systemctl restart display-manager
+echo $XDG_CURRENT_DESKTOP
+sudo dnf install speedtest-cli
+speedtest-cli
+journalctl -b -g 'wayland
+journalctl -b -g 'wayland|x11'
+startxfce4 --wayland
+sudo nvim /etc/gdm/custom.conf
+sudo systemctl reboot
+btop
+sudo dnf install gh
+sudo update-ca-trust extractsudo update-ca-trust extract
+sudo update-ca-trust extract
+sudo dnf reinstall ca-certificates
+sudo update-ca-trust extract
+sudo dnf reinstall ca-certificates
+btop
+sudo dnf install speedtest-cli
+sudo dnf install speedtest-cli --setopt=sslverify=0
+sudo update-ca-trust
+sudo update-ca-trust
+sudo dnf install speedtest-cli --setopt=sslverify=0
+la
+v /etc/gdm/custom.conf
+sudo v /etc/gdm/custom.conf
+sudo nvim  /etc/gdm/custom.conf
+q
+v /etc/gdm/custom.conf
+sudo v /etc/gdm/custom.conf
+sudo nvik /etc/gdm/custom.conf
+sudo nvim /etc/gdm/custom.conf
+q
+q
+sudo journalctl -b -1 | less
+sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+gh 
+gh repo list
+gh list repo
+gh repo list
+q
+de
+de
+de
+ls
+dnf
+cd rishi
+ls
+sudo install gh
+sudo dnf install gh
+gh
+gh
+gh auth
+gh auth login
+gh
+ls
+git pull https://github.com/rishi763/cs4740.git
+gh repo clone rishi763/cs4740
+ls
+cd cs4740
+ls
+cd hw4
+ls
+ls
+ls
+l
+ls
+ls
+exit
+btop
+la
+rishi
+la
+v .
+btop
+ls
+.venv/bin/activate
+sudo .venv/bin/activate
+. .venv/bin/activate
+python
+pip
+pip install -R hw4/requirements.txt
+pip install -r hw4/requirements.txt
+rm -rf .venv
+ls
+virtualvenv
+pyhton 3.9
+python3.9
+python
+python3.9
+sudo install python3.9
+bnf install pyhton3.9
+bnf install python3.9
+bnf
+ls
+python
+venv
+virtualvenv
+virtualenv
+sudo virtualenv
+sudo bnf install virtualenv
+bnf
+sudo dnf install virtualend
+sudo dnf install virtualenv
+virtualenv pyenv
+pyenv
+sudo dnf install pyenv
+sudo dnf install python 3.9
+sudo dnf install python3.9
+which python3.9
+virtualenv venv --version /usr/bin/python3.9
+virtualenv --help
+virtualenv -p /usr/bin/python3.9 .venv\
+
+. .venv/bin/activate
+pip install -r hw4/requirements.txt
+where
+cwd
+source /home/eric/rishi/cs4740/.venv/bin/activate
+gh
+gh auth
+  git config --global user.email "rishigujjar763@gmail.com"\
+  git config --global user.name "rishi763"
+tddf
+btop
+btop
+q
+btop
+q
+btop
+la
+ls
+cd ~/.config
+la
+git pull origin main
+git pull origin main --force
+git pull origin main
+la
+exit
+v ~/.ssh
+cd .ssh
+ls
+la
+v .
+q
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+ls
+la
+ls
+..
+exit
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+ls
+nvim scp eric@100.116.122.75
+q
+/bin/python /home/eric/Dev/QRBackend/src/embedder.py
+/bin/python /home/eric/Dev/QRBackend/src/embedder.py
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+which python
+which pip
+pip install -r QRBackend/requirements.txt
+pip install pyarrow
+pip install fastparquet
+which pandas
+pip show pandas
+pip install --upgrade pandas
+pip install --upgrade pyarrow
+ls -lh QRBackend
+cd src
+cd qrbackend
+cd QRBackend
+ls
+cd src
+ls -lh chunked_embeddings/tweets_chunk_1.parquet
+exit
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+ping 100.71.14.123
+exit
+source /home/eric/.cursor-server/bin/5911e9593196a000b1c00553aaf03b0b32042b90/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+pip instal tiktoken
+pip install tiktoken
+exit
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+btop
+exit
+btop
+exit
+cd cd asdfasdfasdf
+ls -lh /home/eric/Dev/QRBackend/src/summaries.csv
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+git config --global commit.gpgsign true
+echo "use-agent" >> ~/.gnupg/gpg.conf 2>/dev/null || true\
+echo "pinentry-program /usr/bin/pinentry-tty" >> ~/.gnupg/gpg-agent.conf 2>/dev/null || true\
+gpgconf --kill gpg-agent\
+export GPG_TTY=$(tty)\
+
+gpg --list-secret-keys --keyid-format=long
+# (optional) clear any wrong signer from before\
+git config --global --unset user.signingkey 2>/dev/null || true\
+git config --global --unset gpg.format 2>/dev/null || true\
+\
+# set your identity and the signer key\
+git config --global user.name "Austin Wu"\
+git config --global user.email "austin4705@gmail.com"\
+git config --global user.signingkey B5CBEDAA8DB730A6\
+git config --global commit.gpgsign true\
+git config --global gpg.program gpg
+git config --global user.name "Austin Wu"\
+git config --global user.email "austin4705@gmail.com"\
+git config --global user.signingkey B5CBEDAA8DB730A6\
+git config --global commit.gpgsign true\
+git config --global gpg.program gpg
+echo 'export GPG_TTY=$(tty)' >> ~/.bashrc\
+export GPG_TTY=$(tty)
+cd Dev/QRBackend
+la
+git switch main
+git pull --rebase origin main
+ssh-keygen -t ed25519 -C "austin4705@gmail.com"
+ssh-keygen -t ed25519 -C "austin4705@gmail.com"
+ssh-agent
+cat ~/.ssh/id_ed25519.pub
+ssh -T git@github.com
+git switch newBranch 
+la
+git push origin main
+git remote set-url origin git@github.com:vigillabs/QRBackend.git
+ssh-add ~/.ssh/id_ed25519   # enter your passphrase if you set one
+ssh -T git@github.com 
+git push origin main
+git pull origin
+git push origin main
+git push -u origin newBranch
+git push origin main
+git branch DerekBranch
+git switch DerekBranch
+git push -u origin DerekBranch
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+ks
+ls
+cd QRBackend
+ls
+git add .
+gc savepoint
+gpg --full-generate-key
+gpg --full-generate-key
+gc savepoint
+gc savepoint
+git commit -S -m "savepoint"
+git push origin main
+git pull origin main
+git checkout -b newBranch
+ls
+git add .
+git commit -S -m "savepoint"
+git push origin main
+git stash -u 
+git fetch origin
+git log
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+ls
+cp QRBackend QRBackendAustin
+cp -r QRBackend QRBackendAustin
+ls
+mv QRBackend QRBackendDerek
+ls
+cd QRBackendAustin
+la
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+git branch 
+git switch newBranch
+git revert
+git 
+git list
+git help
+git restore
+git restore .
+git switch newBranch
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+git switch DerekBranch
+git init
+rm -rf .git
+cd QRBackend
+git status
+git add
+git add .
+git commit -m "test"
+git log
+git gui
+git-gui
+git git-gui
+git -h
+git switch DerekBranch
+git branch
+git switch newBranch
+git status
+git switch DerekBranch
+git status
+git -h
+git push
+git status
+git branch
+which python
+cd
+cd QRBackendDerek
+cd QRBackendDerek
+cd /home/eric/Dev/QRBackendDerek
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+git log
+git add .
+git commit -m "test"
+git push origin DerekBranch
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+/bin/python /home/eric/Dev/QRBackendDerek/src/main.py
+cd /home/eric/Dev
+find ~/.vscode-server -name argv.json
+free -h
+ulimit -a
+htop
+htop
+git branch
+git status
+cd /home/eric/Dev/QRBackendDerek
+git status
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+cd âƒ¨ƒº
+cd /home/eric/Dev/QRBackendDerek
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+git pull origin DerekBranch
+git fetch origin
+git fetch origin DerekBranch
+git log
+git switch DerekBranch
+git pull origin DerekBranch
+git pull origin DerekBranch --force
+rm data/solana/output.png
+rm data/solana/summaries.csv
+git pull origin DerekBranch --force
+git pull origin DerekBranch --force
+git log
+git branch AustinBranch
+git switch AustinBranch
+pip install zarr
+pip install polars
+whoami
+python --version
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+cd /home/eric/Dev/QRBackendDerek
+git add .
+git commit -m "fuck you austin"
+sudo sudo dmesg | grep Bluetooth
+sudo sudo dmesg | grep Bluetooth
+# 1) See controller and power state\
+bluetoothctl show\
+\
+# 2) If it's blocked, unblock and power it on\
+rfkill list bluetooth\
+sudo rfkill unblock bluetooth\
+bluetoothctl power on\
+\
+# 3) Bring the HCI up from kernel side (if needed)\
+sudo btmgmt --index 0 info\
+sudo btmgmt --index 0 power on\
+\
+# 4) Scan to confirm it works\
+bluetoothctl scan on   # let it run ~10s, then 'scan off'\
+
+rfkill list bluetooth
+sudo rfkill unblock bluetooth
+bluetoothctl power on
+sudo btmgmt --index 0 info
+sudo btmgmt --index 0 info
+bluetoothctl scan on   # let it run ~10s, then 'scan off'
+bluetoothctl scan on
+bluetoothctl scan on
+bluetoothctl
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+cd /home/eric/Dev/QRBackendDerek
+git status
+git branch
+git switch AustinBranch
+git switch newBranch
+git switch DerekBranch
+python tweet_dump
+python /src/tweet_dump
+python /src/tweet_dump.py
+python /home/eric/Dev/QRBackendDerek/src/tweet_dump.py
+asdfasdf
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+cd 
+cd /
+cd /home/eric/Dev/QRBackendDerek
+python /home/eric/Dev/QRBackendDerek/src/tweet_dump.py --start-date "2025-09-20T23:00:00.000Z"
+import urllib3.exceptions
+pip install urllib3.exceptions
+sudo pip uninstall urllib3\
+sudo pip install --upgrade urllib3
+pip uninstall urllib3
+python /home/eric/Dev/QRBackendDerek/src/tweet_dump.py --start-date "2025-09-20T23:00:00.000Z"
+python /home/eric/Dev/QRBackendDerek/src/tweet_dump.py --start-date "2025-09-20T23:00:00.001Z"
+python /home/eric/Dev/QRBackendDerek/src/tweet_dump.py --start-date "2025-09-20T23:00:01.000Z"
+htop
+git add .
+git commit -m "updated tweets dump"
+git log
+git show ee4e535ca10d57ca94168d9b91190bfd0ccac69c:/home/eric/Dev/QRBackendDerek/data/raw_tweets/tweets_dump.parquet > old.parquet
+git revert ee4e535ca10d57ca94168d9b91190bfd0ccac69c
+git revert --abort
+git log
+git revert ee4e535ca10d57ca94168d9b91190bfd0ccac69c
+git revert --abort
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+export VOYAGE_API_KEY="pa-adX2MN4J2L_jbURGv9YsnmiElazrO3yXQj8M_YsLylu"
+echo $VOYAGE_API_KEY
+python -c "import voyageai"
+cd src
+ls
+python scratch.py
+python scratch.py
+python scratch.py
+echo $VOYAGE_API_KEY
+export VOYAGE_API_KEY="pa-adX2MN4J2L_jbURGv9YsnmiElazrO3yXQj8M_YsLylu"
+export VOYAGE_API_KEY=pa-adX2MN4J2L_jbURGv9YsnmiElazrO3yXQj8M_YsLylN"
+export VOYAGE_API_KEY="pa-adX2MN4J2L_jbURGv9YsnmiElazrO3yXQj8M_YsLylN"
+echo $VOYAGE_API_KEY
+python scratch.py
+cd ..
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents" \\
+-H "x-goog-api-key: $GEMINI_API_KEY" \\
+-H 'Content-Type: application/json' \\
+-d '{"requests": [{\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "What is the meaning of life?"}]}, },\
+    {\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "How much wood would a woodchuck chuck?"}]}, },\
+    {\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "How does the brain work?"}]}, }, ]}' 2> /dev/null | grep -C 5 values\
+    ```\
+\
+
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents" \\
+-H "x-goog-api-key: $GEMINI_API_KEY" \\
+-H 'Content-Type: application/json' \\
+-d '{"requests": [{\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "What is the meaning of life?"}]}, },\
+    {\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "How much wood would a woodchuck chuck?"}]}, },\
+    {\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "How does the brain work?"}]}, }, ]}' 2> /dev/null | grep -C 5 values
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents" \\
+-H "x-goog-api-key: $GEMINI_API_KEY" \\
+-H 'Content-Type: application/json' \\
+-d '{"requests": [{\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "What is the meaning of life?"}]}, },\
+    {\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "How much wood would a woodchuck chuck?"}]}, },\
+    {\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "How does the brain work?"}]}, }, ]}' 2> /dev/null | grep -C 5 values
+echo $GEMINI_API_KEY
+source ~/.env
+source .env
+echo $GEMINI_API_KEY
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents" \\
+-H "x-goog-api-key: $GEMINI_API_KEY" \\
+-H 'Content-Type: application/json' \\
+-d '{"requests": [{\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "What is the meaning of life?"}]}, },\
+    {\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "How much wood would a woodchuck chuck?"}]}, },\
+    {\
+    "model": "models/gemini-embedding-001",\
+    "content": {\
+    "parts":[{\
+        "text": "How does the brain work?"}]}, }, ]}' 2> /dev/null | grep -C 5 values
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+pip show hdbscan scikit-learn scipy
+git add .
+cd /home/eric/Dev/QRBackendDerek
+git add .
+git commit -m "cluster.py checkpoint"
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+git add .
+git commit -m "savepoint"
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/34881053400013f38e2354f1479c88c9067039a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+exit
+ls
+ls
+cd Videos
+ls
+cd ..
+ls
+cd rishi
+la -a rishi
+cd Dev
+cd ~/Dev
+v .
+v .
+tmux
+source /home/eric/.cursor-server/bin/9d178a4a5589981b62546448bb32920a8219a5d0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/9d178a4a5589981b62546448bb32920a8219a5d0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+ls
+q
+ls
+clear
+exit
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+ls
+la
+ls -a
+cd .ssh
+ls
+v authorized_keys
+..
+la
+rishi
+la
+..
+ls
+Dev
+ls
+v .
+source /home/eric/.cursor-server/bin/9d178a4a5589981b62546448bb32920a8219a5d0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/3ccce8f55d8cca49f6d28b491a844c699b8719a0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+vi .zshrc
+ls
+df -h
+sl
+neofetch
+fastfetch
+fastfetch
+sudo yum install sl
+sudo dnf install sl
+sl
+sudo dnf install lolcat
+sl | lolcat
+asciiquarium
+asciiquarium
+sudo dnf install asciiquarium
+asciiquarium
+ls
+rm lolcat
+ls
+ls
+ls
+Dev
+ls
+..
+mkcd vigil
+ls
+sudo dnf install uv
+uv init backend
+ls
+backend
+ls
+git branch -M main
+ls
+vi design.md
+ls
+ls
+vi design.md
+vi design.md
+vi README.md
+eza
+ls --tree
+la
+ls
+rm design.md
+ls
+ga .
+git add .
+git commit -m "init commit"
+git remote add origin git@github.com:vigillabs/backend-new.git
+git push origin main
+ls
+ls
+ls
+vi .zshrc
+zsh
+zsh
+sl
+sl >> lolcat
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+ls
+sls
+sls
+source /home/eric/.cursor-server/bin/9d178a4a5589981b62546448bb32920a8219a5d0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/9d178a4a5589981b62546448bb32920a8219a5d0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/9d178a4a5589981b62546448bb32920a8219a5d0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+git clone origin https://github.com/vigillabs/backend-new/
+git clone https://github.com/vigillabs/backend-new/
+hciconfig -a
+hciconfig -a
+xrandr --output HDMI-1 --set audio on~
+xrandr --output HDMI-1 --set audio on
+run-help xrandr
+xrandr --output DisplayPort-0 --set audio on
+xrandr --listmonitors
+xrandr --output HDMI-1 --set audio on
+xrandr --output HDMI-1
+xrandr --output HDMI-1 --properties
+xrandr --output HDMI-1 --set audio on
+tailscale
+tailscale switch
+tailscale switch 
+tailscale switch vigil
+tailscale status
+tailscale switch Austin4705@
+tailscale login
+sudo tailscale login
+sudo tailscale login
+sudo tailscale 
+sudo tailscale up
+sudo tailscale login
+sudo tailscale down
+sudo tailscale login
+sudo tailscale up
+sudo tailscale switch
+sudo tailscale switch austin4705.github
+tailscale up
+sudo tailscale up
+btop
+source /home/eric/.cursor-server/bin/9d178a4a5589981b62546448bb32920a8219a5d0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/9d178a4a5589981b62546448bb32920a8219a5d0/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+su root
+q
+source /home/eric/.cursor-server/bin/b9e5948c1ad20443a5cecba6b84a3c9b99d62580/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/b9e5948c1ad20443a5cecba6b84a3c9b99d62580/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+source /home/eric/.cursor-server/bin/b9e5948c1ad20443a5cecba6b84a3c9b99d62580/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh
+sudo dnf install cuda-toolkit
+nvidia-smi
+sudo dnf nvidia-cuda-toolkit
+sudo dnf install nvidia-cuda-toolkit
+q
+sudo dnf install spotify
+sudo dnf install spotify
+sudo dnf install flatpak
+[200~
+flatpak install flathub com.spotify.Client
+flatpak run flathub com.spotify.Client
+flatpak run com.spotify.Client

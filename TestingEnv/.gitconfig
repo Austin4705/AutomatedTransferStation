@@ -1,0 +1,8 @@
+[user]
+	email = austin4705@gmail.com
+	name = Austin Wu
+	signingkey = B5CBEDAA8DB730A6
+[commit]
+	gpgsign = true
+[gpg]
+	program = gpg
