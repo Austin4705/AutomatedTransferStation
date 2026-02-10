@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "automated-transfer-station"
+version = "0.1.0"
+description = "General-purpose library for control of transfer stations for 2D materials research"
+requires-python = ">=3.10"
+dependencies = [
+    "opencv-python",
+    "flask",
+    "flask-cors",
+    "websockets",
+    "pyserial",
+    "python-dotenv",
+    "matplotlib",
+    "numpy<2.2",
+    "scipy",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+omero = ["omero-py"]
+thor = []  # ThorLabs SDK installed separately
+webrtc = ["aiortc", "aiohttp"]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+

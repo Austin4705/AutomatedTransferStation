@@ -17,6 +17,8 @@ else:
 
 from transfer_station import Transfer_Station
 
+
+@Transfer_Station.register("hqGraphene")
 class TransferStationWinFile(Transfer_Station):
 
     MAGNIFICATION_TRAVEL = {
@@ -41,86 +43,86 @@ class TransferStationWinFile(Transfer_Station):
         return self.command_server.send(command)
 
     def moveX(self, X):
-        """Move to X coordinate
-        X: X position
-        Status: Working
-        """
-        cmd = f"SETPOSX{X}"  # X is 0 for X-only movement
+        """Move to X coordinate"""
+        cmd = f"SETPOSX{X}"
         print(f"Moving to X position: {X}")
         res = self.send_command(cmd)
         return res
 
     def moveY(self, Y):
-        """Move to Y coordinate
-        Y: Y position
-        Status: Working
-        """
-        cmd = f"SETPOSY{Y}"  # Y is 0 for Y-only movement
+        """Move to Y coordinate"""
+        cmd = f"SETPOSY{Y}"
         print(f"Moving to Y position: {Y}")
         res = self.send_command(cmd)
         return res
 
     def moveZ(self, Z):
-        """Move to Z coordinate
-        Z: Z position
-        Status: Working
-        """
-        cmd = f"SETPOSZ{Z}"  # Z is 0 for Z-only movement
+        """Move to Z coordinate"""
+        cmd = f"SETPOSZ{Z}"
         print(f"Moving to Z position: {Z}")
         res = self.send_command(cmd)
         return res
 
-    def posX(self):
-        """Get X position
-        Status: Working
-        """
-        cmd = "GETPOSX"
-        # print(f"Getting X position")
+    def moveXRel(self, X):
+        """Move relative X"""
+        cmd = f"SETPOSXREL{X}"
+        print(f"Moving relative X: {X}")
         res = self.send_command(cmd)
-        # print(f"X position: {res} and {type(res)}")
+        return res
+
+    def moveYRel(self, Y):
+        """Move relative Y"""
+        cmd = f"SETPOSYREL{Y}"
+        print(f"Moving relative Y: {Y}")
+        res = self.send_command(cmd)
+        return res
+
+    def moveZRel(self, Z):
+        """Move relative Z"""
+        cmd = f"SETPOSZREL{Z}"
+        print(f"Moving relative Z: {Z}")
+        res = self.send_command(cmd)
+        return res
+
+    def moveXYRel(self, X, Y):
+        """Move relative XY"""
+        self.moveXRel(X)
+        self.moveYRel(Y)
+
+    def posX(self):
+        """Get X position"""
+        cmd = "GETPOSX"
+        res = self.send_command(cmd)
         return CommandServer.get_first_double(res)
 
     def posY(self):
-        """Get Y position
-        Status: Working
-        """
+        """Get Y position"""
         cmd = "GETPOSY"
-        # print(f"Getting Y position")
         res = self.send_command(cmd)
-        # print(f"Y position: {res} and {type(res)}")
         return CommandServer.get_first_double(res)
     
     def posZ(self):
-        """Get Z position
-        Status: Working
-        """
+        """Get Z position"""
         cmd = "GETPOSZ"
-        # print(f"Getting Z position")
         res = self.send_command(cmd)
         return CommandServer.get_first_double(res)
     
     def led_on(self):
-        """Turn LED on
-        Status: Working
-        """
+        """Turn LED on"""
         cmd = "LEDON"
         print(f"Turning LED on")
         res = self.send_command(cmd)
         return res
     
     def led_off(self):
-        """Turn LED off
-        Status: Working
-        """
+        """Turn LED off"""
         cmd = "LEDOFF"
         print(f"Turning LED off")
         res = self.send_command(cmd)
         return res
 
     def ts_autoFocus(self):
-        """Auto Focus
-        Status: Working
-        """
+        """Auto Focus"""
         cmd = "AUTFOC"
         print(f"Auto Focusing")
         res = self.send_command(cmd)
@@ -154,15 +156,6 @@ class CommandServer:
             win32file.CloseHandle(handle)
             msg = resp.decode("utf-8").strip()
 
-            # timestamp = Transfer_Station.time_stamp()
-            # # Add timestamp and store message
-            # message_entry = {
-            #     'timestamp': timestamp,
-            #     'command': data,
-            #     'response': msg
-            # }
-            # self.message_history.append(message_entry)
-            # print(f"Response: {msg}")
             return msg
 
         except pywintypes.error as e:
@@ -187,7 +180,6 @@ class CommandServer:
             return ""
 
     def get_first_double(my_string):
-        # print(f"Getting first double: {my_string}")
         if my_string is None or my_string.strip() == "OK":
             return 0
         numeric_const_pattern = r'[-+]?(?:(?:\d*\.\d+)|(?:\d+\.?)(?:[Ee][+-]?\d+)?)'
@@ -220,6 +212,3 @@ class DummyCommandServer:
     def receive_command(self):
         print("Receiving command")
         return "OK"
-
-
-

@@ -14,13 +14,18 @@ from logger import Logger
 class Socket_Manager:
     """
     This class handles the websockets that are used to communicate with the UI.
-    All you really have to know is that it has a queue of jsons that represent incoming messages and a function to send jsons to the clients.
+    All you really have to know is that it has a queue of jsons that represent
+    incoming messages and a function to send jsons to the clients.
     """
     CONNECTIONS = set()
+    _connections_lock = threading.Lock()
     packet_handlers: Dict[str, Callable] = dict()
     transfer_station = None
     position_ping_enabled = True
     position_ping_interval = 1.0  # seconds
+
+    # Store the event loop so we can safely schedule from any thread
+    _loop: asyncio.AbstractEventLoop | None = None
 
     @classmethod
     def start(cls, _packet_handler):
@@ -28,6 +33,7 @@ class Socket_Manager:
         Socket_Manager.packet_handlers = _packet_handler.packet_handlers
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        Socket_Manager._loop = loop  # store reference for cross-thread sends
 
         async def main():
             host = os.environ.get('WEBSOCKET_HOST', '0.0.0.0')
@@ -39,7 +45,8 @@ class Socket_Manager:
         loop.run_forever()
 
     async def conn_handler(websocket):
-        Socket_Manager.CONNECTIONS.add(websocket)
+        with Socket_Manager._connections_lock:
+            Socket_Manager.CONNECTIONS.add(websocket)
         Logger.log(f"New connection created {websocket}")
         try:
             async for message in websocket:
@@ -53,7 +60,8 @@ class Socket_Manager:
         except Exception as e:
             Logger.log(f"Socket error: {e}")
         finally:
-            Socket_Manager.CONNECTIONS.discard(websocket)
+            with Socket_Manager._connections_lock:
+                Socket_Manager.CONNECTIONS.discard(websocket)
             Logger.log(f"Connection removed {websocket}")
 
     def handle_packet(message: str):
@@ -63,7 +71,6 @@ class Socket_Manager:
             except json.JSONDecodeError:
                 raise ValueError("Message is not valid JSON")
             packet_type = packet["type"]
-            # Logger.log(f"Handling packet: {packet_type}")
             handler = Socket_Manager.packet_handlers.get(packet_type, Socket_Manager.default_handler)
             handler(packet_type, packet)
 
@@ -77,25 +84,29 @@ class Socket_Manager:
 
 
     async def _send_all_async(msg: str):
-        for websocket in list(Socket_Manager.CONNECTIONS):
+        with Socket_Manager._connections_lock:
+            connections = list(Socket_Manager.CONNECTIONS)
+        for websocket in connections:
             try:
                 await websocket.send(msg)
             except websockets.exceptions.ConnectionClosed:
-                if websocket in Socket_Manager.CONNECTIONS:
+                with Socket_Manager._connections_lock:
                     Socket_Manager.CONNECTIONS.discard(websocket)
-                    Logger.log(f"Removed closed connection {websocket}")
+                Logger.log(f"Removed closed connection {websocket}")
             except Exception as e:
                 Logger.log(f"Error sending message to {websocket}: {e}")
 
     def send_all_json(json_data: dict):
+        """Thread-safe: schedule a send on the websocket event loop from any thread."""
         try:
             msg = json.dumps(json_data)
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            loop.call_soon_threadsafe(lambda: asyncio.create_task(Socket_Manager._send_all_async(msg)))
+            loop = Socket_Manager._loop
+            if loop is None or loop.is_closed():
+                # Server not started yet or shut down — silently drop
+                return
+            loop.call_soon_threadsafe(
+                lambda: asyncio.ensure_future(Socket_Manager._send_all_async(msg))
+            )
         except Exception as e:
             Logger.log(f"Error serializing JSON: {e}")
 

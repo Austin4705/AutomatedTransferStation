@@ -16,35 +16,97 @@ from camera import Camera
 
 transfer_functions_dict: Dict[str, Callable] = {}
 def transfer_function(command: str):
-    """Decorator to register packet handlers"""
+    """Decorator to register transfer functions"""
     def decorator(func):
         transfer_functions_dict[command] = func
         return func
     return decorator
 
 class Transfer_Functions:
-    """Class containing all transfer functions"""
-    executing_threads = dict()
-    execute = True
+    """Class containing all transfer functions.
+    
+    Uses threading.Event for pause/cancel so that waiting is efficient
+    and thread-safe (no busy-loop on a bare bool).
+    """
 
     def __init__(self, transfer_station, image_container) -> None:
         self.transfer_station = transfer_station
         self.image_container = image_container
-        pass
-    
+
+        # Thread-safe execution control
+        self._run_event = threading.Event()    # clear = paused, set = running
+        self._cancel_event = threading.Event() # set = cancelled
+        self._run_event.set()                  # start in "running" state
+
+        self._active_threads: list[threading.Thread] = []
+        self._threads_lock = threading.Lock()
+
+    # --------------- execution control ---------------
+
+    @property
+    def is_executing(self) -> bool:
+        """True when operations are allowed to proceed (not paused, not cancelled)."""
+        return self._run_event.is_set() and not self._cancel_event.is_set()
+
+    def wait_if_paused(self, timeout: float = 0.1) -> bool:
+        """Block until un-paused, or return False immediately if cancelled."""
+        while not self._cancel_event.is_set():
+            if self._run_event.wait(timeout=timeout):
+                return True   # running
+        return False  # cancelled
+
+    @transfer_function("PAUSE_EXECUTION")
+    def pause_execution(self, *_args):
+        self._run_event.clear()
+        Logger.log("Execution paused")
+
+    @transfer_function("RESUME_EXECUTION")
+    def resume_execution(self, *_args):
+        self._run_event.set()
+        Logger.log("Execution resumed")
+
+    @transfer_function("CANCEL_EXECUTION")
+    def cancel_execution(self, *_args):
+        self._cancel_event.set()
+        self._run_event.set()  # unblock any waiting threads so they can check cancel
+        Logger.log("All operations signalled to cancel")
+        # Wait briefly for threads to finish
+        with self._threads_lock:
+            for t in self._active_threads:
+                t.join(timeout=2.0)
+            self._active_threads.clear()
+        # Reset for next use
+        self._cancel_event.clear()
+        self._run_event.set()
+
+    # --------------- command dispatch ---------------
+
     def run_command(self, command: str, data: dict):
-        """
-        given a command and parameters, execute the command
-        """
-        thread = threading.Thread(target=self.execute_command, args=(command, data))
-        thread.daemon = True
+        """Run a transfer function in a background thread."""
+        thread = threading.Thread(target=self._execute_in_thread, args=(command, data), daemon=True)
+        with self._threads_lock:
+            self._active_threads.append(thread)
         thread.start()
+
+    def _execute_in_thread(self, command: str, data: dict):
+        try:
+            self.execute_command(command, data)
+        finally:
+            with self._threads_lock:
+                if threading.current_thread() in self._active_threads:
+                    self._active_threads.remove(threading.current_thread())
 
     @transfer_function("EXECUTE_COMMAND")
     def execute_command(self, command: str, data: dict):
-        result = transfer_functions_dict[command](self, data)
+        handler = transfer_functions_dict.get(command)
+        if handler is None:
+            Logger.log_error(f"Unknown transfer function: {command}")
+            return
+        result = handler(self, data)
         if result is not None:
             Logger.log(f"Transfer Function executed: {command}")
+
+    # --------------- transfer functions ---------------
 
     @transfer_function("SET_EXPOSURE_TIME")
     def set_exposure_time(self, data: dict):
@@ -54,27 +116,11 @@ class Transfer_Functions:
         Camera.global_list[camera_index].set_exposure_time(exposure_time_us)
         Logger.log(f"Exposure time set for camera {camera_index} to {exposure_time_us} us")
 
-    @transfer_function("PAUSE_EXECUTION")
-    def pause_execution(self):
-        Transfer_Functions.execute = False
-
-    @transfer_function("RESUME_EXECUTION")
-    def resume_execution(self):
-        Transfer_Functions.execute = True
-
-    @transfer_function("CANCEL_EXECUTION")
-    def cancel_execution(self):
-        Transfer_Functions.execute = False
-        for thread in Transfer_Functions.executing_threads:
-            Transfer_Functions.executing_threads[thread] = False
-            Logger.log(f"Thread {thread} signaled to stop")
-
     @transfer_function("RUN_TRACE_OVER")
     def run_trace_over(self, data):
         """Execute trace over with the provided configuration"""
         Logger.log("Type of data: " + type(data).__name__)
         Logger.log("Data: " + str(data))
-    # def temp(self, data):
         
         MAGNIFICATION_TRAVEL = self.transfer_station.MAGNIFICATION_TRAVEL
         magnification = int(data.get("magnification", 20))
@@ -89,6 +135,10 @@ class Transfer_Functions:
         save_images = data.get("save_images", True)
 
         for wafer in data.get("wafers", [{}]):
+            if self._cancel_event.is_set():
+                Logger.log("Trace over cancelled")
+                return
+
             wafer_id = wafer.get("id")
             start = wafer.get("start", {})
             start_x = float(start.get("x"))
@@ -144,24 +194,20 @@ class Transfer_Functions:
 
             counter = 1
             for x, y in points:
-                Logger.log(f"Transfer Functions executing: {Transfer_Functions.execute}")
-                while True:
-                    if Transfer_Functions.execute:
-                        break
-                    time.sleep(0.1)
+                # Wait if paused, abort if cancelled
+                if not self.wait_if_paused():
+                    Logger.log("Trace over cancelled during execution")
+                    return
                 time.sleep(0.01)
-                    
-                    
+
                 self.transfer_station.moveXY(x, y)
                 if counter % pics_until_focus == 0:
                     self.auto_focus(camera, self.transfer_station)
-                    pass
 
                 self.transfer_station.wait(wait_time)
                 image = camera.get_frame()
                 if Autofocus.exist_color_features(image) and Autofocus.get_edge_count(image) < 10:
                     self.auto_focus(camera, self.transfer_station)
-                    pass
 
                 if save_images:
                     image_id = self.image_container.upload_image(image, dataset_id=collection_id, image_name=f"image_{counter}")
@@ -292,7 +338,6 @@ class Transfer_Functions:
 
     def auto_focus(self, camera, transfer_station, n_samples_coarse=20, n_samples_fine=20, z_range_coarse=0.5, z_range_fine=0.1):
         Logger.log("Auto Focus")
-    # def blank(self, data: dict):
         """Auto focus the camera at the current position"""
 
         original_z_pos = transfer_station.posZ()
@@ -312,21 +357,17 @@ class Transfer_Functions:
             transfer_station.moveZRel(-z_range/2)
             transfer_station.wait(1.25)
             for i in range(n_samples):
-                while not Transfer_Functions.execute:
-                    time.sleep(0.1)
+                if not self.wait_if_paused():
+                    return 0.0  # cancelled
 
                 z_step = z_range / n_samples
 
-                # timestamp_move = time.time()
                 transfer_station.moveZRel(z_step)
-                # Logger.log(f"Time to move: {time.time() - timestamp_move}")
-                # time.sleep(0.1)
 
                 edge_count = Autofocus.get_edge_count(camera.get_frame())
                 z_pos = -z_range/2 + (i * z_step)
                 edge_counts.append((edge_count, z_pos))
                 total_edge.append((edge_count, z_pos))
-                # Logger.log(f"i: {i}, Z: {z_pos}, Edge Count: {edge_count}")
 
             best_focus = max(edge_counts, key=lambda x: x[0])
             Logger.log(f"Best focus i: {i}, Z: {best_focus[1]}, Edge count: {best_focus[0]}")
@@ -375,7 +416,6 @@ class Transfer_Functions:
         best_focus_fine = fit_gaussian(total_edge)
         offset = -z_range_fine/2+1*z_range_fine/n_samples_fine
         transfer_station.moveZRel(best_focus_fine+offset)
-        # time.sleep(0.5)
         print(total_edge)
 
     #Takes Seconds
@@ -386,7 +426,7 @@ class Transfer_Functions:
         response = self._send_command(command)
         if(response is not None):
             self.add_response(response) 
-        self.send_command_history.append({
+        self._send_command_history.append({
             'timestamp': Transfer_Functions.time_stamp(),
             'command': command,
             'response': response
@@ -413,6 +453,10 @@ class Transfer_Functions:
                 raise ValueError("No collections provided")
 
             for idx, collection_config in enumerate(collections):
+                if self._cancel_event.is_set():
+                    Logger.log("Scan flakes cancelled")
+                    return
+
                 collection_id = collection_config.get("collection_id")
                 apply_whitebalance = collection_config.get("apply_whitebalance", False)
                 wafer_type = collection_config.get("wafer_type", "HBn")

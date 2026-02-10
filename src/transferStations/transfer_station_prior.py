@@ -9,6 +9,7 @@ import re
 from logger import Logger
 
 
+@Transfer_Station.register("prior")
 class TransferStationPrior(Transfer_Station):
     MAGNIFICATION_TRAVEL = {
         5: {"x": 1, "y": 1, "wait_time": 1},
@@ -82,6 +83,12 @@ class TransferStationPrior(Transfer_Station):
     def posZ(self):
         return self._output_to_internal(self._send_command("PZ"))
 
+    def led_on(self):
+        Logger.log("[Prior] LED ON (not implemented)")
+
+    def led_off(self):
+        Logger.log("[Prior] LED OFF (not implemented)")
+
 
 class CommandServer:
 
@@ -130,7 +137,6 @@ class CommandServer:
         Args:
             command: Command string to send
             wait_response: Whether to wait for a response
-            timeout: Maximum time to wait for response (seconds)
             
         Returns:
             Response string if wait_response=True, otherwise None
@@ -164,4 +170,3 @@ class CommandServer:
 
     def __del__(self):
         self.close()
-

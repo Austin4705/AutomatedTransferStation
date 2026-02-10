@@ -1,4 +1,5 @@
 import cv2
+from abc import ABC, abstractmethod
 from datetime import datetime
 import os
 import numpy as np
@@ -13,45 +14,69 @@ from image_container import Image_Container
 from cv_functions import CV_Functions
 from transfer_station import Transfer_Station
 
-class Camera:
-    image_container: Image_Container = None
-    global_list = dict()
-    _lock = threading.Lock()
-    _instances = weakref.WeakSet()
+
+class Camera(ABC):
+    """
+    Abstract base class for camera hardware.
+
+    Subclasses MUST implement ``initialize_camera``, ``read_frame``,
+    ``get_black_frame``, and ``cleanup``.
+
+    To register a new camera driver::
+
+        @Camera.register("my_camera")
+        class MyCamera(Camera):
+            ...
+    """
+
+    # --------------- driver registry ---------------
+    _registry: dict[str, type] = {}
+
+    @classmethod
+    def register(cls, name: str):
+        """Class decorator that registers a Camera subclass under *name*."""
+        def decorator(subclass):
+            cls._registry[name] = subclass
+            return subclass
+        return decorator
 
     @classmethod
     def create(cls, camera_id: int, camera_type: str = "usb"):
-        """Factory method to create camera by type"""
-        if camera_type == "usb":
-            from cameras.camera_usb import Camera_USB
-            return Camera_USB(camera_id)
-        elif camera_type == "thor":
-            from cameras.camera_thor import Camera_Thor
-            return Camera_Thor(camera_id)
-        else:
-            return cls(camera_id)
+        """Factory: create a Camera by its registered driver name."""
+        driver_cls = cls._registry.get(camera_type)
+        if driver_cls is None:
+            raise ValueError(
+                f"Unknown camera type: '{camera_type}'. "
+                f"Registered types: {list(cls._registry.keys())}"
+            )
+        return driver_cls(camera_id)
+
+    # --------------- class-level state (TODO: move to Runtime) ---------------
+    image_container: Image_Container = None
+    global_list: dict = {}
+    _lock = threading.Lock()
+    _instances = weakref.WeakSet()
 
     @staticmethod
-    def initialize_all_cameras(image_container: Image_Container, type: str = "usb"):
-        """Figures out how many cameras are connected to the system"""
+    def initialize_all_cameras(image_container: Image_Container, camera_type: str = "usb"):
+        """Detect and initialise all available cameras of the given type."""
         Camera.image_container = image_container
-        max_cameras_to_check = int(os.getenv('MAX_CAMERAS', 3))
+        max_cameras_to_check = int(os.getenv('MAX_CAMERAS', '3'))
         available_cameras = []
         Camera.cleanup_all()
         Camera.global_list.clear()
-        
-        print("Searching for cameras...")
-        for i in range(0, max_cameras_to_check):
-            try:
-                camera = Camera.create(camera_id=i, camera_type=type)
 
+        print("Searching for cameras...")
+        for i in range(max_cameras_to_check):
+            try:
+                camera = Camera.create(camera_id=i, camera_type=camera_type)
                 if camera.is_active:
                     print(f"Camera {i} successfully initialized")
                     available_cameras.append(i)
                     with Camera._lock:
                         Camera.global_list[i] = camera
                         Camera._instances.add(camera)
-                else:   
+                else:
                     print(f"Camera {i} failed to initialize")
             except Exception as e:
                 print(f"Error checking camera {i}: {e}")
@@ -59,22 +84,23 @@ class Camera:
         if not available_cameras:
             print("No cameras detected on the system!")
             return {}
-        else: 
+        else:
             print(f"Detected {len(available_cameras)} cameras: {available_cameras}")
-    
+
     @staticmethod
     def cleanup_all():
-        """Clean up all camera instances"""
+        """Clean up all camera instances."""
         print(f"Cleaning up {len(Camera._instances)} camera instances")
         for camera in list(Camera._instances):
             try:
                 camera.cleanup()
-            except:
+            except Exception:
                 pass
 
-    def __init__(self, cameraId):
+    # --------------- instance lifecycle ---------------
+    def __init__(self, camera_id: int):
         self.is_active = False
-        self.camera_id = cameraId
+        self.camera_id = camera_id
         self.frame_lock = threading.Lock()
         self.current_frame = self.get_black_frame()
         self.snapshot_image = self.get_black_frame()
@@ -82,84 +108,95 @@ class Camera:
         self.capture_thread = None
         self.whitebalance_enabled = False
 
+        # FPS tracking (protected by _fps_lock)
+        self._fps_lock = threading.Lock()
         self.start_time = time.time()
         self.frame_count = 0
         self.last_fps_frame_count = 0
         self.fps_update_time = self.start_time
-        self.fps_display = 0
-        self.fps_total = 0
+        self.fps_display = 0.0
+        self.fps_total = 0.0
         self.fps_counter_enabled = False
-        
+
         self.initialize_camera()
 
         self.capture_thread = threading.Thread(target=self._capture_frames, daemon=True)
         self.capture_thread.start()
-        time.sleep(os.getenv('CAMERA_INIT_TIMEOUT', 3))
-        
+        time.sleep(float(os.getenv('CAMERA_INIT_TIMEOUT', '3')))
+
     def __del__(self):
-        """Clean up resources when the camera is deleted"""
         self.cleanup()
 
-    def cleanup(self):
-        print(f"Cleaning up camera {self.camera_id}")
-        self.is_active = False
-        if self.capture_thread is not None:
-            if self.capture_thread.is_alive():
-                try:
-                    self.capture_thread.join(timeout=1.0)
-                except Exception as e:
-                    print(f"Error joining capture thread for camera {self.camera_id}: {e}")
+    # --------------- abstract interface ---------------
+    @abstractmethod
+    def initialize_camera(self) -> None:
+        """Initialise the camera hardware. Must set ``self.is_active``."""
+        ...
 
-    def initialize_camera(self):
-        print(f"Trying camera {self.camera_id}...")
-        self.is_active = True
-        pass
+    @abstractmethod
+    def read_frame(self) -> tuple[bool, np.ndarray | None]:
+        """Return ``(success, frame_bgr)``."""
+        ...
+
+    @abstractmethod
+    def get_black_frame(self) -> np.ndarray:
+        """Return a black frame of the expected dimensions."""
+        ...
 
     def set_exposure_time(self, exposure_time_us: int):
-        Logger.log(f"Setting exposure time for camera {self.camera_id} to {exposure_time_us}")
+        """Override in subclasses that support exposure control."""
+        Logger.log(f"set_exposure_time not implemented for camera {self.camera_id}")
 
-    def read_frame(self):
-        return True, self.get_black_frame()
+    def cleanup(self):
+        """Release resources. Subclasses should call ``super().cleanup()``."""
+        self.is_active = False
+        if self.capture_thread is not None and self.capture_thread.is_alive():
+            try:
+                self.capture_thread.join(timeout=1.0)
+            except Exception as e:
+                print(f"Error joining capture thread for camera {self.camera_id}: {e}")
 
+    # --------------- frame capture loop ---------------
     def _capture_frames(self):
-        """Background thread to continuously capture frames"""
-        while True:
+        """Background thread: continuously capture frames."""
+        while self.is_active:
             try:
                 ret, frame = self.read_frame()
-                if not ret: 
+                if not ret or frame is None:
+                    time.sleep(0.01)
                     continue
+
                 with self.frame_lock:
                     self.current_frame = frame
 
-                self.frame_count += 1
-                current_time = time.time()
-                if current_time - self.fps_update_time >= 3.0:
-                    elapsed = current_time - self.fps_update_time
-                    self.last_fps_frame_count = self.frame_count
-                    self.fps_update_time = current_time
-                    self.fps_display = (self.frame_count - self.last_fps_frame_count) / elapsed
-                    self.fps_total = self.frame_count  / (current_time - self.start_time)
+                with self._fps_lock:
+                    self.frame_count += 1
+                    current_time = time.time()
+                    if current_time - self.fps_update_time >= 3.0:
+                        elapsed = current_time - self.fps_update_time
+                        frames_since = self.frame_count - self.last_fps_frame_count
+                        self.fps_display = frames_since / elapsed
+                        self.fps_total = self.frame_count / (current_time - self.start_time)
+                        self.last_fps_frame_count = self.frame_count
+                        self.fps_update_time = current_time
 
             except Exception as e:
                 print(f"Error in capture thread for camera {self.camera_id}: {e}")
                 time.sleep(0.1)
 
-    def get_frame(self):
-        """Get the most recent frame (thread-safe)"""
+    def get_frame(self) -> np.ndarray:
+        """Get the most recent frame (thread-safe)."""
         with self.frame_lock:
             return self.current_frame.copy()
 
-    def get_black_frame(self):
-        return np.zeros((480, 640, 3), dtype=np.uint8)
-
+    # --------------- snapshots ---------------
     def snap_image(self):
-        """Take a snapshot and store it"""
+        """Take a snapshot and store it."""
         if self.whitebalance_enabled:
             self.snapshot_image = CV_Functions.whitebalance(self.get_frame().copy())
         else:
             self.snapshot_image = self.get_frame()
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT", "camera": self.camera_id})
-        # Logger.log(self.snapshot_image.shape)
         try:
             image_id = Camera.image_container.save_snapshot(Camera.image_container.active_chip_id, self.snapshot_image)
             image_metadata = {"key_value_pairs": {
@@ -172,7 +209,7 @@ class Camera:
         return self.snapshot_image
 
     def snap_image_flake_hunted(self):
-        """Take a flake hunted snapshot and store it"""
+        """Take a flake-hunted snapshot and store it."""
         frame = self.get_frame()
         Socket_Manager.send_all_json({"type": "REFRESH_SNAPSHOT_FLAKE_HUNTED", "camera": self.camera_id})
         try:
@@ -186,28 +223,31 @@ class Camera:
             Logger.log_error(f"Error saving flake hunted snapshot: {e}")
         return self.snapshot_image_flake_hunted
 
-
+    # --------------- HTTP response helpers ---------------
     def get_single_frame_as_response(self):
-        """Get a single frame formatted as an HTTP response"""
+        """Get a single frame formatted as an HTTP multipart response."""
         frame = self.get_frame()
 
         if self.whitebalance_enabled:
             frame = CV_Functions.whitebalance(frame.copy())
 
         if self.fps_counter_enabled:
-            cv2.putText(frame, f"FPS: {self.fps_display:.1f}, Total: {self.fps_total:.1f}", (10, 30),
-            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(frame, f"Frame: {self.frame_count}", (10, 70),
-            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            with self._fps_lock:
+                fps_display = self.fps_display
+                fps_total = self.fps_total
+                frame_count = self.frame_count
+            cv2.putText(frame, f"FPS: {fps_display:.1f}, Total: {fps_total:.1f}", (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, f"Frame: {frame_count}", (10, 70),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             # Draw a crosshair in the middle of the frame
             h, w = frame.shape[:2]
             center_x, center_y = w // 2, h // 2
-            crosshair_length = 20  # pixels
-            color = (0, 0, 255)  # Red crosshair (BGR)
+            crosshair_length = 20
+            color = (0, 0, 255)
             thickness = 2
-            cv2.line( frame, (center_x - crosshair_length, center_y), (center_x + crosshair_length, center_y), color, thickness,)
-            cv2.line( frame, (center_x, center_y - crosshair_length), (center_x, center_y + crosshair_length), color, thickness,)
-            # print(f"FPS: {self.fps_display:.1f}, Frame: {self.frame_count}")
+            cv2.line(frame, (center_x - crosshair_length, center_y), (center_x + crosshair_length, center_y), color, thickness)
+            cv2.line(frame, (center_x, center_y - crosshair_length), (center_x, center_y + crosshair_length), color, thickness)
         try:
             ret, png = cv2.imencode(".jpg", frame)
             if not ret:
@@ -221,29 +261,15 @@ class Camera:
             return None
 
     def get_snapshot_as_response(self):
-        """Get the snapshot as an HTTP response"""
+        """Get the snapshot as an HTTP multipart response."""
         frame = self.snapshot_image
         focus_score = Autofocus.calculate_focus_score(frame)
         has_enough_edges = Autofocus.get_edge_count(frame)
         color_ratio = Autofocus.get_color_features(frame)
-        cv2.putText(
-            frame,
-            f"Focus Score: {focus_score:.2f} {has_enough_edges}",
-            (10, 30),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 255, 255),  # White text
-            2  # Thickness
-        )
-        cv2.putText(
-            frame,
-            f"Color Ratio: {color_ratio:.2f}",
-            (10, 60),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 255, 255),  # White text
-            2  # Thickness
-        )
+        cv2.putText(frame, f"Focus Score: {focus_score:.2f} {has_enough_edges}",
+            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(frame, f"Color Ratio: {color_ratio:.2f}",
+            (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         ret, png = cv2.imencode(".jpg", frame)
         return (
             b"--frame\r\n"
@@ -251,10 +277,33 @@ class Camera:
         )
 
     def get_flake_hunted_snapshot_as_response(self):
-        """Get the flake hunted snapshot as an HTTP response"""
+        """Get the flake-hunted snapshot as an HTTP multipart response."""
         frame = self.snapshot_image_flake_hunted
         ret, png = cv2.imencode(".jpg", frame)
         return (
             b"--frame\r\n"
             b"Content-Type: image/jpeg\r\n\r\n" + png.tobytes() + b"\r\n\r\n"
         )
+
+
+# ──────────────────────────────────────────────────────────────
+# Built-in Virtual camera (returns black frames, for dev/testing)
+# ──────────────────────────────────────────────────────────────
+
+@Camera.register("virtual")
+class VirtualCamera(Camera):
+    """A virtual camera that returns black frames. Useful for development."""
+
+    def initialize_camera(self) -> None:
+        print(f"[VirtualCam] Camera {self.camera_id} initialized (virtual)")
+        self.is_active = True
+
+    def read_frame(self) -> tuple[bool, np.ndarray]:
+        return True, self.get_black_frame()
+
+    def get_black_frame(self) -> np.ndarray:
+        return np.zeros((480, 640, 3), dtype=np.uint8)
+
+    def cleanup(self):
+        print(f"[VirtualCam] Camera {self.camera_id} cleaned up")
+        super().cleanup()

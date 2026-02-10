@@ -14,6 +14,8 @@ from thorlabs_tsi_sdk.tl_color_enums import FORMAT
 from camera import Camera
 from logger import Logger
 
+
+@Camera.register("thor")
 class Camera_Thor(Camera):
 
     def __init__(self, cameraId):
@@ -56,7 +58,7 @@ class Camera_Thor(Camera):
             
             self.frame_width = self.cam.image_width_pixels
             self.frame_height = self.cam.image_height_pixels
-            self.cam.exposure_time_us = os.getenv('CAMERA_EXPOSURE_TIME_US', 5000)
+            self.cam.exposure_time_us = int(os.getenv('CAMERA_EXPOSURE_TIME_US', '5000'))
             self.cam.image_poll_timeout_ms = 1000
             self.cam.frames_per_trigger_zero_for_unlimited = 0
             self.cam.arm(2)
@@ -81,7 +83,6 @@ class Camera_Thor(Camera):
 
     def read_frame(self):
         if self.cam is None or not self.is_active:
-            # print(f"Camera {self.camera_id} is None: {self.cam==None} or not active: {self.is_active==False}")
             return False, None
         
         if self.mono_to_color_processor is None:

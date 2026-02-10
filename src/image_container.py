@@ -17,10 +17,38 @@ import cv2
 
 from logger import Logger
 
+
 class Image_Container:
     """
-    This class is used to store images.
+    Image storage backend.
+
+    Uses a factory pattern so the backend can be swapped in the future
+    (e.g. local file storage, S3, etc.) without touching consumer code.
+
+    Currently the only concrete implementation is OMERO.
     """
+
+    # --------------- factory ---------------
+    _backend_registry: dict[str, type] = {}
+
+    @classmethod
+    def register_backend(cls, name: str):
+        """Class decorator to register an Image_Container backend."""
+        def decorator(subclass):
+            cls._backend_registry[name] = subclass
+            return subclass
+        return decorator
+
+    @classmethod
+    def create(cls, backend: str = "omero", **kwargs) -> "Image_Container":
+        """Create an Image_Container using the named backend."""
+        backend_cls = cls._backend_registry.get(backend)
+        if backend_cls is None:
+            # Default to the base class (OMERO) for backwards compatibility
+            return cls(**kwargs)
+        return backend_cls(**kwargs)
+
+    # --------------- OMERO implementation ---------------
 
     def __init__(self):
         self.connect_to_omero(os.getenv('OMERO_HOST'), os.getenv('OMERO_USERNAME'), os.getenv('OMERO_PASSWORD'))
@@ -137,7 +165,7 @@ class Image_Container:
     def download_image(self, image_id: int) -> np.ndarray:
         """
         Returns:
-            numpy array in (Y, X, 3) format (same as cv2.imread - BGR format). Assumes the png on the server is in the correct formatj.
+            numpy array in (Y, X, 3) format (same as cv2.imread - BGR format).
         """
 
         image = self.conn.getObject("Image", image_id)
@@ -155,7 +183,6 @@ class Image_Container:
             data[:, :, c] = plane
         # Data from Omero is in RGB format, convert to BGR for OpenCV
         return cv2.cvtColor(np.ascontiguousarray(data), cv2.COLOR_RGB2BGR)
-        # return np.ascontiguousarray(data)
        
     
     def metadata_serialize(self, image_id: int) -> Dict:
@@ -260,7 +287,6 @@ class Image_Container:
             'description': dataset.getDescription(),
             'owner': dataset.getOwnerFullName(),
             'image_count': dataset.countChildren(),
-            # 'images': [{'id': img.getId(), 'name': img.getName()} for img in dataset.listChildren()],
             'key_value_pairs': {},
             'tags': [],
             'comments': [],

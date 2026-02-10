@@ -14,9 +14,15 @@ import web_server
 from socket_manager import Socket_Manager
 from packet_handlers import PacketHandlers
 
+# Import drivers so they self-register via @register decorators
+import transferStations.transfer_station_prior     # noqa: F401
+import transferStations.transfer_station_winFile   # noqa: F401
+import cameras.camera_usb                          # noqa: F401
+import cameras.camera_thor                         # noqa: F401
+
 if __name__ == "__main__":
     Logger.init_logger(Socket_Manager)
-    load_dotenv("defualt.env")
+    load_dotenv("default.env")
     load_dotenv(".env", override=True)
 
     Logger.log("Initializing Image Container")

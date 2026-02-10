@@ -7,6 +7,7 @@ import time
 from camera import Camera
 
 
+@Camera.register("usb")
 class Camera_USB(Camera):
     def initialize_camera(self):
         if os.name == 'nt':  # Check if running on Windows
@@ -16,15 +17,16 @@ class Camera_USB(Camera):
         while not self.cap.isOpened():
             time.sleep(0.1)
         self.is_active = True
-        self.frame_height = os.getenv(f'CAMERA{self.camera_id}_RESOLUTION_HEIGHT', 480)
-        self.frame_width = os.getenv(f'CAMERA{self.camera_id}_RESOLUTION_WIDTH', 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.frame_height = int(os.getenv(f'CAMERA{self.camera_id}_RESOLUTION_HEIGHT', '480'))
+        self.frame_width = int(os.getenv(f'CAMERA{self.camera_id}_RESOLUTION_WIDTH', '640'))
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frame_height)
 
     def read_frame(self):
         return self.cap.read()
 
     def __init__(self, cameraId):
+        self.cap = None
         super().__init__(cameraId)
 
     def get_black_frame(self):

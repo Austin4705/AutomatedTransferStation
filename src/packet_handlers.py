@@ -133,7 +133,7 @@ class PacketHandlers:
 
     @packet_handler("REQUEST_LOG_MESSAGES")
     def handle_request_log_messages(packet_type: str, data: dict):
-        messages = self.logger.get_messages(50)
+        messages = Logger.get_messages(50)
         Socket_Manager.send_all_json({
             "type": "RESPONSE_LOG_MESSAGES",
             "messages": messages
