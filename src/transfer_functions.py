@@ -11,6 +11,7 @@ from scipy.optimize import curve_fit
 
 from autofocus import Autofocus
 from image_container import Image_Container
+from cv_functions import CV_Functions
 from logger import Logger
 from camera import Camera
 
@@ -192,6 +193,8 @@ class Transfer_Functions:
             self.transfer_station.wait(initial_wait_time)
             self.auto_focus(camera, self.transfer_station, n_samples_coarse= 80, z_range_coarse=1.5)
 
+            came_before_no_background = False
+
             counter = 1
             for x, y in points:
                 # Wait if paused, abort if cancelled
@@ -201,13 +204,23 @@ class Transfer_Functions:
                 time.sleep(0.01)
 
                 self.transfer_station.moveXY(x, y)
-                if counter % pics_until_focus == 0:
-                    self.auto_focus(camera, self.transfer_station)
+                # if counter % pics_until_focus == 0: # Autofocus no matter what sometimes
+                #     Logger.log("Autofocusing for periodic recheck")
+                #     self.auto_focus(camera, self.transfer_station)
 
                 self.transfer_station.wait(wait_time)
                 image = camera.get_frame()
-                if Autofocus.exist_color_features(image) and Autofocus.get_edge_count(image) < 10:
-                    self.auto_focus(camera, self.transfer_station)
+                is_background, bg_stats = CV_Functions.is_substrate_background(image)
+                edge_count = Autofocus.get_edge_count(image)
+
+                if is_background:
+                    if edge_count < 10 or came_before_no_background:
+                        Logger.log(f"Autofocusing - Substrate background: {is_background}, Edge count: {edge_count} - came before no background: {came_before_no_background} - pics until focus: {pics_until_focus}")
+                        self.auto_focus(camera, self.transfer_station)
+                    came_before_no_background = False
+                else:
+                    Logger.log("Skipping autofocus - not substrate background")
+                    came_before_no_background = True
 
                 if save_images:
                     image_id = self.image_container.upload_image(image, dataset_id=collection_id, image_name=f"image_{counter}")
@@ -345,6 +358,7 @@ class Transfer_Functions:
 
         if not Autofocus.exist_color_features(frame):
             Logger.log("No color features exist")
+
             return
 
         original_edge_count = Autofocus.get_edge_count(frame)

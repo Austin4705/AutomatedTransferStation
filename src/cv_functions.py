@@ -85,3 +85,55 @@ class CV_Functions:
         # NTSC Coefficients for brightness
         brightness = 0.299 * rgb[:,0] + 0.587 * rgb[:,1] + 0.114 * rgb[:,2]
         return brightness
+
+    def is_substrate_background(
+        image,
+        hue_range=(110, 170),
+        min_saturation=30,
+        min_purple_fraction=0.4,
+        sample_fraction=0.5,
+    ):
+        """Check whether the image background is a purple SiO2 substrate.
+
+        Returns True when the majority of the central region has purple hue
+        with sufficient saturation (i.e. good for flake hunting).  Returns
+        False for grey / brown bare-metal backgrounds.
+
+        Args:
+            image: BGR uint8 image (OpenCV format).
+            hue_range: (lo, hi) acceptable hue in OpenCV 0-180 scale.
+                        Default (110, 170) covers violet through magenta.
+            min_saturation: pixels below this S value are considered grey.
+            min_purple_fraction: fraction of sampled pixels that must be
+                                    purple for the image to pass.
+            sample_fraction: fraction of the image (centred) to sample,
+                                avoids vignetting at edges.
+
+        Returns:
+            (bool, dict) – pass/fail and diagnostic stats.
+        """
+        h, w = image.shape[:2]
+        margin_y = int(h * (1 - sample_fraction) / 2)
+        margin_x = int(w * (1 - sample_fraction) / 2)
+        roi = image[margin_y:h - margin_y, margin_x:w - margin_x]
+
+        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        hue = hsv[:, :, 0].ravel().astype(np.float32)
+        sat = hsv[:, :, 1].ravel().astype(np.float32)
+
+        saturated = sat >= min_saturation
+        in_hue = (hue >= hue_range[0]) & (hue <= hue_range[1])
+        purple_mask = saturated & in_hue
+
+        n_total = len(hue)
+        n_purple = int(purple_mask.sum())
+        purple_frac = n_purple / max(n_total, 1)
+
+        stats = {
+            "median_hue": float(np.median(hue)),
+            "median_saturation": float(np.median(sat)),
+            "purple_fraction": round(purple_frac, 4),
+            "n_pixels_sampled": n_total,
+            "passed": purple_frac >= min_purple_fraction,
+        }
+        return stats["passed"], stats
