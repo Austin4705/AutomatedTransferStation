@@ -82,8 +82,11 @@ def draw_crosshair(image_rgb, x, y, size=20, color=(255, 0, 0)):
     return out
 
 
-def draw_flakes_on_image(image_rgb, flakes):
-    """Draw detected flake contours and labels on an RGB image."""
+def draw_flakes_on_image(image_rgb, flakes, undersized=None):
+    """Draw detected flake contours and labels on an RGB image.
+
+    Undersized flakes (if provided) are drawn in red instead of green.
+    """
     det = image_rgb.copy()
     for flake in flakes:
         cv2.drawContours(det, [flake["contour"]], -1, (0, 255, 0), 2)
@@ -92,14 +95,28 @@ def draw_flakes_on_image(image_rgb, flakes):
         label = f"A={int(flake['stats']['area'])}"
         cv2.putText(det, label, (cx + 10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3)
         cv2.putText(det, label, (cx + 10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1)
+    for flake in (undersized or []):
+        cv2.drawContours(det, [flake["contour"]], -1, (255, 60, 60), 2)
+        cx, cy = flake["center"]
+        cv2.circle(det, (cx, cy), 6, (180, 0, 0), -1)
+        label = f"A={int(flake['stats']['area'])}"
+        cv2.putText(det, label, (cx + 10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3)
+        cv2.putText(det, label, (cx + 10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 60, 60), 1)
     return det
 
 
-def load_and_preprocess(path, apply_wb):
-    """Load image, optionally white-balance. Returns (bgr, rgb) or (None, None)."""
+def load_and_preprocess(path, apply_wb, background=None):
+    """Load image, optionally correct vignetting & white-balance.
+
+    Returns (raw_bgr, wb_bgr, wb_rgb) or (None, None, None).
+    raw_bgr: vignette-corrected but no white balance (for detection).
+    wb_bgr/wb_rgb: with white balance applied (for display).
+    """
     raw_bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
     if raw_bgr is None:
-        return None, None
+        return None, None, None
+    if background is not None and raw_bgr.shape[:2] == background.shape[:2]:
+        raw_bgr = FlinderDetector.correct_vignetting(raw_bgr, background)
     raw_rgb = cv2.cvtColor(raw_bgr, cv2.COLOR_BGR2RGB)
     if apply_wb:
         wb_rgb = whitebalance(raw_rgb)
@@ -107,7 +124,34 @@ def load_and_preprocess(path, apply_wb):
     else:
         wb_rgb = raw_rgb.copy()
         wb_bgr = raw_bgr.copy()
-    return wb_bgr, wb_rgb
+    return raw_bgr, wb_bgr, wb_rgb
+
+
+def _get_or_compute_background(collection_dir, n_sample):
+    """Load cached background from disk, or compute and save it.
+
+    The background .npy file is saved inside the collection directory so it
+    persists across Streamlit sessions and app restarts.
+    """
+    collection_dir = Path(collection_dir)
+    cache_path = collection_dir / f"_vignetting_bg_n{n_sample}.npy"
+
+    mem_key = str(cache_path)
+    if mem_key in st.session_state:
+        return st.session_state[mem_key]
+
+    if cache_path.exists():
+        bg = np.load(str(cache_path))
+        st.session_state[mem_key] = bg
+        return bg
+
+    all_paths = sorted(collection_dir.glob("*.png")) + sorted(collection_dir.glob("*.jpg"))
+    if len(all_paths) < 5:
+        return None
+    bg = FlinderDetector.compute_background(all_paths, n_sample=n_sample)
+    np.save(str(cache_path), bg)
+    st.session_state[mem_key] = bg
+    return bg
 
 
 # ─── Default Config ──────────────────────────────────────────────────────────
@@ -115,14 +159,14 @@ def load_and_preprocess(path, apply_wb):
 
 DEFAULT_CALIBRATION = {
     "thickness": [1],
-    "k": [161],
-    "b": [166],
-    "g": [162],
-    "r": [158],
+    "k": [120],
+    "b": [126],
+    "g": [119],
+    "r": [118],
     "k_error": [6],
-    "b_error": [5],
+    "b_error": [6],
     "g_error": [6],
-    "r_error": [6],
+    "r_error": [4],
     "number_of_intervals": 1,
 }
 
@@ -139,6 +183,7 @@ DEFAULT_CONFIG = {
         "r_std": {"max": 15},
         "area_perimeter_ratio": {"min": 0.05, "max": 1.0},
         "aspect_ratio": {"min": 1.0, "max": 6.0},
+        "points_per_unit_length": {"min": 0.0, "max": 10.0},
     },
 }
 
@@ -156,6 +201,13 @@ _use = _cfg["use_channels"]
 
 st.sidebar.header("Preprocessing")
 apply_wb = st.sidebar.checkbox("Apply white balance", value=True)
+apply_vignetting = st.sidebar.checkbox("Apply vignetting correction", value=True,
+    help="Builds a per-pixel background from the collection and divides each image by it. "
+         "Removes spatially-varying illumination (vignetting, uneven lighting).")
+
+if apply_vignetting:
+    n_bg_samples = st.sidebar.slider("Background sample count", 20, 500, 100, step=10,
+        help="Number of images to sample for computing the per-pixel median background.")
 
 # Color target (defaults from calibration)
 st.sidebar.header("Target Color (KBGR)")
@@ -197,6 +249,20 @@ apr_min = st.sidebar.slider("Area/perimeter ratio min", 0.0, 1.0, _crit["area_pe
 apr_max = st.sidebar.slider("Area/perimeter ratio max", 1.0, 10.0, _crit["area_perimeter_ratio"]["max"], step=0.1)
 ar_min = st.sidebar.slider("Aspect ratio min", 1.0, 3.0, _crit["aspect_ratio"]["min"], step=0.1)
 ar_max = st.sidebar.slider("Aspect ratio max", 1.0, 30.0, _crit["aspect_ratio"]["max"], step=0.5)
+ppul_min = st.sidebar.slider("Points/unit length min", 0.0, 5.0, _crit["points_per_unit_length"]["min"], step=0.1)
+ppul_max = st.sidebar.slider("Points/unit length max", 0.5, 20.0, _crit["points_per_unit_length"]["max"], step=0.5)
+
+# Size filter (post-detection)
+st.sidebar.header("Size Filter")
+filter_by_area = st.sidebar.checkbox("Enable area filter", value=False,
+    help="Post-detection filter: separate flakes by contour area. "
+         "Does not affect which contours are found (that's min contour area above).")
+if filter_by_area:
+    area_threshold = st.sidebar.slider("Area threshold (px)", 10, 50000, 500, step=10)
+    area_filter_mode = st.sidebar.radio("Undersized flakes", ["Highlight in red", "Discard"])
+else:
+    area_threshold = 0
+    area_filter_mode = "Discard"
 
 # ─── Build shared config & mask values ───────────────────────────────────────
 
@@ -220,6 +286,7 @@ config = {
         "r_std": {"max": max_std},
         "area_perimeter_ratio": {"min": apr_min, "max": apr_max},
         "aspect_ratio": {"min": ar_min, "max": ar_max},
+        "points_per_unit_length": {"min": ppul_min, "max": ppul_max},
     },
 }
 
@@ -258,35 +325,143 @@ with tab_tuner:
         st.stop()
     image_path = image_dir / selected_name
 
-    wb_bgr, wb_rgb = load_and_preprocess(image_path, apply_wb)
-    if wb_bgr is None:
+    # Vignetting correction — build list of background sources
+    tuner_bg = None
+    if apply_vignetting:
+        tuner_bg_sources = []
+        tuner_bg_labels = []
+
+        dataset_root_tuner = Path(__file__).parent / "Dataset"
+        if dataset_root_tuner.exists():
+            coll_dirs = set()
+            for p in dataset_root_tuner.rglob("*.png"):
+                coll_dirs.add(p.parent)
+            for d in sorted(coll_dirs):
+                tuner_bg_sources.append(d)
+                tuner_bg_labels.append(f"Dataset/{d.relative_to(dataset_root_tuner)}")
+
+        if len(image_files) >= 5:
+            tuner_bg_sources.append(image_dir)
+            tuner_bg_labels.append(f"images/ ({len(image_files)} images)")
+
+        if tuner_bg_sources:
+            tuner_bg_idx = st.selectbox("Background source collection", range(len(tuner_bg_labels)),
+                                        format_func=lambda i: tuner_bg_labels[i],
+                                        help="Pick the collection folder to compute the vignetting background from. "
+                                             "Needs many images of mostly bare substrate.",
+                                        key="tuner_bg_collection")
+            bg_dir = tuner_bg_sources[tuner_bg_idx]
+            bg_count = len(sorted(bg_dir.glob("*.png")) + sorted(bg_dir.glob("*.jpg")))
+            with st.spinner(f"Loading vignetting background (sampling {min(n_bg_samples, bg_count)} of {bg_count} images)..."):
+                tuner_bg = _get_or_compute_background(bg_dir, n_bg_samples)
+            if tuner_bg is not None:
+                st.caption(f"Background loaded from `{tuner_bg_labels[tuner_bg_idx]}` (cached to disk).")
+        else:
+            st.info("No image sources with 5+ images found. Vignetting correction disabled for tuner.")
+
+    raw_bgr, wb_bgr, wb_rgb = load_and_preprocess(image_path, apply_wb, background=tuner_bg)
+    if raw_bgr is None:
         st.error(f"Failed to load {image_path}")
         st.stop()
 
     h, w = wb_rgb.shape[:2]
 
-    # ── Color sampler ────────────────────────────────────────────────────
-    st.subheader("Color Sampler")
-    sc1, sc2 = st.columns([3, 1])
-    with sc1:
-        sample_x = st.number_input("Sample X", 0, w - 1, w // 2, step=10)
-        sample_y = st.number_input("Sample Y", 0, h - 1, h // 2, step=10)
-    with sc2:
-        px_bgr = wb_bgr[sample_y, sample_x]
-        px_b, px_g, px_r = int(px_bgr[0]), int(px_bgr[1]), int(px_bgr[2])
-        px_k = int(cv2.cvtColor(wb_bgr, cv2.COLOR_BGR2GRAY)[sample_y, sample_x])
-        st.markdown(f"**Sampled:** K={px_k} B={px_b} G={px_g} R={px_r}")
-        swatch = np.full((40, 100, 3), [px_r, px_g, px_b], dtype=np.uint8)
-        st.image(swatch, caption=f"RGB({px_r},{px_g},{px_b})", width=100)
-        st.caption("Copy these into the sidebar Target Color fields.")
-
-    crosshair_img = draw_crosshair(wb_rgb, sample_x, sample_y)
-    st.image(crosshair_img, caption="Original (click position shown)", width="stretch")
-
     # ── Run detection ────────────────────────────────────────────────────
-    flakes, k_ch, b_ch, g_ch, r_ch = detector.detect(wb_bgr, [mask_values])
+    all_flakes, k_ch, b_ch, g_ch, r_ch = detector.detect(raw_bgr, [mask_values])
     channel_masks = detector.make_channel_masks(k_ch, b_ch, g_ch, r_ch, mask_values)
     combined_mask = detector.make_selection(k_ch, b_ch, g_ch, r_ch, mask_values)
+
+    # Apply size filter
+    if filter_by_area:
+        flakes = [f for f in all_flakes if f["stats"]["area"] >= area_threshold]
+        undersized_flakes = [f for f in all_flakes if f["stats"]["area"] < area_threshold]
+        undersized_display = undersized_flakes if area_filter_mode == "Highlight in red" else []
+    else:
+        flakes = all_flakes
+        undersized_display = []
+
+    # ── Combined + Detection ─────────────────────────────────────────────
+    st.subheader("Combined Mask & Detection Result")
+    ch_colors = {"k": (200, 200, 200), "b": (80, 80, 255), "g": (80, 255, 80), "r": (255, 80, 80)}
+    res_cols = st.columns(2)
+    with res_cols[0]:
+        color_overlay = np.zeros(wb_rgb.shape, dtype=np.float32)
+        overlap_count = np.zeros(wb_rgb.shape[:2], dtype=np.float32)
+        for ch, ch_color in ch_colors.items():
+            if ch in channel_masks:
+                m = channel_masks[ch] > 0
+                color_overlay[m] += np.array(ch_color, dtype=np.float32)
+                overlap_count[m] += 1.0
+        has_color = overlap_count > 0
+        color_overlay[has_color] /= overlap_count[has_color, np.newaxis]
+        color_overlay = np.clip(color_overlay, 0, 255).astype(np.uint8)
+        combined_vis = wb_rgb.copy()
+        combined_vis[has_color] = cv2.addWeighted(
+            wb_rgb, 1.0, color_overlay, 0.5, 0
+        )[has_color]
+        st.image(combined_vis, caption="Combined mask (per-channel colors)", width="stretch")
+        st.caption(f"{int(np.count_nonzero(combined_mask)):,} px in combined mask")
+    with res_cols[1]:
+        det_img = draw_flakes_on_image(wb_rgb, flakes, undersized_display)
+        caption = f"Detected: {len(flakes)} flakes"
+        if undersized_display:
+            caption += f" ({len(undersized_display)} undersized in red)"
+        st.image(det_img, caption=caption, width="stretch")
+
+    # ── ANDed mask + contour interpretability ────────────────────────────
+    st.subheader("ANDed Mask & Contour Analysis")
+    and_cols = st.columns(3)
+
+    with and_cols[0]:
+        mask_binary = (combined_mask > 0).astype(np.uint8) * 255
+        st.image(mask_binary, caption="ANDed binary mask", width="stretch")
+        st.caption(f"{int(np.count_nonzero(combined_mask)):,} px")
+
+    all_contours = detector.find_contours_in_mask(combined_mask, min_area)
+
+    rejected_criteria = []
+    rejected_color = []
+    for contour in all_contours:
+        if any(np.array_equal(contour, f["contour"]) for f in all_flakes):
+            continue
+        stats = detector.calculate_contour_statistics(contour, k_ch, b_ch, g_ch, r_ch)
+        if not detector.check_criteria(stats):
+            rejected_criteria.append((contour, stats))
+        else:
+            rejected_color.append((contour, stats))
+
+    def _draw_contour_categories(base_img):
+        out = base_img.copy()
+        for f in flakes:
+            cv2.drawContours(out, [f["contour"]], -1, (0, 255, 0), 2)
+        for f in undersized_display:
+            cv2.drawContours(out, [f["contour"]], -1, (255, 255, 0), 2)
+        for contour, _ in rejected_criteria:
+            cv2.drawContours(out, [contour], -1, (255, 60, 60), 2)
+        for contour, _ in rejected_color:
+            cv2.drawContours(out, [contour], -1, (255, 165, 0), 2)
+        return out
+
+    with and_cols[1]:
+        mask_rgb = cv2.cvtColor(mask_binary, cv2.COLOR_GRAY2RGB)
+        st.image(_draw_contour_categories(mask_rgb), caption="Contours on mask", width="stretch")
+        legend = (
+            f":green[Green] = accepted ({len(flakes)})  \n"
+            f":red[Red] = rejected by shape/std ({len(rejected_criteria)})  \n"
+            f":orange[Orange] = rejected by color ({len(rejected_color)})"
+        )
+        if undersized_display:
+            legend = (
+                f":green[Green] = accepted ({len(flakes)})  \n"
+                f"Yellow = undersized ({len(undersized_display)})  \n"
+                f":red[Red] = rejected by shape/std ({len(rejected_criteria)})  \n"
+                f":orange[Orange] = rejected by color ({len(rejected_color)})"
+            )
+        st.caption(legend)
+
+    with and_cols[2]:
+        st.image(_draw_contour_categories(wb_rgb), caption="Contours on image", width="stretch")
+        st.caption(f"{len(all_contours)} total contours above min area")
 
     # ── Mask ranges ──────────────────────────────────────────────────────
     st.subheader("Mask Value Ranges")
@@ -298,38 +473,39 @@ with tab_tuner:
             f"[{mask_values[ch]['min']}, {mask_values[ch]['max']}]" if enabled else "disabled",
         )
 
+    # ── Raw channels ────────────────────────────────────────────────────
+    st.subheader("Extracted Channels")
+    ch_images = {"k": k_ch, "b": b_ch, "g": g_ch, "r": r_ch}
+    raw_cols = st.columns(4)
+    for i, ch in enumerate(["k", "b", "g", "r"]):
+        with raw_cols[i]:
+            st.image(ch_images[ch], caption=f"{ch.upper()} channel", width="stretch", clamp=True)
+
     # ── Channel masks ────────────────────────────────────────────────────
     st.subheader("Individual Channel Masks")
-    ch_colors = {"k": (200, 200, 200), "b": (80, 80, 255), "g": (80, 255, 80), "r": (255, 80, 80)}
     mask_cols = st.columns(4)
     for i, ch in enumerate(["k", "b", "g", "r"]):
         with mask_cols[i]:
             if ch in channel_masks:
-                vis = overlay_mask(wb_rgb, channel_masks[ch], ch_colors[ch], alpha=0.5)
-                st.image(vis, caption=f"{ch.upper()} mask", width="stretch")
+                mask_vis = (channel_masks[ch] > 0).astype(np.uint8) * 255
+                st.image(mask_vis, caption=f"{ch.upper()} mask", width="stretch")
                 st.caption(f"{int(np.count_nonzero(channel_masks[ch])):,} px")
             else:
                 st.caption(f"{ch.upper()} disabled")
 
-    # ── Combined + Detection ─────────────────────────────────────────────
-    st.subheader("Combined Mask & Detection Result")
-    res_cols = st.columns(2)
-    with res_cols[0]:
-        combined_vis = overlay_mask(wb_rgb, combined_mask, (0, 255, 255), alpha=0.5)
-        st.image(combined_vis, caption="Combined mask", width="stretch")
-        st.caption(f"{int(np.count_nonzero(combined_mask)):,} px in combined mask")
-    with res_cols[1]:
-        det_img = draw_flakes_on_image(wb_rgb, flakes)
-        st.image(det_img, caption=f"Detected: {len(flakes)} flakes", width="stretch")
-
     # ── Flake details table ──────────────────────────────────────────────
-    if flakes:
-        st.subheader(f"Detected Flakes ({len(flakes)})")
+    table_flakes = flakes + undersized_display
+    if table_flakes:
+        header = f"Detected Flakes ({len(flakes)})"
+        if undersized_display:
+            header += f" + {len(undersized_display)} undersized"
+        st.subheader(header)
         rows = []
-        for i, f in enumerate(flakes):
+        for i, f in enumerate(table_flakes):
             s = f["stats"]
             rows.append({
                 "#": i,
+                "Status": "accepted" if i < len(flakes) else "undersized",
                 "Center": f"{f['center'][0]}, {f['center'][1]}",
                 "Area (px)": f"{s['area']:.0f}",
                 "K med": f"{s['k_median']:.0f}", "B med": f"{s['b_median']:.0f}",
@@ -338,10 +514,31 @@ with tab_tuner:
                 "G std": f"{s['g_std']:.1f}", "R std": f"{s['r_std']:.1f}",
                 "A/P": f"{s['area_perimeter_ratio']:.3f}",
                 "Aspect": f"{s['aspect_ratio']:.2f}",
+                "Pts/len": f"{s['points_per_unit_length']:.2f}",
             })
         st.dataframe(rows, width="stretch")
     else:
-        st.info("No flakes detected. Try widening tolerances or lowering min area.")
+        st.info("No flakes detected. Try widening tolerances or lowering min area."
+                + (" (area filter is active)" if filter_by_area else ""))
+
+    # ── Color sampler ────────────────────────────────────────────────────
+    st.subheader("Color Sampler")
+    sc1, sc2 = st.columns([3, 1])
+    with sc1:
+        sample_x = st.number_input("Sample X", 0, w - 1, w // 2, step=10)
+        sample_y = st.number_input("Sample Y", 0, h - 1, h // 2, step=10)
+    with sc2:
+        px_k = int(k_ch[sample_y, sample_x])
+        px_b = int(b_ch[sample_y, sample_x])
+        px_g = int(g_ch[sample_y, sample_x])
+        px_r = int(r_ch[sample_y, sample_x])
+        st.markdown(f"**Sampled:** K={px_k} B={px_b} G={px_g} R={px_r}")
+        swatch = np.full((40, 100, 3), [px_r, px_g, px_b], dtype=np.uint8)
+        st.image(swatch, caption=f"RGB({px_r},{px_g},{px_b})", width=100)
+        st.caption("Copy these into the sidebar Target Color fields.")
+
+    crosshair_img = draw_crosshair(wb_rgb, sample_x, sample_y)
+    st.image(crosshair_img, caption="Original (click position shown)", width="stretch")
 
     # ── Export config ────────────────────────────────────────────────────
     with st.expander("Export Config"):
@@ -372,6 +569,7 @@ config = {{
         'r_std': {{'max': {max_std}}},
         'area_perimeter_ratio': {{'min': {apr_min}, 'max': {apr_max}}},
         'aspect_ratio': {{'min': {ar_min}, 'max': {ar_max}}},
+        'points_per_unit_length': {{'min': {ppul_min}, 'max': {ppul_max}}},
     }}
 }}"""
         st.code(export_config, language="python")
@@ -411,18 +609,28 @@ with tab_dataset:
     total_available = len(all_images)
     st.write(f"**{total_available}** images in `{dir_labels[selected_dir_idx]}`")
 
+    # Compute vignetting background for this collection
+    dataset_bg = None
+    if apply_vignetting and total_available >= 5:
+        with st.spinner(f"Loading vignetting background (sampling {min(n_bg_samples, total_available)} of {total_available} images)..."):
+            dataset_bg = _get_or_compute_background(selected_dir, n_bg_samples)
+        if dataset_bg is not None:
+            st.caption(f"Background loaded (cached to `_vignetting_bg_n{n_bg_samples}.npy` in collection folder).")
+    elif apply_vignetting:
+        st.warning("Need at least 5 images for vignetting correction.")
+
     # Options
     opt_cols = st.columns(4)
-    show_mode = opt_cols[0].radio("Show", ["Only with flakes", "All images"], index=0)
-    max_display = opt_cols[1].number_input("Max images to display", 10, 500, 50, step=10)
+    show_mode = opt_cols[0].radio("Show", ["Only with flakes", "All images"], index=1)
+    max_display = opt_cols[1].number_input("Max images to display", 10, 50, 50, step=10)
     cols_per_row = opt_cols[2].number_input("Columns", 1, 6, 3)
     n_workers = opt_cols[3].number_input("Workers", 1, 16, min(8, total_available), step=1)
 
     # Sample size
     sample_cols = st.columns(2)
     max_compute = sample_cols[0].number_input(
-        "Max images to process", 1, total_available, min(total_available, 100), step=10,
-        help="Randomly samples this many images from the folder.",
+        "Max images to process", 1, total_available, min(total_available, 50), step=10,
+        help="Number of images to process. Default: all images.",
     )
     if max_compute < total_available:
         sample_cols[1].caption(f"Will randomly sample **{max_compute}** of {total_available} images.")
@@ -439,15 +647,12 @@ with tab_dataset:
         total = len(images_to_run)
         t_start = time.perf_counter()
 
-        # Worker function — runs in a thread. cv2 releases the GIL so
-        # multiple threads get true parallelism on the C++ side.
         def _detect_one(img_path):
-            wb_bgr_w, wb_rgb_w = load_and_preprocess(img_path, apply_wb)
-            if wb_bgr_w is None:
+            raw_bgr_w, wb_bgr_w, wb_rgb_w = load_and_preprocess(img_path, apply_wb, background=dataset_bg)
+            if raw_bgr_w is None:
                 return None
-            flakes_w = detector.detect_flakes(wb_bgr_w, [mask_values])
-            det_img_w = draw_flakes_on_image(wb_rgb_w, flakes_w)
-            return (img_path, flakes_w, det_img_w)
+            flakes_w = detector.detect_flakes(raw_bgr_w, [mask_values])
+            return (img_path, flakes_w, wb_rgb_w)
 
         results = [None] * total
         done_count = 0
@@ -477,36 +682,48 @@ with tab_dataset:
         elapsed_total = time.perf_counter() - t_start
         progress.empty()
 
-        # ── Summary ──────────────────────────────────────────────────────
         total_processed = len(results)
-        with_flakes = [(p, f, img) for p, f, img in results if len(f) > 0]
-        total_flakes = sum(len(f) for _, f, _ in results)
+        all_flake_count = sum(len(f) for _, f, _ in results)
 
         st.success(
             f"Done in **{elapsed_total:.1f}s** ({total_processed/elapsed_total:.1f} img/s). "
             f"Processed **{total_processed}** images. "
-            f"**{len(with_flakes)}** have flakes ({total_flakes} total flakes found)."
+            f"**{all_flake_count}** total flakes found."
         )
 
-        # Save results to session state so they persist across reruns
         st.session_state["dataset_results"] = results
-        st.session_state["dataset_with_flakes"] = with_flakes
-        st.session_state["dataset_total_flakes"] = total_flakes
 
     # ── Display results (from session state) ─────────────────────────────
     if "dataset_results" in st.session_state:
         results = st.session_state["dataset_results"]
-        with_flakes = st.session_state["dataset_with_flakes"]
-        total_flakes = st.session_state["dataset_total_flakes"]
+
+        # Apply size filter to cached results (re-draws on every rerun, no re-detection needed)
+        filtered = []
+        for (img_path, flakes_raw, wb_rgb_w) in results:
+            if filter_by_area:
+                passing = [f for f in flakes_raw if f["stats"]["area"] >= area_threshold]
+                undersized = [f for f in flakes_raw if f["stats"]["area"] < area_threshold]
+                undersized_show = undersized if area_filter_mode == "Highlight in red" else []
+            else:
+                passing = flakes_raw
+                undersized_show = []
+            det_img = draw_flakes_on_image(wb_rgb_w, passing, undersized_show)
+            filtered.append((img_path, passing, undersized_show, det_img))
+
+        with_flakes = [(p, f, u, img) for p, f, u, img in filtered if len(f) > 0]
+        total_flakes = sum(len(f) for _, f, _, _ in filtered)
+        total_undersized = sum(len(u) for _, _, u, _ in filtered)
 
         # Summary metrics
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Images processed", len(results))
-        m2.metric("Images with flakes", len(with_flakes))
-        m3.metric("Total flakes", total_flakes)
+        mcols = st.columns(4 if filter_by_area else 3)
+        mcols[0].metric("Images processed", len(results))
+        mcols[1].metric("Images with flakes", len(with_flakes))
+        mcols[2].metric("Total flakes", total_flakes)
+        if filter_by_area:
+            mcols[3].metric("Undersized", total_undersized)
 
         # Pick which results to show
-        display_list = with_flakes if show_mode == "Only with flakes" else results
+        display_list = with_flakes if show_mode == "Only with flakes" else filtered
         display_list = display_list[:max_display]
 
         if not display_list:
@@ -514,33 +731,35 @@ with tab_dataset:
         else:
             st.subheader(f"Results ({len(display_list)} images shown)")
 
-            # Render as a grid
             for row_start in range(0, len(display_list), cols_per_row):
                 row_items = display_list[row_start : row_start + cols_per_row]
                 cols = st.columns(cols_per_row)
-                for col_idx, (img_path, flakes_item, det_img) in enumerate(row_items):
+                for col_idx, (img_path, flakes_item, undersized_item, det_img) in enumerate(row_items):
                     with cols[col_idx]:
                         n = len(flakes_item)
                         caption = f"{img_path.name} — {n} flake{'s' if n != 1 else ''}"
+                        if undersized_item:
+                            caption += f" ({len(undersized_item)} undersized)"
                         st.image(det_img, caption=caption, width="stretch")
 
             # ── Aggregate flake table ────────────────────────────────────
             if with_flakes:
                 with st.expander("All detected flakes (table)"):
                     all_rows = []
-                    for img_path, flakes_item, _ in with_flakes:
-                        for i, f in enumerate(flakes_item):
-                            s = f["stats"]
-                            all_rows.append({
-                                "Image": img_path.name,
-                                "Flake #": i,
-                                "Center": f"{f['center'][0]},{f['center'][1]}",
-                                "Area": f"{s['area']:.0f}",
-                                "K": f"{s['k_median']:.0f}",
-                                "B": f"{s['b_median']:.0f}",
-                                "G": f"{s['g_median']:.0f}",
-                                "R": f"{s['r_median']:.0f}",
-                                "K std": f"{s['k_std']:.1f}",
-                                "Aspect": f"{s['aspect_ratio']:.2f}",
-                            })
+                    for img_path, flakes_item, undersized_item, _ in with_flakes:
+                        for status, flist in [("accepted", flakes_item), ("undersized", undersized_item)]:
+                            for i, f in enumerate(flist):
+                                s = f["stats"]
+                                all_rows.append({
+                                    "Image": img_path.name,
+                                    "Status": status,
+                                    "Center": f"{f['center'][0]},{f['center'][1]}",
+                                    "Area": f"{s['area']:.0f}",
+                                    "K": f"{s['k_median']:.0f}",
+                                    "B": f"{s['b_median']:.0f}",
+                                    "G": f"{s['g_median']:.0f}",
+                                    "R": f"{s['r_median']:.0f}",
+                                    "K std": f"{s['k_std']:.1f}",
+                                    "Aspect": f"{s['aspect_ratio']:.2f}",
+                                })
                     st.dataframe(all_rows, width="stretch")

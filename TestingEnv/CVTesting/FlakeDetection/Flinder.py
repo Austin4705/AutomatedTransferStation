@@ -1,10 +1,12 @@
 import cv2
 import os
+import random
 import matplotlib.pyplot as plt
 import json
 import threading
 import numpy as np
 import matplotlib.cm as cm
+from pathlib import Path
 from scipy.interpolate import interp1d
 from skimage import color, segmentation, measure, morphology, filters
 from sklearn.cluster import KMeans
@@ -17,12 +19,99 @@ class FlinderDetector:
     def __init__(self, config=None, debug=False):
         self.debug = debug
         self.config = config
+        self._background = None
         if config is not None:
             for key, value in config.items():
                 if isinstance(value, dict) and key in self.config and isinstance(self.config[key], dict):
                     self.config[key].update(value)
                 else:
                     self.config[key] = value
+
+    # ── Vignetting / flat-field correction ───────────────────────────────
+
+    @staticmethod
+    def compute_background(image_paths, n_sample=100, target_value=127.5):
+        """Build a per-pixel background model from the median of sampled images.
+
+        Most pixels in a wafer scan are bare substrate, so the pixel-wise
+        median across many images captures the illumination profile
+        (including vignetting, uneven lighting, etc.).
+
+        Args:
+            image_paths: list of Path or str to images in a collection.
+            n_sample: how many images to sample (more = more accurate, slower).
+            target_value: the neutral gray value to normalize to.
+
+        Returns:
+            background (np.float32 H x W x 3): per-pixel background model.
+        """
+        paths = list(image_paths)
+        if len(paths) == 0:
+            raise ValueError("No image paths provided for background computation")
+        sample = random.sample(paths, min(n_sample, len(paths)))
+
+        first = cv2.imread(str(sample[0]), cv2.IMREAD_COLOR)
+        if first is None:
+            raise ValueError(f"Could not read image: {sample[0]}")
+        h, w = first.shape[:2]
+
+        stack = np.zeros((len(sample), h, w, 3), dtype=np.uint8)
+        valid = 0
+        for i, p in enumerate(sample):
+            img = cv2.imread(str(p), cv2.IMREAD_COLOR)
+            if img is not None and img.shape[:2] == (h, w):
+                stack[valid] = img
+                valid += 1
+        stack = stack[:valid]
+
+        background = np.median(stack, axis=0).astype(np.float32)
+        return background
+
+    @staticmethod
+    def correct_vignetting(image, background, target_value=127.5):
+        """Correct vignetting by dividing by the per-pixel background.
+
+        For each channel at each pixel: corrected = (pixel / background) * target.
+        Then re-center so the histogram peak sits at target_value.
+
+        Args:
+            image: BGR uint8 image.
+            background: float32 H x W x 3 background from compute_background().
+            target_value: neutral gray level to normalize to.
+
+        Returns:
+            corrected BGR uint8 image.
+        """
+        img_f = image.astype(np.float32)
+        safe_bg = np.maximum(background, 1.0)
+        corrected = img_f / safe_bg * target_value
+
+        for ch in range(3):
+            channel = corrected[:, :, ch]
+            vals = channel[(channel > 10) & (channel < 245)]
+            if len(vals) > 0:
+                bins = np.arange(50, 200, 0.5)
+                hist, _ = np.histogram(vals, bins=bins)
+                peak = bins[np.argmax(hist)]
+                if peak > 10:
+                    channel[:] = channel / peak * target_value
+            corrected[:, :, ch] = channel
+
+        return np.clip(corrected, 0, 255).astype(np.uint8)
+
+    def set_background(self, background):
+        """Store a precomputed background for use in detect/detect_flakes."""
+        self._background = background
+
+    def clear_background(self):
+        """Clear the stored background model."""
+        self._background = None
+
+    def preprocess_image(self, image):
+        """Apply vignetting correction if a background model is set."""
+        if self._background is not None:
+            return self.correct_vignetting(image, self._background)
+        return image
 
     # ── Channel extraction ──────────────────────────────────────────────
 
@@ -129,6 +218,7 @@ class FlinderDetector:
             "area": float(area), "perimeter": float(perim),
             "area_perimeter_ratio": float(16 * area / perim**2),
             "aspect_ratio": float(max(d1, d2) / min(d1, d2)),
+            "points_per_unit_length": float(len(contour) / perim),
         }
 
     # ── Validation ──────────────────────────────────────────────────────
@@ -140,6 +230,7 @@ class FlinderDetector:
             stats["g_std"] < c["g_std"]["max"], stats["r_std"] < c["r_std"]["max"],
             c["area_perimeter_ratio"]["min"] < stats["area_perimeter_ratio"] < c["area_perimeter_ratio"]["max"],
             c["aspect_ratio"]["min"] < stats["aspect_ratio"] < c["aspect_ratio"]["max"],
+            c["points_per_unit_length"]["min"] < stats["points_per_unit_length"] < c["points_per_unit_length"]["max"],
         ])
 
     def check_color_in_range(self, stats, mask_values):
@@ -155,16 +246,17 @@ class FlinderDetector:
         """Returns (flakes_list, k, b, g, r) processed channels."""
         if min_area is None:
             min_area = self.config["min_area"]
-        processed = cv2.medianBlur(image, self.config.get("median_blur_size", 7))
+        corrected = self.preprocess_image(image)
+        self._debug_image(corrected, "Vignetting-corrected")
+        processed = cv2.medianBlur(corrected, self.config.get("median_blur_size", 7))
         self._debug_image(processed, "Preprocessed (median blur)")
         k, b, g, r = self.extract_kbgr(processed)
-        ko, bo, go, ro = self.extract_kbgr(image)
         flakes = []
         for idx, mv in enumerate(mask_values_list):
             sel = self.make_selection(k, b, g, r, mv)
             self._debug_image(sel, f"Combined mask - interval {idx}")
             for contour in self.find_contours_in_mask(sel, min_area):
-                stats = self.calculate_contour_statistics(contour, ko, bo, go, ro)
+                stats = self.calculate_contour_statistics(contour, k, b, g, r)
                 if not self.check_criteria(stats):
                     continue
                 if not self.check_color_in_range(stats, mv):
