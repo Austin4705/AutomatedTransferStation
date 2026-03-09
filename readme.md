@@ -111,6 +111,10 @@ conda init powershell
   }
 }
 ```
+```
+conda run -n automatedTransfer streamlit run flake_tuner.py --server.headless true 
+```
+```localhost:8501```
 
 ## Contributing
 For questions or contributions, please contact the Yasuda Lab at Cornell or Austin at `austin-wu.com`

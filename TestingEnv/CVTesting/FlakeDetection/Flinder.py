@@ -84,18 +84,26 @@ class FlinderDetector:
 
     # ── Vignetting / flat-field correction ───────────────────────────────
 
-    @staticmethod
-    def compute_background(image_paths, n_sample=100, target_value=127.5):
+    @classmethod
+    def compute_background(cls, image_paths, n_sample=100, target_value=127.5,
+                           filter_substrate=True, smooth_sigma=8.0):
         """Build a per-pixel background model from the median of sampled images.
 
         Most pixels in a wafer scan are bare substrate, so the pixel-wise
         median across many images captures the illumination profile
         (including vignetting, uneven lighting, etc.).
 
+        When *filter_substrate* is True (the default) each candidate image is
+        first checked with ``is_substrate_background``.  Only images that pass
+        (i.e. are mostly purple SiO₂ substrate) are kept.  This prevents
+        chip / flake regions from corrupting the vignetting model.
+
         Args:
             image_paths: list of Path or str to images in a collection.
-            n_sample: how many images to sample (more = more accurate, slower).
+            n_sample: how many substrate images to collect for the model.
             target_value: the neutral gray value to normalize to.
+            filter_substrate: if True, reject images that fail the substrate
+                background check before including them in the median.
 
         Returns:
             background (np.float32 H x W x 3): per-pixel background model.
@@ -103,54 +111,144 @@ class FlinderDetector:
         paths = list(image_paths)
         if len(paths) == 0:
             raise ValueError("No image paths provided for background computation")
-        sample = random.sample(paths, min(n_sample, len(paths)))
 
-        first = cv2.imread(str(sample[0]), cv2.IMREAD_COLOR)
+        random.shuffle(paths)
+
+        first = cv2.imread(str(paths[0]), cv2.IMREAD_COLOR)
         if first is None:
-            raise ValueError(f"Could not read image: {sample[0]}")
+            raise ValueError(f"Could not read image: {paths[0]}")
         h, w = first.shape[:2]
 
-        stack = np.zeros((len(sample), h, w, 3), dtype=np.uint8)
+        stack = np.zeros((min(n_sample, len(paths)), h, w, 3), dtype=np.uint8)
         valid = 0
-        for i, p in enumerate(sample):
+        checked = 0
+        for p in paths:
+            if valid >= n_sample:
+                break
             img = cv2.imread(str(p), cv2.IMREAD_COLOR)
-            if img is not None and img.shape[:2] == (h, w):
-                stack[valid] = img
-                valid += 1
+            if img is None or img.shape[:2] != (h, w):
+                continue
+            checked += 1
+            if filter_substrate:
+                passed, _ = cls.is_substrate_background(img)
+                if not passed:
+                    continue
+            stack[valid] = img
+            valid += 1
+
+        if valid == 0:
+            raise ValueError(
+                f"No suitable substrate images found "
+                f"(checked {checked}/{len(paths)}, filter_substrate={filter_substrate})"
+            )
+
         stack = stack[:valid]
+        print(f"Vignetting model: using {valid} substrate images "
+              f"(checked {checked}/{len(paths)}, filter_substrate={filter_substrate})")
 
         background = np.median(stack, axis=0).astype(np.float32)
+        if smooth_sigma and smooth_sigma > 0:
+            background = cv2.GaussianBlur(background, (0, 0), smooth_sigma)
+        return background
+
+    @classmethod
+    def compute_background_from_images(cls, images, n_sample=100,
+                                       filter_substrate=True, smooth_sigma=8.0):
+        """Build a per-pixel background model from in-memory images.
+
+        Same idea as ``compute_background`` but operates on a list of
+        numpy arrays instead of file paths — useful when images are already
+        loaded (e.g. from a pickle cache).
+
+        Args:
+            images: list of BGR uint8 numpy arrays.
+            n_sample: max number of substrate images to include.
+            filter_substrate: if True, reject images that fail the
+                substrate background check.
+
+        Returns:
+            background (np.float32 H×W×3): per-pixel background model.
+        """
+        if len(images) == 0:
+            raise ValueError("No images provided for background computation")
+
+        indices = list(range(len(images)))
+        random.shuffle(indices)
+
+        h, w = images[indices[0]].shape[:2]
+
+        stack = np.zeros((min(n_sample, len(images)), h, w, 3), dtype=np.uint8)
+        valid = 0
+        checked = 0
+        for idx in indices:
+            if valid >= n_sample:
+                break
+            img = images[idx]
+            if img is None or img.shape[:2] != (h, w):
+                continue
+            checked += 1
+            if filter_substrate:
+                passed, _ = cls.is_substrate_background(img)
+                if not passed:
+                    continue
+            stack[valid] = img
+            valid += 1
+
+        if valid == 0:
+            raise ValueError(
+                f"No suitable substrate images found "
+                f"(checked {checked}/{len(images)}, "
+                f"filter_substrate={filter_substrate})"
+            )
+
+        stack = stack[:valid]
+        print(f"Vignetting model: using {valid} substrate images "
+              f"(checked {checked}/{len(images)}, "
+              f"filter_substrate={filter_substrate})")
+
+        background = np.median(stack, axis=0).astype(np.float32)
+        if smooth_sigma and smooth_sigma > 0:
+            background = cv2.GaussianBlur(background, (0, 0), smooth_sigma)
         return background
 
     @staticmethod
-    def correct_vignetting(image, background, target_value=127.5):
+    def correct_vignetting(image, background, target_value=127.5,
+                           per_tile_recenter=True, gain_clip=(0.6, 1.8)):
         """Correct vignetting by dividing by the per-pixel background.
 
         For each channel at each pixel: corrected = (pixel / background) * target.
-        Then re-center so the histogram peak sits at target_value.
 
         Args:
             image: BGR uint8 image.
             background: float32 H x W x 3 background from compute_background().
             target_value: neutral gray level to normalize to.
+            per_tile_recenter: if True (default), re-center each channel's
+                histogram peak to *target_value*.  Set to False when
+                producing tiles for stitching — the per-tile re-centering
+                creates tile-to-tile color discontinuities at seams.
 
         Returns:
             corrected BGR uint8 image.
         """
         img_f = image.astype(np.float32)
         safe_bg = np.maximum(background, 1.0)
-        corrected = img_f / safe_bg * target_value
+        gain = target_value / safe_bg
+        if gain_clip is not None:
+            lo, hi = gain_clip
+            gain = np.clip(gain, float(lo), float(hi))
+        corrected = img_f * gain
 
-        for ch in range(3):
-            channel = corrected[:, :, ch]
-            vals = channel[(channel > 10) & (channel < 245)]
-            if len(vals) > 0:
-                bins = np.arange(50, 200, 0.5)
-                hist, _ = np.histogram(vals, bins=bins)
-                peak = bins[np.argmax(hist)]
-                if peak > 10:
-                    channel[:] = channel / peak * target_value
-            corrected[:, :, ch] = channel
+        if per_tile_recenter:
+            for ch in range(3):
+                channel = corrected[:, :, ch]
+                vals = channel[(channel > 10) & (channel < 245)]
+                if len(vals) > 0:
+                    bins = np.arange(50, 200, 0.5)
+                    hist, _ = np.histogram(vals, bins=bins)
+                    peak = bins[np.argmax(hist)]
+                    if peak > 10:
+                        channel[:] = channel / peak * target_value
+                corrected[:, :, ch] = channel
 
         return np.clip(corrected, 0, 255).astype(np.uint8)
 
@@ -162,10 +260,15 @@ class FlinderDetector:
         """Clear the stored background model."""
         self._background = None
 
-    def preprocess_image(self, image):
+    def preprocess_image(self, image, per_tile_recenter=True, gain_clip=(0.6, 1.8)):
         """Apply vignetting correction if a background model is set."""
         if self._background is not None:
-            return self.correct_vignetting(image, self._background)
+            return self.correct_vignetting(
+                image,
+                self._background,
+                per_tile_recenter=per_tile_recenter,
+                gain_clip=gain_clip,
+            )
         return image
 
     # ── Channel extraction ──────────────────────────────────────────────
