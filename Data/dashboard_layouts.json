@@ -1,0 +1,61 @@
+{
+  "layouts": [
+    {
+      "id": "8cd262a26bed478d8d613a904f48bfcb",
+      "name": "Test",
+      "layout": [
+        {
+          "id": "camera-1778391416604-751",
+          "type": "camera",
+          "x": 1,
+          "y": 1,
+          "w": 6,
+          "h": 6
+        }
+      ],
+      "created_at": "2026-05-10T01:37:12.651842",
+      "updated_at": "2026-05-10T01:37:12.651842"
+    },
+    {
+      "id": "a82be77fe6434d5aac7a7d3447d1f78c",
+      "name": "Test Copy",
+      "layout": [
+        {
+          "id": "camera-1778391416604-751",
+          "type": "camera",
+          "x": 1,
+          "y": 1,
+          "w": 6,
+          "h": 6
+        },
+        {
+          "id": "goto-flake-1778391450686-169",
+          "type": "goto-flake",
+          "x": 0,
+          "y": 7,
+          "w": 4,
+          "h": 4
+        },
+        {
+          "id": "commands-1778391451385-366",
+          "type": "commands",
+          "x": 4,
+          "y": 11,
+          "w": 4,
+          "h": 4
+        },
+        {
+          "id": "control-panel-1778391452057-577",
+          "type": "control-panel",
+          "x": 0,
+          "y": 15,
+          "w": 4,
+          "h": 6
+        }
+      ],
+      "created_at": "2026-05-10T01:37:27.660868",
+      "updated_at": "2026-05-10T01:37:33.662477"
+    }
+  ],
+  "updated_at": "2026-05-10T01:37:33.662752"
+}

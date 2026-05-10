@@ -58,16 +58,18 @@ const ConnectionStatus = () => {
     (readyState === ReadyState.CONNECTING && connectingTime > 5);
 
   return (
-    <div className="connection-status flex items-center">
-      {shouldShowReconnectButton && (
-        <button 
-          className="reconnect-button mr-3 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
-          onClick={reconnect}
-          title="Reconnect WebSocket"
-        >
-          Reconnect
-        </button>
-      )}
+    <div className="connection-status">
+      <div className="connection-reconnect-slot">
+        {shouldShowReconnectButton && (
+          <button
+            className="reconnect-button"
+            onClick={reconnect}
+            title="Reconnect WebSocket"
+          >
+            Reconnect
+          </button>
+        )}
+      </div>
       <div className="status-indicator">
         <span 
           className="status-dot"

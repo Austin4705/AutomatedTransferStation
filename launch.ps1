@@ -157,31 +157,16 @@ Write-ColorOutput "Python environment found!" "Green"
 Write-ColorOutput "`n[6/6] Launching Python application..." "Yellow"
 Write-ColorOutput "========================================`n" "Cyan"
 
-# Change to src directory and run main.py
-Push-Location src
+# Run as a package from the project root: PYTHONPATH=src python -m ats
+$env:PYTHONPATH = "src" + [System.IO.Path]::PathSeparator + $env:PYTHONPATH
 
-# Create a script block to run in the conda environment
-$scriptBlock = {
-    param($srcPath)
-    Set-Location $srcPath
-    & conda activate automatedTransfer
-    & python main.py
-}
-
-# Try to run with conda
 try {
-    # Use cmd to activate conda and run python
-    & cmd /c "conda activate automatedTransfer && python main.py"
+    & cmd /c "conda activate automatedTransfer && python -m ats"
 } catch {
     Write-ColorOutput "ERROR: Failed to launch Python application" "Red"
     Write-ColorOutput $_.Exception.Message "Red"
-
-    # Cleanup
-    Pop-Location
     Stop-Process -Id $clientProcess.Id -Force
     exit 1
-} finally {
-    Pop-Location
 }
 
 # Cleanup function
@@ -208,4 +193,4 @@ function Cleanup {
 Register-EngineEvent PowerShell.Exiting -Action { Cleanup }
 
 # Wait for user to press Enter to exit (this is handled by the Python script)
-# The script will exit when main.py exits
+# The script will exit when python -m ats exits

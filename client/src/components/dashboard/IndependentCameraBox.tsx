@@ -4,6 +4,7 @@ import { jsonStateAtom } from "../../state/jsonState";
 import { isConsoleMessage } from "../../state/consoleState";
 import { connectionStateAtom } from "../../state/appState";
 import { useSendJSON } from "../../hooks/useSendJSON";
+import WebRTCVideoFeed from "./WebRTCVideoFeed";
 
 interface IndependentCameraBoxProps {
   cameraId: string; // Unique ID for this camera widget (e.g., "camera-1", "camera-2")
@@ -190,6 +191,19 @@ const IndependentCameraBox = ({ cameraId, defaultCamera = 0 }: IndependentCamera
                 Try Again
               </button>
             </div>
+          </div>
+        ) : feedType === 'video' ? (
+          <div className="image-wrapper relative w-full h-full flex items-center justify-center">
+            <WebRTCVideoFeed
+              key={`${cameraId}-webrtc-${cameraNumber}-${connection.host}`}
+              host={connection.host}
+              cameraNumber={cameraNumber}
+              onError={(msg) => setError(msg)}
+              onConnected={() => {
+                setError(null);
+                setIsRefreshing(false);
+              }}
+            />
           </div>
         ) : (
           <div className="image-wrapper relative w-full h-full flex items-center justify-center">

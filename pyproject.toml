@@ -18,17 +18,21 @@ dependencies = [
     "numpy<2.2",
     "scipy",
     "pydantic>=2.0",
+    "aiortc>=1.9",
+    "aiohttp>=3.9",
 ]
 
 [project.optional-dependencies]
 omero = ["omero-py"]
 thor = []  # ThorLabs SDK installed separately
-webrtc = ["aiortc", "aiohttp"]
 dev = [
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
 ]
+
+[project.scripts]
+ats = "ats.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -36,8 +40,10 @@ where = ["src"]
 [tool.setuptools.package-dir]
 "" = "src"
 
+[tool.setuptools.package-data]
+ats = ["cameras/thor_drivers/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-
 

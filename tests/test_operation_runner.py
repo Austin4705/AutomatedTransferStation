@@ -1,6 +1,5 @@
 """Tests for the OperationRunner state machine."""
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+import os
 
 import time
 import threading
@@ -8,10 +7,10 @@ import pytest
 from unittest.mock import MagicMock
 
 # Mock Logger before importing operation_runner
-from logger import Logger
+from ats.logger import Logger
 Logger.socket_manager = MagicMock()
 
-from operation_runner import OperationRunner, OperationState, OperationCancelled, OperationContext
+from ats.operation_runner import OperationRunner, OperationState, OperationCancelled, OperationContext
 
 
 class TestOperationRunner:
@@ -98,12 +97,11 @@ class TestConfig:
     """Test config validation."""
 
     def test_app_config_from_env(self):
-        from config import AppConfig
+        from ats.config import AppConfig
         os.environ["TRANSFER_STATION_TYPE"] = "virtual"
         os.environ["CAMERA_TYPE"] = "virtual"
         config = AppConfig.from_env()
         assert config.station.station_type == "virtual"
         assert config.camera.camera_type == "virtual"
         assert config.camera.max_cameras >= 1
-
 

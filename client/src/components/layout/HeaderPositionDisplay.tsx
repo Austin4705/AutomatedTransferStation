@@ -31,8 +31,8 @@ const HeaderPositionDisplay = () => {
   };
 
   return (
-    <div className="header-position-display flex items-center ml-4">
-      <div className="flex items-center mr-3">
+    <div className="header-position-display">
+      <div className="header-position-polling">
         <label className="flex items-center text-xs mr-2">
           <input
             type="checkbox"
@@ -43,7 +43,7 @@ const HeaderPositionDisplay = () => {
           <span className="whitespace-nowrap">Auto</span>
         </label>
         
-        <div className="flex items-center">
+        <div className="header-poll-rate">
           <input
             type="number"
             min="0.1"
@@ -60,14 +60,14 @@ const HeaderPositionDisplay = () => {
         </div>
       </div>
       
-      <div className="position-values flex items-center text-xs">
-        <div className="flex items-center mr-2">
+      <div className="position-values">
+        <div className="position-axis-value">
           <span className="font-medium mr-1">X:</span>
           <span>
             {position ? formatPosition(position.x) : "0.000"}
           </span>
         </div>
-        <div className="flex items-center">
+        <div className="position-axis-value">
           <span className="font-medium mr-1">Y:</span>
           <span>
             {position ? formatPosition(position.y) : "0.000"}

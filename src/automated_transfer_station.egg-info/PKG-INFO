@@ -1,0 +1,24 @@
+Metadata-Version: 2.4
+Name: automated-transfer-station
+Version: 0.1.0
+Summary: General-purpose library for control of transfer stations for 2D materials research
+Requires-Python: >=3.10
+Requires-Dist: opencv-python
+Requires-Dist: flask
+Requires-Dist: flask-cors
+Requires-Dist: websockets
+Requires-Dist: pyserial
+Requires-Dist: python-dotenv
+Requires-Dist: matplotlib
+Requires-Dist: numpy<2.2
+Requires-Dist: scipy
+Requires-Dist: pydantic>=2.0
+Requires-Dist: aiortc>=1.9
+Requires-Dist: aiohttp>=3.9
+Provides-Extra: omero
+Requires-Dist: omero-py; extra == "omero"
+Provides-Extra: thor
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-asyncio; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"

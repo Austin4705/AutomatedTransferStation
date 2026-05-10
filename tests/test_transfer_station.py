@@ -1,9 +1,7 @@
 """Tests for the Transfer_Station ABC and VirtualTransferStation."""
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 import pytest
-from transfer_station import Transfer_Station, VirtualTransferStation
+from ats.transfer_station import Transfer_Station, VirtualTransferStation
 
 
 class TestVirtualTransferStation:
@@ -11,7 +9,7 @@ class TestVirtualTransferStation:
 
     def setup_method(self):
         # Ensure Logger doesn't try to send via websocket during tests
-        from logger import Logger
+        from ats.logger import Logger
         from unittest.mock import MagicMock
         Logger.socket_manager = MagicMock()
         self.ts = VirtualTransferStation()
@@ -69,7 +67,7 @@ class TestDriverRegistry:
         assert "virtual" in Transfer_Station._registry
 
     def test_create_virtual(self):
-        from logger import Logger
+        from ats.logger import Logger
         from unittest.mock import MagicMock
         Logger.socket_manager = MagicMock()
         ts = Transfer_Station.create("virtual")
@@ -81,7 +79,7 @@ class TestDriverRegistry:
 
     def test_custom_driver_registration(self):
         """Verify a user can register their own driver at runtime."""
-        from logger import Logger
+        from ats.logger import Logger
         from unittest.mock import MagicMock
         Logger.socket_manager = MagicMock()
 
@@ -94,5 +92,4 @@ class TestDriverRegistry:
 
         # Clean up
         del Transfer_Station._registry["test_custom"]
-
 
