@@ -119,7 +119,6 @@ class Transfer_Functions:
 
     @transfer_function("RUN_TRACE_OVER")
     def run_trace_over(self, data):
-        """Execute trace over with the provided configuration"""
         Logger.log("Type of data: " + type(data).__name__)
         Logger.log("Data: " + str(data))
         
@@ -128,11 +127,8 @@ class Transfer_Functions:
         wait_time = MAGNIFICATION_TRAVEL[magnification].get("wait_time", 1)
         travel = MAGNIFICATION_TRAVEL[magnification]
 
-        pics_until_focus = int(data.get("pics_until_focus", 10))
         initial_wait_time = float(data.get("initial_wait_time", 25))
-        focus_wait_time = float(data.get("focus_wait_time", 8))
-        camera_index = int(data.get("camera_index", 0))
-        camera = Camera.global_list[camera_index]
+        camera = Camera.global_list[int(data.get("camera_index", 0))]
         save_images = data.get("save_images", True)
 
         for wafer in data.get("wafers", [{}]):
@@ -149,94 +145,31 @@ class Transfer_Functions:
             end_x = float(end.get("x"))
             end_y = float(end.get("y"))
 
-            x_steps = int(abs(end_x - start_x) / travel["x"])
-            y_steps = int(abs(end_y - start_y) / travel["y"])
-            Logger.log(f"Creating {x_steps+1}x{y_steps+1} = {(x_steps+1)*(y_steps+1)} photos with {travel['x']}x {travel['y']}y travel per picture")
-            points = []
-            going_right = start_x >= end_x
-            current_x = start_x
-            for y in range(y_steps + 1):
-                row_y = start_y + (y * travel["y"])
-                sign = 1 if end_y >= start_y else -1
-                row_y = start_y + (y * travel["y"] * sign)
-                points.append((current_x, row_y))
-            
-                for x in range(1, x_steps + 1):
-                    if going_right:
-                        next_x = current_x - travel["x"]
-                    else:
-                        next_x = current_x + travel["x"]
-                    points.append((next_x, row_y))
-                    current_x = next_x
-                going_right = not going_right
+            self.run_trace_over(start_x, end_x, start_y, end_y, start_z, travel, initial_wait_time, camera, save_images, wafer_id)
+
+    @transfer_function("RUN_TRACE_OVER_AREA")
+        Logger.log("Type of data: " + type(data).__name__)
+        Logger.log("Data: " + str(data))
         
-            if save_images:
-                wafer_folder = self.image_container.load_or_create_chip_by_name(wafer_id)
-                collection_id = self.image_container.create_new_collection(wafer_folder)
-                self.image_container.apply_metadata_to_dataset(collection_id, {"key_value_pairs": 
-                    {
-                    "start_x": start_x,
-                    "start_y": start_y,
-                    "end_x": end_x,
-                    "end_y": end_y,
-                    "x_steps": x_steps,
-                    "y_steps": y_steps,
-                    "magnification": magnification,
-                    "pics_until_focus": pics_until_focus,
-                    "initial_wait_time": initial_wait_time,
-                    "focus_wait_time": focus_wait_time,
-                    "camera_index": camera_index,
-                    }
-                })
-            self.transfer_station.moveXY(start_x, start_y)
-            self.transfer_station.moveZ(start_z)
-            self.transfer_station.wait(initial_wait_time)
-            self.auto_focus(camera, self.transfer_station, n_samples_coarse= 80, z_range_coarse=1.5)
+        MAGNIFICATION_TRAVEL = self.transfer_station.MAGNIFICATION_TRAVEL
+        magnification = int(data.get("magnification", 20))
+        wait_time = MAGNIFICATION_TRAVEL[magnification].get("wait_time", 1)
+        travel = MAGNIFICATION_TRAVEL[magnification]
 
-            came_before_no_background = False
+        initial_wait_time = float(data.get("initial_wait_time", 25))
+        camera = Camera.global_list[int(data.get("camera_index", 0))]
+        save_images = data.get("save_images", True)
 
-            counter = 1
-            for x, y in points:
-                # Wait if paused, abort if cancelled
-                if not self.wait_if_paused():
-                    Logger.log("Trace over cancelled during execution")
-                    return
-                time.sleep(0.01)
 
-                self.transfer_station.moveXY(x, y)
-                # if counter % pics_until_focus == 0: # Autofocus no matter what sometimes
-                #     Logger.log("Autofocusing for periodic recheck")
-                #     self.auto_focus(camera, self.transfer_station)
+        wafer_id = data.get("wafer_id")
+        start_x = float(data.get("start_x", 0))
+        start_y = float(data.get("start_y", 0))
+        start_z = float(data.get("start_z", 0))
+        end_x = float(data.get("end_x", 0))
+        end_y = float(data.get("end_y", 0))
 
-                self.transfer_station.wait(wait_time)
-                image = camera.get_frame()
-                is_background, bg_stats = CV_Functions.is_substrate_background(image)
-                edge_count = Autofocus.get_edge_count(image)
+        self.run_trace_over(start_x, end_x, start_y, end_y, start_z, travel, initial_wait_time, camera, save_images, wafer_id) 
 
-                if is_background:
-                    if edge_count < 10 or came_before_no_background:
-                        Logger.log(f"Autofocusing - Substrate background: {is_background}, Edge count: {edge_count} - came before no background: {came_before_no_background} - pics until focus: {pics_until_focus}")
-                        self.auto_focus(camera, self.transfer_station)
-                    came_before_no_background = False
-                else:
-                    Logger.log("Skipping autofocus - not substrate background")
-                    came_before_no_background = True
-
-                if save_images:
-                    image_id = self.image_container.upload_image(image, dataset_id=collection_id, image_name=f"image_{counter}")
-                    image_metadata = {"key_value_pairs": {
-                        "wafer_id": wafer_id,
-                        "camera_index": camera_index,
-                        "x": x,
-                        "y": y,
-                        "sequence": counter,
-                        "timestamp": time.time(),
-                        "magnification": magnification,
-                    }}
-                    self.image_container.apply_metadata_to_image(image_id, image_metadata)
-
-                counter += 1
-                
 
     @transfer_function("goto_wafer_image")
     def goto_wafer_image(self, data: dict):
@@ -330,24 +263,169 @@ class Transfer_Functions:
         transfer_station = self.transfer_station
         self.auto_focus(camera, transfer_station)
 
-    def auto_focus2(self, camera, transfer_station):
-        original_z_pos = transfer_station.posZ()
-        frame = camera.get_frame()
-        original_edge_count = Autofocus.get_edge_count(frame),
-        if not Autofocus.exist_color_features(frame):
-            Logger.log("No color features exist")
-            return
-        z_range = 0.5
-        def func():
-            timestamp = time.time()
-            while time.time() - timestamp < 2:
-                Logger.log(f"Z: {transfer_station.posZ()}")
-        transfer_station.moveZRel(-z_range/2)
-        func()
-        transfer_station.moveZRel(z_range)
-        func()
-        transfer_station.moveZRel(-z_range/2)
-        func()
+    @transfer_function("TEST_COMMAND")
+    def test_command(self, data: dict):
+        Logger.log("Test Command")
+        Logger.log(data)
+
+    @transfer_function("RUN_SCAN_FLAKES")
+    def run_scan_flakes(self, data: dict):
+        """
+        Scan flakes from multiple collections
+        """
+        try:
+            from socket_manager import Socket_Manager
+
+            Logger.log("Starting SCAN_FLAKES operation")
+            collections = data.get("collections", [])
+
+            if not collections:
+                raise ValueError("No collections provided")
+
+            for idx, collection_config in enumerate(collections):
+                if self._cancel_event.is_set():
+                    Logger.log("Scan flakes cancelled")
+                    return
+
+                collection_id = collection_config.get("collection_id")
+                apply_whitebalance = collection_config.get("apply_whitebalance", False)
+                wafer_type = collection_config.get("wafer_type", "HBn")
+
+                Logger.log(f"Processing collection {idx + 1}/{len(collections)}")
+                Logger.log(f"  Collection ID: {collection_id}")
+                Logger.log(f"  Apply Whitebalance: {apply_whitebalance}")
+                Logger.log(f"  Wafer Type: {wafer_type}")
+
+            Socket_Manager.send_all_json({
+                "type": "SCAN_FLAKES_RESULT",
+                "success": True,
+                "collectionCount": len(collections),
+                "message": f"Successfully processed {len(collections)} collection(s)"
+            })
+
+        except Exception as e:
+            from socket_manager import Socket_Manager
+            Logger.log_error(f"Error in RUN_SCAN_FLAKES: {str(e)}")
+            Socket_Manager.send_all_json({
+                "type": "SCAN_FLAKES_RESULT",
+                "success": False,
+                "message": f"Error: {str(e)}"
+            })
+
+    @transfer_function("RUN_GOTO_FLAKE")
+    def run_goto_flake(self, data: dict):
+        """
+        Navigate to a specific flake location based on image ID and new coordinates
+        """
+        try:
+            image_id = data.get("image_id")
+            new_start_x = float(data.get("new_start_x"))
+            new_start_y = float(data.get("new_start_y"))
+
+            if not image_id:
+                raise ValueError("Image ID is required")
+
+            Logger.log(f"Navigating to flake:")
+            Logger.log(f"  Image ID: {image_id}")
+            Logger.log(f"  New Start X: {new_start_x}")
+            Logger.log(f"  New Start Y: {new_start_y}")
+
+        except Exception as e:
+            Logger.log_error(f"Error in RUN_GOTO_FLAKE: {str(e)}")
+
+    def send_command(self, command):
+        response = self._send_command(command)
+        if(response is not None):
+            self.add_response(response) 
+        self._send_command_history.append({
+            'timestamp': Transfer_Functions.time_stamp(),
+            'command': command,
+            'response': response
+        })
+        return response
+
+    def run_trace_over(self, start_x, end_x, start_y, end_y, start_z, travel, initial_wait_time, camera, save_images, wafer_id):
+        """Execute trace over with the provided configuration"""
+            x_steps = int(abs(end_x - start_x) / travel["x"])
+            y_steps = int(abs(end_y - start_y) / travel["y"])
+            Logger.log(f"Creating {x_steps+1}x{y_steps+1} = {(x_steps+1)*(y_steps+1)} photos with {travel['x']}x {travel['y']}y travel per picture")
+            points = []
+            going_right = start_x >= end_x
+            current_x = start_x
+            for y in range(y_steps + 1):
+                row_y = start_y + (y * travel["y"])
+                sign = 1 if end_y >= start_y else -1
+                row_y = start_y + (y * travel["y"] * sign)
+                points.append((current_x, row_y))
+            
+                for x in range(1, x_steps + 1):
+                    if going_right:
+                        next_x = current_x - travel["x"]
+                    else:
+                        next_x = current_x + travel["x"]
+                    points.append((next_x, row_y))
+                    current_x = next_x
+                going_right = not going_right
+        
+            if save_images:
+                wafer_folder = self.image_container.load_or_create_chip_by_name(wafer_id)
+                collection_id = self.image_container.create_new_collection(wafer_folder)
+                self.image_container.apply_metadata_to_dataset(collection_id, {"key_value_pairs": 
+                    {
+                    "start_x": start_x,
+                    "start_y": start_y,
+                    "end_x": end_x,
+                    "end_y": end_y,
+                    "x_steps": x_steps,
+                    "y_steps": y_steps,
+                    "magnification": magnification,
+                    "initial_wait_time": initial_wait_time,
+                    }
+                })
+            self.transfer_station.moveXY(start_x, start_y)
+            self.transfer_station.moveZ(start_z)
+            self.transfer_station.wait(initial_wait_time)
+            self.auto_focus(camera, self.transfer_station, n_samples_coarse= 80, z_range_coarse=1.5)
+
+            came_before_no_background = False
+
+            counter = 1
+            for x, y in points:
+                # Wait if paused, abort if cancelled
+                if not self.wait_if_paused():
+                    Logger.log("Trace over cancelled during execution")
+                    return
+                time.sleep(0.01)
+
+                self.transfer_station.moveXY(x, y)
+                self.transfer_station.wait(wait_time)
+                image = camera.get_frame()
+                is_background, bg_stats = CV_Functions.is_substrate_background(image)
+                edge_count = Autofocus.get_edge_count(image)
+
+                if is_background:
+                    if edge_count < 10 or came_before_no_background:
+                        Logger.log(f"Autofocusing - Substrate background: {is_background}, Edge count: {edge_count} - came before no background: {came_before_no_background} - pics until focus: {pics_until_focus}")
+                        self.auto_focus(camera, self.transfer_station)
+                    came_before_no_background = False
+                else:
+                    Logger.log("Skipping autofocus - not substrate background")
+                    came_before_no_background = True
+
+                if save_images:
+                    image_id = self.image_container.upload_image(image, dataset_id=collection_id, image_name=f"image_{counter}")
+                    image_metadata = {"key_value_pairs": {
+                        "wafer_id": wafer_id,
+                        "camera_index": camera_index,
+                        "x": x,
+                        "y": y,
+                        "sequence": counter,
+                        "timestamp": time.time(),
+                        "magnification": magnification,
+                    }}
+                    self.image_container.apply_metadata_to_image(image_id, image_metadata)
+
+                counter += 1
 
     def auto_focus(self, camera, transfer_station, n_samples_coarse=20, n_samples_fine=20, z_range_coarse=0.5, z_range_fine=0.1):
         Logger.log("Auto Focus")
@@ -436,83 +514,3 @@ class Transfer_Functions:
     def time_stamp():
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]     
     
-    def send_command(self, command):
-        response = self._send_command(command)
-        if(response is not None):
-            self.add_response(response) 
-        self._send_command_history.append({
-            'timestamp': Transfer_Functions.time_stamp(),
-            'command': command,
-            'response': response
-        })
-        return response
-    
-    @transfer_function("TEST_COMMAND")
-    def test_command(self, data: dict):
-        Logger.log("Test Command")
-        Logger.log(data)
-
-    @transfer_function("RUN_SCAN_FLAKES")
-    def run_scan_flakes(self, data: dict):
-        """
-        Scan flakes from multiple collections
-        """
-        try:
-            from socket_manager import Socket_Manager
-
-            Logger.log("Starting SCAN_FLAKES operation")
-            collections = data.get("collections", [])
-
-            if not collections:
-                raise ValueError("No collections provided")
-
-            for idx, collection_config in enumerate(collections):
-                if self._cancel_event.is_set():
-                    Logger.log("Scan flakes cancelled")
-                    return
-
-                collection_id = collection_config.get("collection_id")
-                apply_whitebalance = collection_config.get("apply_whitebalance", False)
-                wafer_type = collection_config.get("wafer_type", "HBn")
-
-                Logger.log(f"Processing collection {idx + 1}/{len(collections)}")
-                Logger.log(f"  Collection ID: {collection_id}")
-                Logger.log(f"  Apply Whitebalance: {apply_whitebalance}")
-                Logger.log(f"  Wafer Type: {wafer_type}")
-
-            Socket_Manager.send_all_json({
-                "type": "SCAN_FLAKES_RESULT",
-                "success": True,
-                "collectionCount": len(collections),
-                "message": f"Successfully processed {len(collections)} collection(s)"
-            })
-
-        except Exception as e:
-            from socket_manager import Socket_Manager
-            Logger.log_error(f"Error in RUN_SCAN_FLAKES: {str(e)}")
-            Socket_Manager.send_all_json({
-                "type": "SCAN_FLAKES_RESULT",
-                "success": False,
-                "message": f"Error: {str(e)}"
-            })
-
-    @transfer_function("RUN_GOTO_FLAKE")
-    def run_goto_flake(self, data: dict):
-        """
-        Navigate to a specific flake location based on image ID and new coordinates
-        """
-        try:
-            image_id = data.get("image_id")
-            new_start_x = float(data.get("new_start_x"))
-            new_start_y = float(data.get("new_start_y"))
-
-            if not image_id:
-                raise ValueError("Image ID is required")
-
-            Logger.log(f"Navigating to flake:")
-            Logger.log(f"  Image ID: {image_id}")
-            Logger.log(f"  New Start X: {new_start_x}")
-            Logger.log(f"  New Start Y: {new_start_y}")
-
-        except Exception as e:
-            Logger.log_error(f"Error in RUN_GOTO_FLAKE: {str(e)}")

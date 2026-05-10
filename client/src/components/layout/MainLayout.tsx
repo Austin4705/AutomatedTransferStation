@@ -1,13 +1,127 @@
 import { Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useRecoilState, useRecoilValue } from 'recoil';
 import ConnectionStatus from './ConnectionStatus';
 import HeaderPositionDisplay from './HeaderPositionDisplay';
 import HostConfigInput from './HostConfigInput';
+import { connectionStateAtom } from '../../state/appState';
+import {
+  dashboardLayoutConfigAtom,
+  DEFAULT_DASHBOARD_LAYOUT,
+  GridLayoutItem,
+  gridLayoutAtom,
+} from '../../state/gridLayoutState';
+
+const cloneLayout = (layout: GridLayoutItem[]): GridLayoutItem[] =>
+  layout.map((item) => ({ ...item }));
 
 const MainLayout = () => {
-  const resetLayout = () => {
-    if (window.confirm('Are you sure you want to reset the dashboard layout to default?')) {
-      localStorage.removeItem('gridstack-layout');
-      window.location.reload();
+  const connection = useRecoilValue(connectionStateAtom);
+  const [gridLayout, setGridLayout] = useRecoilState(gridLayoutAtom);
+  const [dashboardConfig, setDashboardConfig] = useRecoilState(dashboardLayoutConfigAtom);
+  const [isSavingLayout, setIsSavingLayout] = useState(false);
+  const [isResettingLayout, setIsResettingLayout] = useState(false);
+
+  const configBaseUrl = `http://${connection.host}:3000`;
+
+  useEffect(() => {
+    const loadDashboardLayout = async () => {
+      try {
+        const response = await fetch(`${configBaseUrl}/dashboard_layout_config`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const payload = await response.json() as { layout?: GridLayoutItem[] };
+        const loadedLayout = Array.isArray(payload.layout) && payload.layout.length > 0
+          ? payload.layout
+          : DEFAULT_DASHBOARD_LAYOUT;
+        const initialLayout = cloneLayout(loadedLayout);
+
+        setGridLayout(cloneLayout(initialLayout));
+        setDashboardConfig({
+          initialLayout,
+          isLoaded: true,
+        });
+      } catch (error) {
+        console.error('Failed to load dashboard layout config, using defaults:', error);
+        const fallbackLayout = cloneLayout(DEFAULT_DASHBOARD_LAYOUT);
+        setGridLayout(cloneLayout(fallbackLayout));
+        setDashboardConfig({
+          initialLayout: fallbackLayout,
+          isLoaded: true,
+        });
+      }
+    };
+
+    loadDashboardLayout();
+  }, [configBaseUrl, setDashboardConfig, setGridLayout]);
+
+  const resetLayout = async () => {
+    if (!window.confirm('Are you sure you want to reset the dashboard layout from Data/dashboard_layout_config.json?')) {
+      return;
+    }
+
+    setIsResettingLayout(true);
+    try {
+      const response = await fetch(`${configBaseUrl}/dashboard_layout_config`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const payload = await response.json() as { layout?: GridLayoutItem[] };
+      const loadedLayout = Array.isArray(payload.layout) && payload.layout.length > 0
+        ? payload.layout
+        : DEFAULT_DASHBOARD_LAYOUT;
+      const resetLayoutValue = cloneLayout(loadedLayout);
+
+      setGridLayout(cloneLayout(resetLayoutValue));
+      setDashboardConfig({
+        initialLayout: resetLayoutValue,
+        isLoaded: true,
+      });
+    } catch (error) {
+      console.error('Failed to reset dashboard layout from backend config:', error);
+      const fallbackLayout = dashboardConfig.initialLayout.length > 0
+        ? dashboardConfig.initialLayout
+        : DEFAULT_DASHBOARD_LAYOUT;
+      setGridLayout(cloneLayout(fallbackLayout));
+      window.alert('Failed to fetch Data/dashboard_layout_config.json from backend. Reset to last loaded layout.');
+    } finally {
+      setIsResettingLayout(false);
+    }
+  };
+
+  const saveLayout = async () => {
+    setIsSavingLayout(true);
+    try {
+      const response = await fetch(`${configBaseUrl}/dashboard_layout_config`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ layout: gridLayout }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const payload = await response.json() as { layout?: GridLayoutItem[] };
+      const persistedLayout = Array.isArray(payload.layout) && payload.layout.length > 0
+        ? payload.layout
+        : cloneLayout(gridLayout);
+
+      setDashboardConfig({
+        initialLayout: cloneLayout(persistedLayout),
+        isLoaded: true,
+      });
+      window.alert('Dashboard layout saved to Data/dashboard_layout_config.json');
+    } catch (error) {
+      console.error('Failed to save dashboard layout:', error);
+      window.alert('Failed to save dashboard layout config.');
+    } finally {
+      setIsSavingLayout(false);
     }
   };
 
@@ -27,10 +141,19 @@ const MainLayout = () => {
           <HeaderPositionDisplay />
           <button
             onClick={resetLayout}
-            className="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm flex-shrink-0 whitespace-nowrap"
-            title="Reset dashboard layout to default"
+            disabled={!dashboardConfig.isLoaded || isResettingLayout}
+            className="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm flex-shrink-0 whitespace-nowrap disabled:bg-gray-500 disabled:cursor-not-allowed"
+            title="Reset dashboard layout from Data/dashboard_layout_config.json"
           >
-            Reset Layout
+            {isResettingLayout ? 'Resetting...' : 'Reset Layout'}
+          </button>
+          <button
+            onClick={saveLayout}
+            disabled={isSavingLayout || !dashboardConfig.isLoaded}
+            className="ml-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm flex-shrink-0 whitespace-nowrap disabled:bg-gray-500 disabled:cursor-not-allowed"
+            title="Save current dashboard layout to Data/dashboard_layout_config.json"
+          >
+            {isSavingLayout ? 'Saving...' : 'Save Layout'}
           </button>
         </div>
         <ConnectionStatus />

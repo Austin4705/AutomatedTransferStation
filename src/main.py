@@ -14,26 +14,44 @@ import web_server
 from socket_manager import Socket_Manager
 from packet_handlers import PacketHandlers
 
-# Import drivers so they self-register via @register decorators
-import transferStations.transfer_station_prior     # noqa: F401
-import transferStations.transfer_station_winFile   # noqa: F401
-import cameras.camera_usb                          # noqa: F401
-import cameras.camera_thor                         # noqa: F401
+# Driver module lookup — only the selected driver is imported after .env loads.
+# "virtual" is built into the base classes and needs no extra import.
+_CAMERA_DRIVER_MODULES = {
+    "usb":  "cameras.camera_usb",
+    "thor": "cameras.camera_thor",
+}
+
+_TRANSFER_STATION_DRIVER_MODULES = {
+    "prior":      "transferStations.transfer_station_prior",
+    "hqGraphene": "transferStations.transfer_station_winFile",
+}
+
+def _load_driver(driver_map: dict, type_name: str, label: str):
+    """Import a driver module if the chosen type requires one."""
+    if type_name in driver_map:
+        import importlib
+        mod = driver_map[type_name]
+        Logger.log(f"Loading {label} driver: {mod}")
+        importlib.import_module(mod)
 
 if __name__ == "__main__":
     Logger.init_logger(Socket_Manager)
     load_dotenv("default.env")
     load_dotenv(".env", override=True)
 
+    camera_type = os.getenv('CAMERA_TYPE', 'virtual')
+    transfer_station_type = os.getenv('TRANSFER_STATION_TYPE', 'virtual')
+
+    _load_driver(_CAMERA_DRIVER_MODULES, camera_type, "camera")
+    _load_driver(_TRANSFER_STATION_DRIVER_MODULES, transfer_station_type, "transfer station")
+
     Logger.log("Initializing Image Container")
     IMAGE_CONTAINER = Image_Container()
 
     Logger.log("Starting Transfer Station")
-    transfer_station_type = os.getenv('TRANSFER_STATION_TYPE', 'virtual')
     TRANSFER_STATION = Transfer_Station.create(transfer_station_type)
 
     Logger.log("Detecting and initializing cameras...")
-    camera_type = os.getenv('CAMERA_TYPE', os.getenv('CAMERA_TYPE', 'virtual'))
     cameras = Camera.initialize_all_cameras(IMAGE_CONTAINER, camera_type)
     Logger.log(f"Initialized {len(Camera.global_list)} cameras: {list(Camera.global_list.keys())}")
     

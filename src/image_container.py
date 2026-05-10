@@ -51,10 +51,21 @@ class Image_Container:
     # --------------- OMERO implementation ---------------
 
     def __init__(self):
-        self.connect_to_omero(os.getenv('OMERO_HOST'), os.getenv('OMERO_USERNAME'), os.getenv('OMERO_PASSWORD'))
+        self.conn = None
+        self.connected = False
         self.wafers = {}
-        self.wafers["default_location"] = self.load_or_create_chip_by_name("default_location")
-        self.active_chip_id = self.wafers["default_location"]
+        self.active_chip_id = None
+
+        try:
+            self.connect_to_omero(
+                os.getenv('OMERO_HOST'),
+                os.getenv('OMERO_USERNAME'),
+                os.getenv('OMERO_PASSWORD'),
+            )
+            self.wafers["default_location"] = self.load_or_create_chip_by_name("default_location")
+            self.active_chip_id = self.wafers["default_location"]
+        except Exception as e:
+            Logger.log(f"OMERO connection failed ({e}). Running in offline mode — image storage disabled.")
 
     def connect_to_omero(self, host: str, username: str, password: str, port: int = 4064) -> BlitzGateway:
         logging.getLogger("omero").setLevel(logging.ERROR)
@@ -63,11 +74,21 @@ class Image_Container:
         logging.getLogger("omero.cli").setLevel(logging.ERROR)
         self.conn = BlitzGateway(username, password, host=host, port=port, secure=True)
         if not self.conn.connect():
+            self.conn = None
             raise ConnectionError("Failed to connect to OMERO server")
+        self.connected = True
     
+    def _require_connection(self, action: str = "operation") -> bool:
+        """Return True if OMERO is connected, otherwise log and return False."""
+        if not self.connected:
+            Logger.log(f"Skipping {action} — OMERO offline")
+            return False
+        return True
+
     def disconnect_from_omero(self):
         if self.conn:
             self.conn.close()
+            self.connected = False
 
     def create_dataset(self, name: str, description: Optional[str] = None, project_id: Optional[int] = None) -> int:
         dataset = omero.model.DatasetI()
@@ -222,6 +243,8 @@ class Image_Container:
         return metadata
 
     def apply_metadata_to_image(self, image_id: int, metadata: Dict):
+        if not self._require_connection("apply_metadata_to_image"):
+            return
         image = self.conn.getObject("Image", image_id)
 
         if metadata.get('key_value_pairs'):
@@ -382,12 +405,18 @@ class Image_Container:
         return chip_id
 
     def save_snapshot(self, chip_id: int, snapshot: np.ndarray):
+        if not self._require_connection("save_snapshot"):
+            return None
         return self.upload_image(snapshot, self.wafers[chip_id]['dataset_snapshot_id'])
 
     def save_flake_hunted_snapshot(self, chip_id: int, snapshot: np.ndarray):
+        if not self._require_connection("save_flake_hunted_snapshot"):
+            return None
         return self.upload_image(snapshot, self.wafers[chip_id]['dataset_flake_hunted_snapshot_id'])
 
-    def load_or_create_chip_by_name(self, chip_name: str) -> int:
+    def load_or_create_chip_by_name(self, chip_name: str) -> Optional[int]:
+        if not self._require_connection("load_or_create_chip_by_name"):
+            return None
         for project in self.conn.getObjects("Project"):
             if project.getName() == chip_name:
                 chip_id = project.getId()
@@ -395,7 +424,6 @@ class Image_Container:
                     self.load_chip(chip_id)
                 return chip_id
 
-        # If not found, create a new chip
         chip_id = self.create_chip(chip_name)
         return chip_id
 

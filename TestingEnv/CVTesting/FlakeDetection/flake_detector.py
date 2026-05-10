@@ -13,8 +13,8 @@ from sklearn.cluster import KMeans
 import pandas as pd
 import os
 
-class FlinderDetector:
-    """Flinder-style flake detection with KBGR channel masking."""
+class Flake_Detector:
+    """Flake detection with KBGR channel masking."""
 
     def __init__(self, config=None, debug=False):
         self.debug = debug
@@ -213,7 +213,9 @@ class FlinderDetector:
 
     @staticmethod
     def correct_vignetting(image, background, target_value=127.5,
-                           per_tile_recenter=True, gain_clip=(0.6, 1.8)):
+                           per_tile_recenter=True, gain_clip=(0.6, 1.8),
+                           compensate_background_drift=True,
+                           background_percentile=50.0):
         """Correct vignetting by dividing by the per-pixel background.
 
         For each channel at each pixel: corrected = (pixel / background) * target.
@@ -226,11 +228,21 @@ class FlinderDetector:
                 histogram peak to *target_value*.  Set to False when
                 producing tiles for stitching — the per-tile re-centering
                 creates tile-to-tile color discontinuities at seams.
+            compensate_background_drift: if True, estimate and remove per-frame
+                additive background drift per channel before applying gain.
+            background_percentile: percentile used to estimate channel baseline.
+                50.0 corresponds to median.
 
         Returns:
             corrected BGR uint8 image.
         """
         img_f = image.astype(np.float32)
+        if compensate_background_drift:
+            ref_bg = np.percentile(background, background_percentile, axis=(0, 1))
+            frame_bg = np.percentile(img_f, background_percentile, axis=(0, 1))
+            drift = (frame_bg - ref_bg).reshape(1, 1, 3)
+            img_f = img_f - drift
+
         safe_bg = np.maximum(background, 1.0)
         gain = target_value / safe_bg
         if gain_clip is not None:
@@ -324,7 +336,7 @@ class FlinderDetector:
             out.append(iv)
         return out
 
-    # ── Single-channel mask (Flinder double-threshold) ──────────────────
+    # ── Single-channel mask (Flake_Detector double-threshold) ──────────────────
 
     def create_mask(self, channel, lmin, lmax):
         sq = self.config.get("blur_size", 5)

@@ -13,7 +13,7 @@ from logger import Logger
 class TransferStationPrior(Transfer_Station):
     MAGNIFICATION_TRAVEL = {
         5: {"x": 1, "y": 1, "wait_time": 1},
-        10: {"x": 1, "y": 1, "wait_time": 1},
+        10: {"x": 1.3, "y": .85, "wait_time": 0.66},
         20: {"x": 0.7, "y": 0.5, "wait_time": 1},
         40: {"x": 1, "y": 1, "wait_time": 1},
         50: {"x": 1, "y": 1, "wait_time": 1},

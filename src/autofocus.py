@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import cpbd 
 
 class Autofocus:
     def __init__(self):
@@ -33,3 +34,11 @@ class Autofocus:
     def exist_color_features(image, ratio_threshold=0.05):
         color_ratio = Autofocus.get_color_features(image)
         return color_ratio >= ratio_threshold
+
+    @staticmethod
+    def calculate_cpbd(image):
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image
+        return cpbd.compute(gray)

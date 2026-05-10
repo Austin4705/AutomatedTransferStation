@@ -1,6 +1,6 @@
 """
 Flake Detection Tuner
-Interactive Streamlit app for tuning Flinder-style flake detection parameters.
+Interactive Streamlit app for tuning Flake_Detector-style flake detection parameters.
 
 Usage:
     cd TestingEnv/CVTesting/FlakeDetection
@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import random
 
-from Flinder import FlinderDetector
+from flake_detector import Flake_Detector
 
 
 # ─── White Balance ───────────────────────────────────────────────────────────
@@ -96,45 +96,52 @@ def draw_flakes_on_image(image_rgb, flakes, undersized=None):
         cv2.putText(det, label, (cx + 10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3)
         cv2.putText(det, label, (cx + 10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 1)
     for flake in (undersized or []):
-        cv2.drawContours(det, [flake["contour"]], -1, (255, 60, 60), 2)
+        cv2.drawContours(det, [flake["contour"]], -1, (255, 0, 0), 2)
         cx, cy = flake["center"]
         cv2.circle(det, (cx, cy), 6, (180, 0, 0), -1)
         label = f"A={int(flake['stats']['area'])}"
         cv2.putText(det, label, (cx + 10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3)
-        cv2.putText(det, label, (cx + 10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 60, 60), 1)
+        cv2.putText(det, label, (cx + 10, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
     return det
 
 
-def load_and_preprocess(path, apply_wb, background=None):
-    """Load image, optionally correct vignetting & white-balance.
+def load_and_preprocess(path, background=None):
+    """Load image and optionally apply vignetting correction.
 
     Returns (raw_bgr, wb_bgr, wb_rgb) or (None, None, None).
     raw_bgr: vignette-corrected but no white balance (for detection).
-    wb_bgr/wb_rgb: with white balance applied (for display).
+    wb_bgr/wb_rgb: display copy of corrected image (no white balance).
     """
     raw_bgr = cv2.imread(str(path), cv2.IMREAD_COLOR)
     if raw_bgr is None:
         return None, None, None
     if background is not None and raw_bgr.shape[:2] == background.shape[:2]:
-        raw_bgr = FlinderDetector.correct_vignetting(raw_bgr, background)
+        raw_bgr = Flake_Detector.correct_vignetting(raw_bgr, background)
     raw_rgb = cv2.cvtColor(raw_bgr, cv2.COLOR_BGR2RGB)
-    if apply_wb:
-        wb_rgb = whitebalance(raw_rgb)
-        wb_bgr = cv2.cvtColor(wb_rgb, cv2.COLOR_RGB2BGR)
-    else:
-        wb_rgb = raw_rgb.copy()
-        wb_bgr = raw_bgr.copy()
+    wb_rgb = raw_rgb.copy()
+    wb_bgr = raw_bgr.copy()
     return raw_bgr, wb_bgr, wb_rgb
 
 
-def _get_or_compute_background(collection_dir, n_sample):
+def check_is_substrate(image_bgr):
+    """Return substrate pass/fail + stats for gating detection."""
+    return Flake_Detector.is_substrate_background(image_bgr)
+
+
+def load_raw_bgr(path):
+    """Load the original image (no correction/white-balance)."""
+    return cv2.imread(str(path), cv2.IMREAD_COLOR)
+
+
+def _get_or_compute_background(collection_dir, n_sample, filter_substrate=True):
     """Load cached background from disk, or compute and save it.
 
     The background .npy file is saved inside the collection directory so it
     persists across Streamlit sessions and app restarts.
     """
     collection_dir = Path(collection_dir)
-    cache_path = collection_dir / f"_vignetting_bg_n{n_sample}.npy"
+    mode_suffix = "substrate" if filter_substrate else "all"
+    cache_path = collection_dir / f"_vignetting_bg_{mode_suffix}_n{n_sample}.npy"
 
     mem_key = str(cache_path)
     if mem_key in st.session_state:
@@ -148,7 +155,11 @@ def _get_or_compute_background(collection_dir, n_sample):
     all_paths = sorted(collection_dir.glob("*.png")) + sorted(collection_dir.glob("*.jpg"))
     if len(all_paths) < 5:
         return None
-    bg = FlinderDetector.compute_background(all_paths, n_sample=n_sample)
+    bg = Flake_Detector.compute_background(
+        all_paths,
+        n_sample=n_sample,
+        filter_substrate=filter_substrate,
+    )
     np.save(str(cache_path), bg)
     st.session_state[mem_key] = bg
     return bg
@@ -159,10 +170,10 @@ def _get_or_compute_background(collection_dir, n_sample):
 
 DEFAULT_CALIBRATION = {
     "thickness": [1],
-    "k": [120],
-    "b": [126],
-    "g": [119],
-    "r": [118],
+    "k": [122],
+    "b": [129],
+    "g": [122],
+    "r": [120],
     "k_error": [6],
     "b_error": [6],
     "g_error": [6],
@@ -200,10 +211,10 @@ _crit = _cfg["criteria"]
 _use = _cfg["use_channels"]
 
 st.sidebar.header("Preprocessing")
-apply_wb = st.sidebar.checkbox("Apply white balance", value=True)
 apply_vignetting = st.sidebar.checkbox("Apply vignetting correction", value=True,
     help="Builds a per-pixel background from the collection and divides each image by it. "
          "Removes spatially-varying illumination (vignetting, uneven lighting).")
+st.sidebar.caption("White balance is disabled in this tuner.")
 
 if apply_vignetting:
     n_bg_samples = st.sidebar.slider("Background sample count", 20, 500, 100, step=10,
@@ -290,7 +301,7 @@ config = {
     },
 }
 
-detector = FlinderDetector(config=config)
+detector = Flake_Detector(config=config)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TABS
@@ -353,29 +364,55 @@ with tab_tuner:
             bg_dir = tuner_bg_sources[tuner_bg_idx]
             bg_count = len(sorted(bg_dir.glob("*.png")) + sorted(bg_dir.glob("*.jpg")))
             with st.spinner(f"Loading vignetting background (sampling {min(n_bg_samples, bg_count)} of {bg_count} images)..."):
-                tuner_bg = _get_or_compute_background(bg_dir, n_bg_samples)
+                tuner_bg = _get_or_compute_background(
+                    bg_dir,
+                    n_bg_samples,
+                    filter_substrate=True,
+                )
             if tuner_bg is not None:
-                st.caption(f"Background loaded from `{tuner_bg_labels[tuner_bg_idx]}` (cached to disk).")
+                st.caption(
+                    f"Background loaded from `{tuner_bg_labels[tuner_bg_idx]}` "
+                    "(substrate-only, cached to disk)."
+                )
         else:
             st.info("No image sources with 5+ images found. Vignetting correction disabled for tuner.")
 
-    raw_bgr, wb_bgr, wb_rgb = load_and_preprocess(image_path, apply_wb, background=tuner_bg)
+    raw_bgr_original = load_raw_bgr(image_path)
+    if raw_bgr_original is None:
+        st.error(f"Failed to load {image_path}")
+        st.stop()
+
+    # ── Run detection ────────────────────────────────────────────────────
+    is_substrate, substrate_stats = check_is_substrate(raw_bgr_original)
+    raw_bgr, wb_bgr, wb_rgb = load_and_preprocess(image_path, background=tuner_bg)
     if raw_bgr is None:
         st.error(f"Failed to load {image_path}")
         st.stop()
 
     h, w = wb_rgb.shape[:2]
 
-    # ── Run detection ────────────────────────────────────────────────────
-    all_flakes, k_ch, b_ch, g_ch, r_ch = detector.detect(raw_bgr, [mask_values])
-    channel_masks = detector.make_channel_masks(k_ch, b_ch, g_ch, r_ch, mask_values)
-    combined_mask = detector.make_selection(k_ch, b_ch, g_ch, r_ch, mask_values)
+    if is_substrate:
+        all_flakes, k_ch, b_ch, g_ch, r_ch = detector.detect(raw_bgr, [mask_values])
+        channel_masks = detector.make_channel_masks(k_ch, b_ch, g_ch, r_ch, mask_values)
+        combined_mask = detector.make_selection(k_ch, b_ch, g_ch, r_ch, mask_values)
+    else:
+        st.warning(
+            "Image failed `is_substrate_background`; skipping flake detection. "
+            f"(purple_fraction={substrate_stats['purple_fraction']:.3f})"
+        )
+        all_flakes = []
+        k_ch = np.zeros(raw_bgr.shape[:2], dtype=np.uint8)
+        b_ch = np.zeros(raw_bgr.shape[:2], dtype=np.uint8)
+        g_ch = np.zeros(raw_bgr.shape[:2], dtype=np.uint8)
+        r_ch = np.zeros(raw_bgr.shape[:2], dtype=np.uint8)
+        channel_masks = {}
+        combined_mask = np.zeros(raw_bgr.shape[:2], dtype=np.uint8)
 
     # Apply size filter
     if filter_by_area:
         flakes = [f for f in all_flakes if f["stats"]["area"] >= area_threshold]
         undersized_flakes = [f for f in all_flakes if f["stats"]["area"] < area_threshold]
-        undersized_display = undersized_flakes if area_filter_mode == "Highlight in red" else []
+        undersized_display = undersized_flakes
     else:
         flakes = all_flakes
         undersized_display = []
@@ -409,7 +446,7 @@ with tab_tuner:
         st.image(det_img, caption=caption, width="stretch")
 
     # ── ANDed mask + contour interpretability ────────────────────────────
-    st.subheader("ANDed Mask & Contour Analysis")
+    st.subheader("ANDed Mask & Contour Analysis (White is mask)")
     and_cols = st.columns(3)
 
     with and_cols[0]:
@@ -435,7 +472,7 @@ with tab_tuner:
         for f in flakes:
             cv2.drawContours(out, [f["contour"]], -1, (0, 255, 0), 2)
         for f in undersized_display:
-            cv2.drawContours(out, [f["contour"]], -1, (255, 255, 0), 2)
+            cv2.drawContours(out, [f["contour"]], -1, (255, 0, 0), 2)
         for contour, _ in rejected_criteria:
             cv2.drawContours(out, [contour], -1, (255, 60, 60), 2)
         for contour, _ in rejected_color:
@@ -453,7 +490,7 @@ with tab_tuner:
         if undersized_display:
             legend = (
                 f":green[Green] = accepted ({len(flakes)})  \n"
-                f"Yellow = undersized ({len(undersized_display)})  \n"
+                f":red[Red] = undersized ({len(undersized_display)})  \n"
                 f":red[Red] = rejected by shape/std ({len(rejected_criteria)})  \n"
                 f":orange[Orange] = rejected by color ({len(rejected_color)})"
             )
@@ -609,15 +646,35 @@ with tab_dataset:
     total_available = len(all_images)
     st.write(f"**{total_available}** images in `{dir_labels[selected_dir_idx]}`")
 
-    # Compute vignetting background for this collection
+    # Configure vignetting background source (loaded only on run for speed)
     dataset_bg = None
-    if apply_vignetting and total_available >= 5:
-        with st.spinner(f"Loading vignetting background (sampling {min(n_bg_samples, total_available)} of {total_available} images)..."):
-            dataset_bg = _get_or_compute_background(selected_dir, n_bg_samples)
-        if dataset_bg is not None:
-            st.caption(f"Background loaded (cached to `_vignetting_bg_n{n_bg_samples}.npy` in collection folder).")
-    elif apply_vignetting:
-        st.warning("Need at least 5 images for vignetting correction.")
+    dataset_bg_source_dir = None
+    dataset_bg_source_label = None
+    dataset_bg_source_count = 0
+    if apply_vignetting:
+        dataset_bg_sources = []
+        dataset_bg_labels = []
+        for d in candidate_dirs:
+            d_count = len(sorted(d.glob("*.png")) + sorted(d.glob("*.jpg")))
+            if d_count >= 5:
+                dataset_bg_sources.append(d)
+                dataset_bg_labels.append(f"Dataset/{d.relative_to(dataset_root)} ({d_count} images)")
+
+        if dataset_bg_sources:
+            dataset_bg_idx = st.selectbox(
+                "Background source collection",
+                range(len(dataset_bg_labels)),
+                format_func=lambda i: dataset_bg_labels[i],
+                key="dataset_bg_collection",
+                help="Pick the collection folder to compute the vignetting background from.",
+            )
+            dataset_bg_source_dir = dataset_bg_sources[dataset_bg_idx]
+            dataset_bg_source_label = dataset_bg_labels[dataset_bg_idx]
+            dataset_bg_source_count = len(
+                sorted(dataset_bg_source_dir.glob("*.png")) + sorted(dataset_bg_source_dir.glob("*.jpg"))
+            )
+        else:
+            st.warning("No collections with at least 5 images found for vignetting background.")
 
     # Options
     opt_cols = st.columns(4)
@@ -640,58 +697,90 @@ with tab_dataset:
 
     # ── Run button ───────────────────────────────────────────────────────
     if st.button("Run Detection", type="primary", use_container_width=True):
-
-        images_to_run = sampled_images
-        progress = st.progress(0, text="Starting parallel detection...")
-        status_text = st.empty()
-        total = len(images_to_run)
-        t_start = time.perf_counter()
-
-        def _detect_one(img_path):
-            raw_bgr_w, wb_bgr_w, wb_rgb_w = load_and_preprocess(img_path, apply_wb, background=dataset_bg)
-            if raw_bgr_w is None:
-                return None
-            flakes_w = detector.detect_flakes(raw_bgr_w, [mask_values])
-            return (img_path, flakes_w, wb_rgb_w)
-
-        results = [None] * total
-        done_count = 0
-
-        with ThreadPoolExecutor(max_workers=n_workers) as executor:
-            future_to_idx = {
-                executor.submit(_detect_one, p): i
-                for i, p in enumerate(images_to_run)
-            }
-            for future in as_completed(future_to_idx):
-                idx = future_to_idx[future]
-                result = future.result()
-                if result is not None:
-                    results[idx] = result
-                done_count += 1
-                elapsed = time.perf_counter() - t_start
-                rate = done_count / elapsed
-                eta = (total - done_count) / rate if rate > 0 else 0
-                progress.progress(
-                    done_count / total,
-                    text=f"{done_count}/{total} done — {rate:.1f} img/s — ETA {eta:.0f}s",
+        if apply_vignetting:
+            if dataset_bg_source_dir is None:
+                st.error("Vignetting is enabled, but no valid background source collection is available.")
+                st.stop()
+            with st.spinner(
+                f"Loading vignetting background (sampling {min(n_bg_samples, dataset_bg_source_count)} "
+                f"of {dataset_bg_source_count} images)..."
+            ):
+                dataset_bg = _get_or_compute_background(
+                    dataset_bg_source_dir,
+                    n_bg_samples,
+                    filter_substrate=True,
                 )
+            if dataset_bg is not None:
+                st.caption(f"Background loaded from `{dataset_bg_source_label}` (substrate-only, cached to disk).")
 
-        # Filter out Nones (failed loads)
-        results = [r for r in results if r is not None]
+        with st.spinner("Running dataset detection..."):
+            images_to_run = sampled_images
+            progress = st.progress(0, text="Starting parallel detection...")
+            status_text = st.empty()
+            total = len(images_to_run)
+            t_start = time.perf_counter()
 
-        elapsed_total = time.perf_counter() - t_start
-        progress.empty()
+            def _detect_one(img_path):
+                raw_bgr_original_w = load_raw_bgr(img_path)
+                if raw_bgr_original_w is None:
+                    return None
+                is_substrate_w, _ = check_is_substrate(raw_bgr_original_w)
+                if not is_substrate_w:
+                    # For display only; detection is intentionally skipped.
+                    _, _, wb_rgb_w = load_and_preprocess(img_path, background=dataset_bg)
+                    if wb_rgb_w is None:
+                        return None
+                    return (img_path, [], wb_rgb_w, False)
+                raw_bgr_w, wb_bgr_w, wb_rgb_w = load_and_preprocess(img_path, background=dataset_bg)
+                if raw_bgr_w is None:
+                    return None
+                flakes_w = detector.detect_flakes(raw_bgr_w, [mask_values])
+                return (img_path, flakes_w, wb_rgb_w, True)
 
-        total_processed = len(results)
-        all_flake_count = sum(len(f) for _, f, _ in results)
+            results = [None] * total
+            done_count = 0
 
-        st.success(
-            f"Done in **{elapsed_total:.1f}s** ({total_processed/elapsed_total:.1f} img/s). "
-            f"Processed **{total_processed}** images. "
-            f"**{all_flake_count}** total flakes found."
-        )
+            with ThreadPoolExecutor(max_workers=n_workers) as executor:
+                future_to_idx = {
+                    executor.submit(_detect_one, p): i
+                    for i, p in enumerate(images_to_run)
+                }
+                for future in as_completed(future_to_idx):
+                    idx = future_to_idx[future]
+                    result = future.result()
+                    if result is not None:
+                        results[idx] = result
+                    done_count += 1
+                    elapsed = time.perf_counter() - t_start
+                    rate = done_count / elapsed
+                    eta = (total - done_count) / rate if rate > 0 else 0
+                    progress.progress(
+                        done_count / total,
+                        text=f"{done_count}/{total} done — {rate:.1f} img/s — ETA {eta:.0f}s",
+                    )
+                    status_text.caption(f"Running detection... {done_count}/{total}")
 
-        st.session_state["dataset_results"] = results
+            # Filter out Nones (failed loads)
+            results = [r for r in results if r is not None]
+
+            elapsed_total = time.perf_counter() - t_start
+            progress.empty()
+            status_text.empty()
+
+            total_processed = len(results)
+            substrate_processed = sum(1 for _, _, _, is_sub in results if is_sub)
+            skipped_non_substrate = total_processed - substrate_processed
+            all_flake_count = sum(len(f) for _, f, _, _ in results)
+
+            st.success(
+                f"Done in **{elapsed_total:.1f}s** ({total_processed/elapsed_total:.1f} img/s). "
+                f"Processed **{total_processed}** images. "
+                f"**{all_flake_count}** total flakes found."
+            )
+            if skipped_non_substrate > 0:
+                st.info(f"Skipped flake detection on **{skipped_non_substrate}** non-substrate images.")
+
+            st.session_state["dataset_results"] = results
 
     # ── Display results (from session state) ─────────────────────────────
     if "dataset_results" in st.session_state:
@@ -699,20 +788,28 @@ with tab_dataset:
 
         # Apply size filter to cached results (re-draws on every rerun, no re-detection needed)
         filtered = []
-        for (img_path, flakes_raw, wb_rgb_w) in results:
+        for item in results:
+            if len(item) == 4:
+                img_path, flakes_raw, wb_rgb_w, is_substrate_img = item
+            else:
+                img_path, flakes_raw, wb_rgb_w = item
+                is_substrate_img = True
             if filter_by_area:
                 passing = [f for f in flakes_raw if f["stats"]["area"] >= area_threshold]
                 undersized = [f for f in flakes_raw if f["stats"]["area"] < area_threshold]
-                undersized_show = undersized if area_filter_mode == "Highlight in red" else []
+                undersized_show = undersized
             else:
                 passing = flakes_raw
                 undersized_show = []
             det_img = draw_flakes_on_image(wb_rgb_w, passing, undersized_show)
-            filtered.append((img_path, passing, undersized_show, det_img))
+            filtered.append((img_path, passing, undersized_show, det_img, is_substrate_img))
 
-        with_flakes = [(p, f, u, img) for p, f, u, img in filtered if len(f) > 0]
-        total_flakes = sum(len(f) for _, f, _, _ in filtered)
-        total_undersized = sum(len(u) for _, _, u, _ in filtered)
+        with_flakes = sorted(
+            [(p, f, u, img, is_sub) for p, f, u, img, is_sub in filtered if len(f) > 0],
+            key=lambda item: (-len(item[1]), item[0].name.lower()),
+        )
+        total_flakes = sum(len(f) for _, f, _, _, _ in filtered)
+        total_undersized = sum(len(u) for _, _, u, _, _ in filtered)
 
         # Summary metrics
         mcols = st.columns(4 if filter_by_area else 3)
@@ -723,7 +820,21 @@ with tab_dataset:
             mcols[3].metric("Undersized", total_undersized)
 
         # Pick which results to show
-        display_list = with_flakes if show_mode == "Only with flakes" else filtered
+        if show_mode == "Only with flakes":
+            display_list = with_flakes
+        else:
+            # Display priority:
+            # 1) images with more satisfied flakes first,
+            # 2) substrate/no-flake images,
+            # 3) non-substrate images.
+            display_list = sorted(
+                filtered,
+                key=lambda item: (
+                    0 if len(item[1]) > 0 else (1 if item[4] else 2),
+                    -len(item[1]),
+                    item[0].name.lower(),
+                ),
+            )
         display_list = display_list[:max_display]
 
         if not display_list:
@@ -734,19 +845,21 @@ with tab_dataset:
             for row_start in range(0, len(display_list), cols_per_row):
                 row_items = display_list[row_start : row_start + cols_per_row]
                 cols = st.columns(cols_per_row)
-                for col_idx, (img_path, flakes_item, undersized_item, det_img) in enumerate(row_items):
+                for col_idx, (img_path, flakes_item, undersized_item, det_img, is_substrate_img) in enumerate(row_items):
                     with cols[col_idx]:
                         n = len(flakes_item)
                         caption = f"{img_path.name} — {n} flake{'s' if n != 1 else ''}"
                         if undersized_item:
                             caption += f" ({len(undersized_item)} undersized)"
+                        if not is_substrate_img:
+                            caption += " — non-substrate (detection skipped)"
                         st.image(det_img, caption=caption, width="stretch")
 
             # ── Aggregate flake table ────────────────────────────────────
             if with_flakes:
                 with st.expander("All detected flakes (table)"):
                     all_rows = []
-                    for img_path, flakes_item, undersized_item, _ in with_flakes:
+                    for img_path, flakes_item, undersized_item, _, _is_substrate_img in with_flakes:
                         for status, flist in [("accepted", flakes_item), ("undersized", undersized_item)]:
                             for i, f in enumerate(flist):
                                 s = f["stats"]

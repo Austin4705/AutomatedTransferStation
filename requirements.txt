@@ -10,3 +10,4 @@ matplotlib
 asyncio
 omero-py
 numpy<2.2
+cpbd

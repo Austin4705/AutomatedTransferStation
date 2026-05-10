@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { GridStack } from 'gridstack';
 import 'gridstack/dist/gridstack.min.css';
 import { useRecoilState } from 'recoil';
-import { gridLayoutAtom } from '../../state/gridLayoutState';
+import { GridLayoutItem, gridLayoutAtom } from '../../state/gridLayoutState';
 
 interface GridstackLayoutProps {
   children: React.ReactNode;
@@ -11,7 +11,10 @@ interface GridstackLayoutProps {
 export const GridstackLayout: React.FC<GridstackLayoutProps> = ({ children }) => {
   const gridRef = useRef<HTMLDivElement>(null);
   const gridInstanceRef = useRef<GridStack | null>(null);
+  const isApplyingExternalLayoutRef = useRef(false);
   const [savedLayout, setSavedLayout] = useRecoilState(gridLayoutAtom);
+  const cloneLayout = (layout: GridLayoutItem[]): GridLayoutItem[] =>
+    layout.map((item) => ({ ...item }));
 
   useEffect(() => {
     if (!gridRef.current) return;
@@ -38,13 +41,11 @@ export const GridstackLayout: React.FC<GridstackLayoutProps> = ({ children }) =>
 
     gridInstanceRef.current = grid;
 
-    // Load saved layout if it exists
-    if (savedLayout && savedLayout.length > 0) {
-      grid.load(savedLayout);
-    }
-
     // Save layout on change
     grid.on('change', () => {
+      if (isApplyingExternalLayoutRef.current) {
+        return;
+      }
       const layout = grid.save(false) as any[];
       setSavedLayout(layout);
     });
@@ -61,6 +62,21 @@ export const GridstackLayout: React.FC<GridstackLayoutProps> = ({ children }) =>
       (window as any).gridstackInstance = gridInstanceRef.current;
     }
   }, []);
+
+  useEffect(() => {
+    const grid = gridInstanceRef.current;
+    if (!grid || !savedLayout || savedLayout.length === 0) {
+      return;
+    }
+
+    isApplyingExternalLayoutRef.current = true;
+    grid.load(cloneLayout(savedLayout));
+
+    // Allow GridStack change events from user interactions after load finishes.
+    window.setTimeout(() => {
+      isApplyingExternalLayoutRef.current = false;
+    }, 0);
+  }, [savedLayout]);
 
   return (
     <div className="grid-stack" ref={gridRef}>

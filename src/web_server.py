@@ -8,11 +8,83 @@ import gc
 import time
 import datetime
 import os
+import json
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 active_streams = {}
 stream_lock = threading.Lock()
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DATA_DIR = os.path.join(PROJECT_ROOT, "Data")
+DASHBOARD_LAYOUT_CONFIG_PATH = os.path.join(DATA_DIR, "dashboard_layout_config.json")
+DEFAULT_DASHBOARD_LAYOUT = [
+    {"id": "camera-1", "x": 0, "y": 0, "w": 6, "h": 6},
+    {"id": "camera-2", "x": 6, "y": 0, "w": 6, "h": 6},
+    {"id": "trace-over", "x": 0, "y": 6, "w": 6, "h": 5},
+    {"id": "scan-flakes", "x": 6, "y": 6, "w": 6, "h": 5},
+    {"id": "goto-flake", "x": 0, "y": 11, "w": 4, "h": 4},
+    {"id": "commands", "x": 4, "y": 11, "w": 4, "h": 4},
+    {"id": "control-panel", "x": 0, "y": 15, "w": 4, "h": 6},
+    {"id": "trace-over-area", "x": 4, "y": 15, "w": 8, "h": 6},
+    {"id": "packets", "x": 8, "y": 11, "w": 4, "h": 4},
+    {"id": "logs", "x": 0, "y": 21, "w": 12, "h": 6},
+]
+
+
+def _normalize_dashboard_layout(raw_layout):
+    if not isinstance(raw_layout, list):
+        return None
+
+    normalized = []
+    for item in raw_layout:
+        if not isinstance(item, dict):
+            return None
+
+        widget_id = item.get("id")
+        x = item.get("x")
+        y = item.get("y")
+        w = item.get("w")
+        h = item.get("h")
+
+        if not isinstance(widget_id, str):
+            return None
+
+        try:
+            normalized_item = {
+                "id": widget_id,
+                "x": int(x),
+                "y": int(y),
+                "w": int(w),
+                "h": int(h),
+            }
+        except (TypeError, ValueError):
+            return None
+
+        normalized.append(normalized_item)
+
+    return normalized
+
+
+def _load_dashboard_layout_from_disk():
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    if not os.path.exists(DASHBOARD_LAYOUT_CONFIG_PATH):
+        return list(DEFAULT_DASHBOARD_LAYOUT)
+
+    try:
+        with open(DASHBOARD_LAYOUT_CONFIG_PATH, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+
+        layout = payload.get("layout") if isinstance(payload, dict) else payload
+        normalized_layout = _normalize_dashboard_layout(layout)
+        if normalized_layout is None:
+            return list(DEFAULT_DASHBOARD_LAYOUT)
+
+        return normalized_layout
+    except Exception as e:
+        print(f"Failed to load dashboard layout config: {e}")
+        return list(DEFAULT_DASHBOARD_LAYOUT)
 
 def startup_flask_app():
     setup_routes()
@@ -200,4 +272,46 @@ def health_check():
         'cameras': len(Camera.global_list),
         'active_streams': len(active_streams),
         'timestamp': datetime.datetime.now().isoformat()
+    }), 200
+
+
+@app.route('/dashboard_layout_config', methods=['GET'])
+def get_dashboard_layout_config():
+    layout = _load_dashboard_layout_from_disk()
+    return jsonify({
+        'layout': layout,
+        'config_path': DASHBOARD_LAYOUT_CONFIG_PATH
+    }), 200
+
+
+@app.route('/dashboard_layout_config', methods=['POST'])
+def save_dashboard_layout_config():
+    payload = request.get_json(silent=True)
+    if payload is None:
+        return jsonify({'success': False, 'error': 'Expected JSON body'}), 400
+
+    raw_layout = payload.get('layout') if isinstance(payload, dict) else payload
+    normalized_layout = _normalize_dashboard_layout(raw_layout)
+
+    if normalized_layout is None:
+        return jsonify({
+            'success': False,
+            'error': "Invalid layout format. Expected list of items with id/x/y/w/h"
+        }), 400
+
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    try:
+        with open(DASHBOARD_LAYOUT_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump({
+                "layout": normalized_layout,
+                "updated_at": datetime.datetime.now().isoformat(),
+            }, f, indent=2)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    return jsonify({
+        'success': True,
+        'layout': normalized_layout,
+        'config_path': DASHBOARD_LAYOUT_CONFIG_PATH
     }), 200

@@ -3,6 +3,7 @@ import SystemLogsBox from '../components/dashboard/SystemLogsBox';
 import CommandInputBox from '../components/dashboard/CommandInputBox';
 import PacketInputBox from '../components/dashboard/PacketInputBox';
 import TraceOverBox from '../components/dashboard/TraceOverBox';
+import TraceOverAreaBox from '../components/dashboard/TraceOverAreaBox';
 import ScanFlakesBox from '../components/dashboard/ScanFlakesBox';
 import GotoFlakeBox from '../components/dashboard/GotoFlakeBox';
 import ControlPanel from '../components/dashboard/ControlPanel';
@@ -140,6 +141,24 @@ const DashboardPage = () => {
               Control Panel
             </h2>
             <ControlPanel />
+          </div>
+        </GridstackWidget>
+
+        {/* Trace Over Area Box */}
+        <GridstackWidget
+          id="trace-over-area"
+          x={4}
+          y={15}
+          w={8}
+          h={6}
+          minW={4}
+          minH={4}
+        >
+          <div className="trace-over-container h-full overflow-auto p-4">
+            <h2 className="dashboard-box-header mb-2 font-semibold text-gray-800">
+              Trace Over Area
+            </h2>
+            <TraceOverAreaBox />
           </div>
         </GridstackWidget>
 
